@@ -1,0 +1,297 @@
+; Sound effects — PC-speaker envelopes on SID voices 1–3 (pulse 50%).
+; Data: pcsounds.asm (tools/gensounds.py). Mixer: ch0=player V1, ch1=enemy V2,
+; ch2=world V3. Enemy envelopes ride pose PRGs; sound_table (BSS, SOUND_TABLE)
+; hi=0 until rebind_streamed_sfx.
+; Layout: N, AD|voice, priority, fnhi[0..N-1]. AD (low nibble masked) written on
+; commit. Sustain is full. Stepped once per mid-split raster (~50/60 Hz).
+; SID Fn lo fixed at $80; the data bytes are Fn hi already (gensounds bakes them).
+
+!zone playsound
+
+SFX_VOL		= $0f
+SFX_NCH		= 3
+SFX_QMAX	= 4
+SND_HDR		= 3			; N, AD|voice, priority before the tick bytes
+sound_table	= SOUND_TABLE
+
+; Per-channel queue (abs — RAM). Index $ff = idle.
+sfx_index
+	!byte $ff, $ff, $ff
+sfx_priority
+	!byte 0, 0, 0
+sfx_count
+	!byte 0, 0, 0
+sfx_max
+	!byte 0, 0, 0
+sfx_ptr_l
+	!byte 0, 0, 0
+sfx_ptr_h
+	!byte 0, 0, 0
+sfx_sr
+	!byte 0				; AD / SR nibble scratch (IRQ)
+
+; Main stages here; mid-split IRQ flushes via play_sound_commit.
+sfx_q
+	!byte 0, 0, 0, 0
+fs_save_x
+	!byte 0				; flush_sfx loop index (IRQ-private; not ZP)
+
+; SID Fn-lo offset from $d400 per channel (V1/V2/V3).
+; Atari: AUDF offset from $D200 (channels 1-3).
+sfx_sid_base
+
+	!byte $00, $02, $04
+
+
+; ------------------------------------------------------------------
+; play_sound_init — clear SID; PW+ADSR defaults; volume full
+; ------------------------------------------------------------------
+play_sound_init
+	ldx #SOUND_RESIDENT_N * 2 - 1
+.psi_tab
+	lda sound_res_words,x
+	sta sound_table,x
+	dex
+	bpl .psi_tab
+	lda #0
+	sta sfx_q_len
+	ldx #SFX_NCH-1
+.psi_ch
+	lda #$ff
+	sta sfx_index,x
+	lda #0
+	sta sfx_priority,x
+	sta sfx_count,x
+	sta sfx_max,x
+	dex
+	bpl .psi_ch
+
+	jsr a8_pokey_play
+	lda #0
+	sta $d201
+	sta $d203
+	sta $d205
+	sta $d207
+	rts
+
+
+; Default PW 50% + ADSR on all voices (per-sound AD on commit).
+sfx_voice_adsr_all
+
+	rts
+
+
+; ------------------------------------------------------------------
+; play_sound — A = sound index; stage for mid-split IRQ.
+; Queue length update is sei-atomic vs flush_sfx. Preserves X,Y; A clobbered.
+; ------------------------------------------------------------------
+play_sound
+	stx ps_save_x
+	php
+	sei
+	ldx sfx_q_len
+	cpx #SFX_QMAX
+	bcs .ps_full
+	sta sfx_q,x
+	inx
+	stx sfx_q_len
+.ps_full
+	plp
+	ldx ps_save_x
+	rts
+
+; Mid-split IRQ: commit staged IDs into channel queues.
+flush_sfx
+	ldx #0
+.fs_loop
+	cpx sfx_q_len
+	bcs .fs_done
+	lda sfx_q,x
+	stx fs_save_x
+	jsr play_sound_commit
+	ldx fs_save_x
+	inx
+	bne .fs_loop
+.fs_done
+	lda #0
+	sta sfx_q_len
+	rts
+
+; A = sound index; higher-or-equal priority preempts (IRQ / flush only).
+; Streamed IDs have sound_table hi=0 until the pose bank is bound.
+play_sound_commit
+	sta sfx_id
+	asl
+	tax
+	lda sound_table+1,x
+	beq .psc_skip
+	sta sfx_zp_h
+	lda sound_table,x
+	sta sfx_zp_l
+	ldy #1
+	lda (sfx_zp_l),y			; AD | voice
+	pha
+	and #3
+	sta sfx_ch
+	tax
+	iny
+	lda (sfx_zp_l),y			; priority
+	cmp sfx_priority,x
+	bcc .psc_pop
+	sta sfx_priority,x
+	ldy #0
+	lda (sfx_zp_l),y			; N
+	sta sfx_max,x
+	pla
+	and #$f0				; attack<<4, decay 0
+	sta sfx_sr
+
+
+	clc
+	lda sfx_zp_l
+	adc #SND_HDR
+	sta sfx_ptr_l,x
+	lda sfx_zp_h
+	adc #0
+	sta sfx_ptr_h,x
+
+	lda #$ff
+	sta sfx_count,x
+	lda sfx_id
+	sta sfx_index,x
+	rts
+.psc_pop
+	pla
+.psc_skip
+	rts
+
+; Gate off any channel whose current id is a streamed (heap) effect.
+stop_streamed_sfx
+	ldx #SFX_NCH-1
+.sss_lp
+	lda sfx_index,x
+	bmi .sss_n
+	cmp #SOUND_RESIDENT_N
+	bcc .sss_n
+	stx sfx_ch
+	jsr sfx_gate_off
+	ldx sfx_ch
+	lda #$ff
+	sta sfx_index,x
+	lda #0
+	sta sfx_priority,x
+	cpx #2
+	bne .sss_n
+	jsr elev_noise_restore
+.sss_n
+	dex
+	bpl .sss_lp
+	rts
+
+; Zero sound_table slots for streamed ids (resident pc_* words stay).
+unbind_streamed_sfx
+	lda #0
+	ldx #SOUND_COUNT * 2 - 1
+.uss_lp
+	cpx #SOUND_RESIDENT_N * 2
+	bcc .uss_rts				; nothing streamed: count == resident
+	sta sound_table,x
+	dex
+	bpl .uss_lp
+.uss_rts
+	rts
+
+; ------------------------------------------------------------------
+; update_sfx — one PC speaker sample per channel (once per mid-split)
+; Scratch ZP: sfx_zp_l/h, sfx_ch, sfx_id.
+; ------------------------------------------------------------------
+update_sfx
+	ldx #0
+.us_loop
+	stx sfx_ch
+	lda sfx_index,x
+	bpl .us_active
+.us_next
+	ldx sfx_ch
+	inx
+	cpx #SFX_NCH
+	bcc .us_loop
+	rts
+
+.us_active
+	inc sfx_count,x
+	lda sfx_count,x
+	cmp sfx_max,x
+	beq .us_stop
+	lda sfx_ptr_l,x
+	sta sfx_zp_l
+	lda sfx_ptr_h,x
+	sta sfx_zp_h
+	ldy sfx_count,x
+	lda (sfx_zp_l),y
+	beq .us_silent
+	sta sfx_id
+	jsr sfx_write_tone
+	jmp .us_next
+
+.us_silent
+	jsr sfx_gate_off
+	jmp .us_next
+
+.us_stop
+	jsr sfx_gate_off
+	ldx sfx_ch
+	lda #$ff
+	sta sfx_index,x
+	lda #0
+	sta sfx_priority,x
+	cpx #2
+	bne .us_stop_vol
+	jsr elev_noise_restore
+.us_stop_vol
+
+	jmp .us_next
+
+; sfx_id = POKEY AUDF (0 = silence); sfx_ch = channel.
+sfx_write_tone
+
+	ldx sfx_ch
+	lda sfx_sid_base,x
+	tay
+	lda sfx_id
+	sta $d200,y
+	lda effects_vol
+	and #$0f
+	ora #$a0				; pure tone
+	sta $d201,y
+	rts
+
+
+; sfx_ch = channel → gate off that voice
+sfx_gate_off
+	ldx sfx_ch
+	lda sfx_sid_base,x
+	tay
+	lda #0
+
+	sta $d201,y
+
+	rts
+
+; ------------------------------------------------------------------
+; elev_noise_restore / elev_noise_program — V3 rumble helpers
+; restore: only if elevators moving and world channel idle
+; program: write V3 noise rumble registers (no refcount)
+; ------------------------------------------------------------------
+elev_noise_restore
+	lda elev_noise_n
+	beq .enr_rts
+	lda sfx_index+2
+	bpl .enr_rts				; world SFX still owns V3
+elev_noise_program
+
+	rts
+
+.enr_rts
+	rts
+

@@ -1,0 +1,192 @@
+{
+  "id": "184bc6f7-ce39-4c53-8600-192ce13d27c6",
+  "name": "Ogre",
+  "verts": 13,
+  "lines": [
+    [
+      0,
+      1
+    ],
+    [
+      1,
+      2
+    ],
+    [
+      0,
+      2
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      2,
+      4
+    ],
+    [
+      4,
+      5
+    ],
+    [
+      2,
+      6
+    ],
+    [
+      6,
+      7
+    ],
+    [
+      0,
+      8
+    ],
+    [
+      8,
+      9
+    ],
+    [
+      1,
+      10
+    ],
+    [
+      10,
+      11
+    ],
+    [
+      7,
+      12
+    ]
+  ],
+  "clips": [
+    {
+      "name": "stand"
+    },
+    {
+      "name": "walk"
+    },
+    {
+      "name": "run"
+    },
+    {
+      "name": "swing",
+      "sound": "melee",
+      "soundFrame": 0
+    },
+    {
+      "name": "shoot",
+      "sound": "shoot",
+      "soundFrame": 2
+    },
+    {
+      "name": "pain"
+    },
+    {
+      "name": "death"
+    },
+    {
+      "name": "pull"
+    }
+  ],
+  "cues": {
+    "sight": "sound/ogre/ogwake.wav",
+    "wince": "sound/soldier/pain1.wav",
+    "melee": "sound/ogre/ogsawatk.wav",
+    "shoot": "sound/weapons/grenade.wav",
+    "death": "sound/ogre/ogdth.wav"
+  },
+  "mdlRig": {
+    "jointVerts": [
+      [
+        82,
+        107,
+        112
+      ],
+      [
+        72,
+        134,
+        146
+      ],
+      [
+        98,
+        130,
+        145
+      ],
+      [
+        119
+      ],
+      [
+        67,
+        68,
+        136,
+        153
+      ],
+      [
+        152,
+        155,
+        156,
+        167
+      ],
+      [
+        55,
+        56,
+        73,
+        168
+      ],
+      [
+        87
+      ],
+      [
+        60,
+        103,
+        104,
+        105,
+        106,
+        113,
+        114,
+        117
+      ],
+      [
+        127,
+        128,
+        129
+      ],
+      [
+        64,
+        65,
+        66,
+        83,
+        84,
+        85,
+        109,
+        110
+      ],
+      [
+        77,
+        79,
+        122
+      ],
+      [
+        42,
+        46,
+        47,
+        48
+      ]
+    ]
+  },
+  "lodZ": 10,
+  "hp": 25,
+  "painChance": 64,
+  "customSkeleton": false,
+  "stockGraph": null,
+  "customGraph": null,
+  "spriteScale": 0.35,
+  "exportClips": [
+    "stand",
+    "walk",
+    "run",
+    "swing",
+    "shoot",
+    "pain",
+    "death",
+    "pull"
+  ]
+}

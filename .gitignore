@@ -1,0 +1,47 @@
+# Intermediate PRGs — playable disk is quake64.d64
+*.prg
+
+# ...except the Krill loader binaries, which are vendored build INPUTS:
+# boot KERNAL-loads them before the fastloader exists. See krill/README.md.
+!krill/*.prg
+
+# Build outputs
+*.lbl
+*.o
+*.sym
+overlay.bin
+memory-report*.json
+heap-report*.json
+build-report.json
+enemies/sfx_*.bin
+enemies/sound_ids.json
+enemies/*.pose
+enemies/ai_*.bin
+enemies/ai_*.rel
+src/ai_game_syms.asm
+src/qsyms.asm
+__pycache__/
+*.pyc
+
+# Third-party tools, not redistributed
+3rdparty/
+
+# Debugging stuff
+*.log
+*.vsf
+
+# Quake shareware (PAK / id1)
+shareware/
+*.pak
+
+# Reference materials
+ref/
+tmp/
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+monitor.log

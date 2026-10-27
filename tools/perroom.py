@@ -1,0 +1,182 @@
+#!/usr/bin/env python3
+"""Locate en_type / en_room inside a packed map payload.
+
+The packed layout is defined in exactly one place: bind_tab in src/overlay.asm,
+which walks the payload adding one array per `+bind_add field, count`. Rather
+than duplicate that order here and let the two drift, this parses bind_tab and
+replays it.
+
+Level PRG payload:
+    overlay_len word, reloc_len word, overlay, reloc dests, then packed map.
+
+Packed layout:
+    24 bytes  counts header (map_nrooms .. spawn_id, see src/map_bss.asm)
+    n bytes   NUL-terminated map name
+    ...       the bind_add arrays, in source order
+
+Counts are either a header symbol or `bind_n`. bind_tab emits
+`+bind_set_n3` / `+bind_set_n2` (nrooms*3 for rc_*, nrooms*2 for rb_*).
+
+Everything extracted is validated before use: room ids must be < map_nrooms and
+type ids < ENEMY_NTYPES. If the layout is ever changed without this being
+updated, the values go out of range and the caller is told, rather than being
+handed a confident wrong answer.
+"""
+
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+OVERLAY = ROOT / "src" / "overlay.asm"
+MAP_BSS = ROOT / "src" / "map_bss.asm"
+
+HDR_LEN = 24
+LEVEL_HDR = 4
+ENEMY_NTYPES = 4
+ROOM_MAX_TYPES = 2
+
+
+def header_symbols() -> list[str]:
+    """The 24 count bytes, in address order, from map_bss.asm."""
+    text = MAP_BSS.read_text(encoding="utf-8", errors="replace")
+    found: dict[int, str] = {}
+    for m in re.finditer(r"^([a-z_0-9]+)\s*=\s*\$0([0-9a-fA-F]{3})\s*$",
+                         text, re.M):
+        addr = int(m.group(2), 16)
+        if 0x400 <= addr < 0x400 + HDR_LEN:
+            found.setdefault(addr, m.group(1))
+    if len(found) != HDR_LEN:
+        raise SystemExit(
+            f"perroom: expected {HDR_LEN} header symbols at $0400, "
+            f"found {len(found)}")
+    return [found[0x400 + i] for i in range(HDR_LEN)]
+
+
+def packed_payload(payload: bytes) -> bytes:
+    """Strip the LoadLevel prefix (overlay_len, reloc_len, overlay, reloc)."""
+    ov_bin = ROOT / "src" / "overlay.bin"
+    if len(payload) < LEVEL_HDR or not ov_bin.is_file():
+        return payload
+    want = ov_bin.stat().st_size
+    ov, rel = int.from_bytes(payload[0:2], "little"), int.from_bytes(
+        payload[2:4], "little"
+    )
+    body = LEVEL_HDR + ov + rel
+    if ov == want and body <= len(payload):
+        return payload[body:]
+    return payload
+
+
+def bind_sequence() -> list[tuple[str, str]]:
+    """[(field, count_expr)] in bind_tab order, count_expr already resolved
+    for the two bind_n recomputations."""
+    text = OVERLAY.read_text(encoding="utf-8", errors="replace")
+    m = re.search(r"^bind_tab\b(.*?)^\s*!word\s+0,\s*0\s*$", text, re.M | re.S)
+    if not m:
+        raise SystemExit("perroom: no bind_tab in overlay.asm")
+    body = m.group(1)
+
+    seq: list[tuple[str, str]] = []
+    pending = None      # what bind_n currently holds
+    for line in body.splitlines():
+        s = line.strip()
+        if re.match(r"^\+bind_set_n3\b", s):
+            pending = "nrooms*3"
+            continue
+        if re.match(r"^\+bind_set_n1\b", s):
+            pending = "nrooms+1"
+            continue
+        if re.match(r"^\+bind_set_n2\b", s):
+            pending = "nrooms*2"
+            continue
+        b = re.match(r"^\+bind_add\s+([a-z_0-9]+)\s*,\s*([a-z_0-9]+)\s*$", s)
+        if b:
+            field, count = b.group(1), b.group(2)
+            if count == "bind_n":
+                if pending is None:
+                    raise SystemExit(
+                        f"perroom: {field} uses bind_n before it is set")
+                count = pending
+            seq.append((field, count))
+    if not seq:
+        raise SystemExit("perroom: bind_tab has no bind_add lines")
+    return seq
+
+
+def field_offsets(payload: bytes) -> tuple[dict[str, int], dict[str, int]]:
+    """(offset of each field, header counts). Offsets are into packed payload."""
+    payload = packed_payload(payload)
+    if len(payload) < HDR_LEN:
+        raise SystemExit("perroom: payload shorter than the header")
+    syms = header_symbols()
+    counts = {syms[i]: payload[i] for i in range(HDR_LEN)}
+
+    # map name, NUL-terminated, follows the header
+    end = payload.find(b"\x00", HDR_LEN)
+    if end < 0:
+        raise SystemExit("perroom: unterminated map name")
+    cur = end + 1
+
+    def resolve(expr: str) -> int:
+        if expr == "nrooms+1":
+            return counts["map_nrooms"] + 1
+        if expr == "nrooms*2":
+            return counts["map_nrooms"] * 2
+        if expr == "nrooms*3":
+            return counts["map_nrooms"] * 3
+        if expr in counts:
+            return counts[expr]
+        raise SystemExit(f"perroom: unknown count `{expr}`")
+
+    offs: dict[str, int] = {}
+    for field, count in bind_sequence():
+        offs[field] = cur
+        cur += resolve(count)
+    if cur > len(payload):
+        raise SystemExit(
+            f"perroom: replayed layout runs {cur - len(payload)} bytes past "
+            f"the payload -- bind_map and this tool disagree")
+    return offs, counts
+
+
+def per_room_types(payload: bytes) -> dict[int, set[int]]:
+    """{room: {enemy type, ...}} for every room holding enemies."""
+    offs, counts = field_offsets(payload)
+    payload = packed_payload(payload)
+    n = counts["map_nenemies"]
+    if n == 0:
+        return {}
+    for need in ("en_type", "en_room"):
+        if need not in offs:
+            raise SystemExit(f"perroom: bind_tab has no {need}")
+    types = payload[offs["en_type"]:offs["en_type"] + n]
+    rooms = payload[offs["en_room"]:offs["en_room"] + n]
+    if len(types) != n or len(rooms) != n:
+        raise SystemExit("perroom: enemy arrays run past the payload")
+
+    # Validate before anyone acts on it. Wrong offsets produce garbage that
+    # would otherwise sail through as a confident, wrong heap figure.
+    nrooms = counts["map_nrooms"]
+    for t in types:
+        if t >= ENEMY_NTYPES:
+            raise SystemExit(
+                f"perroom: enemy type {t} out of range (>= {ENEMY_NTYPES}); "
+                f"the packed layout has changed and this tool is stale")
+    for r in rooms:
+        if r >= nrooms:
+            raise SystemExit(
+                f"perroom: enemy room {r} out of range (>= {nrooms}); "
+                f"the packed layout has changed and this tool is stale")
+
+    out: dict[int, set[int]] = {}
+    for r, t in zip(rooms, types):
+        out.setdefault(r, set()).add(t)
+    for r, ts in sorted(out.items()):
+        if len(ts) > ROOM_MAX_TYPES:
+            raise SystemExit(
+                f"perroom: room {r} has {len(ts)} enemy types "
+                f"(max {ROOM_MAX_TYPES})"
+            )
+    return out

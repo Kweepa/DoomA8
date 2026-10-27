@@ -1,0 +1,26 @@
+Doom is a trademark of
+id software llc/zenimax media inc.
+
+Unofficial atari 8-bit fan port
+created by steve mccrea in 2026.
+
+Not affiliated with or endorsed
+by id software or zenimax.
+
+For non-commercial/fan use only.
+^
+Doom was created by
+john carmack, michael abrash,
+john cash, john romero,
+american mcgee, sandy petersen,
+tim willits, adrian carmack,
+kevin cloud, paul steed,
+trent reznor & nine inch nails.
+^
+Original music by mandy kane,
+butchered by an automatic sid to
+pokey translation.
+
+Thanks y'all!
+
+DoomA8 v1.01.0, built 27 Oct 2026

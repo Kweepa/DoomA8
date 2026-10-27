@@ -1,0 +1,233 @@
+#!/usr/bin/env python3
+"""Bundle the editor into a single self-contained HTML file (no server)."""
+
+from __future__ import annotations
+
+import base64
+import re
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent
+OUT = ROOT / "index.html"
+
+JS_ORDER = [
+    "js/roomGeom.js",
+    "js/model.js",
+  "js/math3d.js",
+  "js/gizmo.js",
+  "js/io.js",
+    "js/pak.js",
+    "js/zip.js",
+    "js/doommesh.js",
+    "js/mdl.js",
+    "js/layoutView.js",
+    "js/overheadView.js",
+    "js/previewView.js",
+    "js/animView.js",
+    "js/weaponView.js",
+    "js/itemView.js",
+    "js/pcsfx.js",
+    "js/soundView.js",
+    "js/buildView.js",
+    "js/pcsrc.js",
+    "js/doompic.js",
+    "js/stickOrtho.js",
+    "js/pclib.js",
+    "js/main.js",
+]
+
+
+def strip_module(src: str) -> str:
+    src = re.sub(r"^import\s+[\s\S]*?;\s*\n", "", src, flags=re.M)
+    src = re.sub(r"^export\s*\{[\s\S]*?\};\s*\n", "", src, flags=re.M)
+    src = re.sub(r"^export\s+default\s+", "", src, flags=re.M)
+    src = re.sub(r"^export\s+", "", src, flags=re.M)
+    return src
+
+
+def main() -> None:
+    css = (ROOT / "styles.css").read_text(encoding="utf-8")
+    parts = []
+    for rel in JS_ORDER:
+        raw = (ROOT / rel).read_text(encoding="utf-8")
+        parts.append(f"// ---- {rel} ----\n{strip_module(raw)}")
+    js = "\n\n".join(parts)
+
+    icon_path = ROOT / "icon.png"
+    favicon_link = ""
+    if icon_path.exists():
+        b64 = base64.b64encode(icon_path.read_bytes()).decode("ascii")
+        favicon_link = f'  <link rel="icon" type="image/png" href="data:image/png;base64,{b64}" />\n'
+
+    nail_path = ROOT.parent / "assets" / "weapons" / "nail_0_edit.png"
+    nail_img = ""
+    if nail_path.is_file():
+        nail_b64 = base64.b64encode(nail_path.read_bytes()).decode("ascii")
+        nail_img = (
+            f'      <img id="preview-nail-png" width="48" height="42" hidden alt="" '
+            f'src="data:image/png;base64,{nail_b64}" />\n'
+        )
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DoomA8 Editor</title>
+{favicon_link}  <style>
+{css}
+  </style>
+</head>
+<body>
+  <header class="toolbar">
+    <h1>DoomA8</h1>
+    <div class="toolbar-actions" role="group" aria-label="Editor mode">
+      <button type="button" id="btn-mode-layout" class="active">Maps</button>
+      <button type="button" id="btn-mode-anim">Enemies</button>
+      <button type="button" id="btn-mode-weapons">Weapons</button>
+      <button type="button" id="btn-mode-items">Items</button>
+      <button type="button" id="btn-mode-sounds">Sounds</button>
+      <button type="button" id="btn-mode-build">Build</button>
+    </div>
+    <div class="toolbar-actions" id="draw-mode-group" role="group" aria-label="Draw mode">
+      <button type="button" id="btn-draw-all" class="active">All</button>
+      <button type="button" id="btn-draw-local">Local</button>
+      <button type="button" id="btn-draw-neighbours" title="Door-linked rooms (when Local is on)">Neighbours</button>
+      <button type="button" id="btn-draw-rooms-only" title="Hide contents; rooms and doors only">Rooms Only</button>
+    </div>
+    <div class="toolbar-actions">
+      <button type="button" id="btn-undo" title="Ctrl+Z" disabled>Undo</button>
+      <button type="button" id="btn-redo" title="Ctrl+Y" disabled>Redo</button>
+      <button type="button" id="btn-save">Save</button>
+      <button type="button" id="btn-load">Load</button>
+    </div>
+    <p id="status" class="status" role="status"></p>
+  </header>
+
+  <main class="layout">
+    <aside class="left">
+      <section id="layout-left">
+        <div class="layout-left-fixed">
+          <input
+            type="search"
+            id="layout-search"
+            class="layout-search"
+            placeholder="items, enemies, rooms"
+            spellcheck="false"
+            autocomplete="off"
+          />
+          <section id="level-list"></section>
+          <h2>Place</h2>
+          <div id="item-palette" class="item-palette"></div>
+        </div>
+        <div class="layout-left-scroll">
+          <h2>Objects</h2>
+          <ul id="object-list" class="object-list"></ul>
+        </div>
+      </section>
+      <section id="anim-left" hidden>
+        <h2>Enemies</h2>
+        <ul id="enemy-list" class="object-list"></ul>
+        <div class="toolbar-actions mdl-overlay-row">
+          <button type="button" id="btn-mdl-overlay" class="active">Ref sprite</button>
+        </div>
+        <div class="btn-row">
+          <button type="button" id="btn-anim-folder">Open shareware folder</button>
+        </div>
+      </section>
+      <section id="weapons-left" hidden>
+        <h2>Weapons</h2>
+        <ul id="weapon-list" class="object-list"></ul>
+        <label class="field mdl-scale-field">
+          <span>Global scale</span>
+          <input type="range" id="weapon-scale" min="0.05" max="4" step="0.01" value="0.4" />
+          <input type="number" id="weapon-scale-num" min="0.05" max="8" step="0.01" value="0.4" />
+        </label>
+        <div class="btn-row">
+          <button type="button" id="btn-weapon-folder">Open shareware folder</button>
+        </div>
+        <div class="btn-row">
+          <button type="button" id="btn-weapon-export">Export PNGs</button>
+        </div>
+      </section>
+      <section id="items-left" hidden>
+        <h2>Items</h2>
+        <ul id="item-mesh-list" class="object-list"></ul>
+        <h2>Doors</h2>
+        <ul id="door-mesh-list" class="object-list"></ul>
+      </section>
+      <section id="sounds-left" hidden>
+        <h2>Sounds</h2>
+        <label class="field sound-unused-toggle">
+          <input type="checkbox" id="chk-hide-unused" checked title="Hide ambience, plats, hknight, and buttons" />
+          <span>Hide unused</span>
+        </label>
+        <div id="sound-list" class="sound-list"></div>
+        <div class="btn-row">
+          <button type="button" id="btn-sound-folder">Open shareware folder</button>
+        </div>
+      </section>
+    </aside>
+
+    <section class="center">
+      <div class="center-heading">
+        <h2 id="center-title">Map</h2>
+        <p id="map-stats" class="map-stats" aria-live="polite"></p>
+      </div>
+      <div class="map-stage" id="map-stage">
+        <div class="stick-pane" id="stick-left" hidden>
+          <canvas id="stick-left-canvas"></canvas>
+          <span class="stick-label">Left</span>
+        </div>
+        <div class="stick-pane" id="stick-front" hidden>
+          <canvas id="stick-front-canvas"></canvas>
+          <span class="stick-label">Front</span>
+        </div>
+        <canvas id="view-canvas" tabindex="0"></canvas>
+      </div>
+      <p class="hint" id="hint"></p>
+      <div id="build-panel" class="build-panel" hidden></div>
+    </section>
+
+    <aside class="right">
+      <div class="right-editors" id="right-editors"></div>
+      <div id="preview-panel" class="preview-panel panel">
+        <h2>Preview</h2>
+        <div class="preview-frame preview-3d-frame">
+          <canvas id="preview-canvas"></canvas>
+        </div>
+        <p class="muted" id="preview-hint">Drag L/R to rotate · U/D to walk</p>
+{nail_img}      </div>
+      <div id="overhead-panel" class="preview-panel panel">
+        <div class="toolbar-actions ortho-tabs" role="group" aria-label="Ortho view">
+          <button type="button" id="btn-ortho-top" class="active">Top</button>
+          <button type="button" id="btn-ortho-left">Left</button>
+          <button type="button" id="btn-ortho-forward">Forward</button>
+        </div>
+        <div class="preview-frame">
+          <canvas id="overhead-canvas"></canvas>
+        </div>
+        <p class="muted" id="ortho-hint">XZ · +Z up · camera arrow</p>
+      </div>
+      <div id="weapon-preview-panel" class="preview-panel panel" hidden>
+        <h2>48×42 sprite</h2>
+        <div class="preview-frame weapon-preview-frame">
+          <canvas id="weapon-preview-canvas"></canvas>
+        </div>
+        <p class="muted" id="weapon-preview-hint">C64 2×2 hi-res</p>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+{js}
+  </script>
+</body>
+</html>
+"""
+    OUT.write_text(html, encoding="utf-8")
+    print(f"Wrote {OUT} ({OUT.stat().st_size} bytes)")
+
+
+if __name__ == "__main__":
+    main()

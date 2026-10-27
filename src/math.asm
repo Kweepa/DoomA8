@@ -1,0 +1,766 @@
+; Signed (A*Y)>>7 and perspective via log/antilog LUTs (charset tails)
+!zone math
+
+; A, Y signed. A = (A*Y)/128, clamp ±127. RAM LUTs ($01=$30).
+; idx = log|A|+log|Y|-224 as 8-bit with carry, no 16-bit subtract.
+smul7
+	sta mul_a
+	sty mul_b
+	eor mul_b
+	sta mul_sign
+	lda mul_a
+	bpl .ap
+	eor #$ff
+	clc
+	adc #1
+.ap
+	beq .zero
+	tax
+	lda mul_b
+	bpl .bp
+	eor #$ff
+	clc
+	adc #1
+.bp
+	beq .zero
+	tay
+	lda LOGTAB,x
+	clc
+	adc LOGTAB,y
+	bcc .noc
+	cmp #224
+	bcc .chi
+	sbc #224
+	tax
+	lda ALOGHI,x
+	jmp .got
+.chi
+	adc #32
+	tax
+	lda ALOGTAB,x
+	jmp .got
+.noc
+	cmp #224
+	bcc .zero
+	sbc #224
+	tax
+	lda ALOGTAB,x
+.got
+	cmp #128
+	bcc .ssgn
+	lda #$7f
+.ssgn
+	bit mul_sign
+	bpl +
+	eor #$ff
+	clc
+	adc #1
++
+	rts
+.zero
+	lda #0
+	rts
+
+; ------------------------------------------------------------------
+; Pointer-based quarter-square multiply: a*m = sq[a+m] − negsq[a+255−m].
+; Tables are page-aligned, so selecting multiplier m costs 4 zp lo-byte
+; stores; each 8×8 product is then two (zp),y loads + sbc per byte.
+
+; Pointer high bytes never change — set once at startup.
+mulset_init
+	lda #>sqlo
+	sta pa_s1l+1
+	sta pb_s1l+1
+	lda #>sqhi
+	sta pa_s1h+1
+	sta pb_s1h+1
+	lda #>negsqlo
+	sta pa_s2l+1
+	sta pb_s2l+1
+	lda #>negsqhi
+	sta pa_s2h+1
+	sta pb_s2h+1
+	rts
+
+; A = signed multiplier → set A/B pointers on |m|, sg_a/b keeps raw byte
+; (bit7 = sign). Preserves X and Y.
+mulset_a
+	sta sg_a
+	bpl +
+	eor #$ff
+	clc
+	adc #1
++
+	sta pa_s1l
+	sta pa_s1h
+	eor #$ff
+	sta pa_s2l
+	sta pa_s2h
+	rts
+
+mulset_b
+	sta sg_b
+	bpl +
+	eor #$ff
+	clc
+	adc #1
++
+	sta pb_s1l
+	sta pb_s1h
+	eor #$ff
+	sta pb_s2l
+	sta pb_s2h
+	rts
+
+; A = unsigned multiplier → set A/B (no sign byte)
+mulset_au
+	sta pa_s1l
+	sta pa_s1h
+	eor #$ff
+	sta pa_s2l
+	sta pa_s2h
+	rts
+
+; Y = unsigned multiplicand → prod = Y * m. Preserves X and Y.
+umul8a
+	sec
+	lda (pa_s1l),y
+	sbc (pa_s2l),y
+	sta prod_l
+	lda (pa_s1h),y
+	sbc (pa_s2h),y
+	sta prod_h
+	rts
+
+umul8b
+	sec
+	lda (pb_s1l),y
+	sbc (pb_s2l),y
+	sta prod_l
+	lda (pb_s1h),y
+	sbc (pb_s2h),y
+	sta prod_h
+	rts
+
+; nlo:nhi (signed) * set-A/B multiplier >> 7 → nlo:nhi (smul16_7 contract).
+; Products inlined; X preserved, Y/ylo/dlo/dhi/prod_* clobbered.
+!macro smul16_body .sg, .s1l, .s1h, .s2l, .s2h {
+	lda nhi
+	eor .sg
+	sta mul_sign
+	lda nhi
+	bpl +
+	sec
+	lda #0
+	sbc nlo
+	sta nlo
+	lda #0
+	sbc nhi
+	sta nhi
++
+	ldy nlo
+	sec
+	lda (.s1l),y
+	sbc (.s2l),y
+	sta dlo
+	lda (.s1h),y
+	sbc (.s2h),y
+	sta dhi
+	ldy nhi
+	sec
+	lda (.s1l),y
+	sbc (.s2l),y
+	sta prod_l
+	lda (.s1h),y
+	sbc (.s2h),y
+	sta prod_h
+	clc
+	lda dhi
+	adc prod_l
+	sta dhi
+	lda prod_h
+	adc #0
+	sta ylo
+	lda dlo				; (p>>7) == (p<<1)>>8, p < 2^23
+	asl
+	lda dhi
+	rol
+	sta nlo
+	lda ylo
+	rol
+	sta nhi
+	bit mul_sign
+	bpl +
+	sec
+	lda #0
+	sbc nlo
+	sta nlo
+	lda #0
+	sbc nhi
+	sta nhi
++
+	rts
+}
+
+smul16_a
+	+smul16_body sg_a, pa_s1l, pa_s1h, pa_s2l, pa_s2h
+smul16_b
+	+smul16_body sg_b, pb_s1l, pb_s1h, pb_s2l, pb_s2h
+
+; Unsigned A*Y → prod_l:prod_h. sq[a+b] - sq[|a-b|], tables (i*i)/4.
+umul8j
+	sta mul_a
+	sty mul_b
+	clc
+	adc mul_b
+	bcc .s0
+	tax
+	lda sqlo+$100,x
+	sta prod_l
+	lda sqhi+$100,x
+	sta prod_h
+	jmp .dif
+.s0
+	tax
+	lda sqlo,x
+	sta prod_l
+	lda sqhi,x
+	sta prod_h
+.dif
+	lda mul_a
+	sec
+	sbc mul_b
+	bcs .dpos
+	eor #$ff
+	adc #1
+.dpos
+	tay
+	sec
+	lda prod_l
+	sbc sqlo,y
+	sta prod_l
+	lda prod_h
+	sbc sqhi,y
+	sta prod_h
+	rts
+
+; A = (A * Y) / div_c, all signed. Clamp ±127. RAM LUTs ($01=$30).
+lerpdv
+	sta mul_a
+	sty mul_b
+	eor mul_b
+	eor div_c
+	sta mul_sign
+	lda mul_a
+	bpl .la
+	eor #$ff
+	clc
+	adc #1
+.la
+	beq .lzero2
+	sta mul_a
+	lda mul_b
+	bpl .lb
+	eor #$ff
+	clc
+	adc #1
+.lb
+	beq .lzero2
+	sta mul_b
+	lda div_c
+	bpl .lc
+	eor #$ff
+	clc
+	adc #1
+.lc
+	beq .lzero2
+	tax
+	lda mul_a
+	tay
+	lda LOGTAB,y
+	clc
+	ldy mul_b
+	adc LOGTAB,y
+	sta prod_l
+	lda #0
+	adc #0
+	sta prod_h
+	sec
+	lda prod_l
+	sbc LOGTAB,x
+	sta prod_l
+	lda prod_h
+	sbc #0
+	bcc .lzero2
+	sta prod_h
+	jsr alog_fetch
+	cmp #128
+	bcc .lsgn2
+	lda #$7f
+.lsgn2
+	bit mul_sign
+	bpl +
+	eor #$ff
+	clc
+	adc #1
++
+	rts
+.lzero2
+	lda #0
+	rts
+
+; ASR n/d only until each fits signed 8-bit (keep y 16-bit)
+scale_nd
+	lda #8
+	sta mul_a
+.snd
+	jsr .nd_fitn
+	bcc .sdo
+	jsr .nd_fitd
+	bcc .sdo
+	rts
+.sdo
+	lda nhi
+	cmp #$80
+	ror nhi
+	ror nlo
+	lda dhi
+	cmp #$80
+	ror dhi
+	ror dlo
+	dec mul_a
+	bne .snd
+	rts
+.nd_fitn
+	lda nhi
+	ldy nlo
+	jmp .nd_fit
+.nd_fitd
+	lda dhi
+	ldy dlo
+.nd_fit
+	tax
+	beq .nd_fz
+	cmp #$ff
+	bne .nd_fn
+	tya
+	bmi .nd_fy
+.nd_fn
+	clc
+	rts
+.nd_fz
+	tya
+	bmi .nd_fn
+.nd_fy
+	sec
+	rts
+
+; div_n0:div_n1 = (ylo:yhi * nlo) / dlo after scale_nd; A = div_n0.
+; Needs |n| <= |d| (interpolation fraction in 0..1; larger n gives y*255/256).
+; Signed, no ±127 clamp. Does not touch rot*.
+lerp16
+	lda #0
+	sta mul_sign
+	lda yhi
+	bpl .yp
+	lda #$80
+	sta mul_sign
+	sec
+	lda #0
+	sbc ylo
+	sta ylo
+	lda #0
+	sbc yhi
+	sta yhi
+.yp
+	lda nlo
+	bpl .np
+	lda mul_sign
+	eor #$80
+	sta mul_sign
+	lda nlo
+	eor #$ff
+	clc
+	adc #1
+	sta nlo
+.np
+	lda dlo
+	bpl .dp
+	lda mul_sign
+	eor #$80
+	sta mul_sign
+	lda dlo
+	eor #$ff
+	clc
+	adc #1
+	sta dlo
+.dp
+	lda dlo
+	bne .mul
+	lda #0
+	sta div_n0
+	sta div_n1
+	rts
+.mul
+	; t = (n<<8)/d as 8 bits, then |y|*t>>8. The clip point lies between the
+	; endpoints so n <= d; scale_nd leaves |d| <= 128, so rem*2 never carries.
+	lda nlo
+	ldx #8
+	cmp dlo
+	bcc .dv
+	lda #$ff			; n >= d: t = 255/256
+	sta div_n2
+	bne .tm
+.dv
+	asl
+	cmp dlo
+	bcc +
+	sbc dlo
++
+	rol div_n2
+	dex
+	bne .dv
+	asl				; round t up when the remainder is >= d/2 (not past 255)
+	cmp dlo
+	bcc .tm
+	inc div_n2
+	bne .tm
+	dec div_n2
+.tm
+	lda ylo
+	ldy div_n2
+	jsr umul8j
+	lda prod_h
+	sta div_n0
+	lda yhi
+	ldy div_n2
+	jsr umul8j
+	clc
+	lda prod_l
+	adc div_n0
+	sta div_n0
+	lda prod_h
+	adc #0
+	sta div_n1
+	bit mul_sign
+	bpl .ok
+	sec
+	lda #0
+	sbc div_n0
+	sta div_n0
+	lda #0
+	sbc div_n1
+	sta div_n1
+.ok
+	lda div_n0
+	rts
+
+; unsigned 24-bit div_n0:div_n1:div_n2 / dlo → quot div_n0:div_n1 (sat $ffff)
+; Leading zero bytes of the numerator only shift zeros through the
+; remainder, so skip them: shuffle bytes up and run 16 (or 8) iterations.
+div24u8
+	lda #0
+	sta nlo				; remainder
+	ldx #24
+	lda div_n2
+	bne .d24
+	lda div_n1
+	sta div_n2
+	lda div_n0
+	sta div_n1
+	lda #0
+	sta div_n0
+	ldx #16
+	lda div_n2
+	bne .d24
+	lda div_n1
+	sta div_n2
+	lda #0
+	sta div_n1
+	ldx #8
+.d24
+	asl div_n0
+	rol div_n1
+	rol div_n2
+	rol nlo
+	lda nlo
+	bcs .dsub
+	cmp dlo
+	bcc .dnext
+.dsub
+	sbc dlo
+	sta nlo
+	inc div_n0
+.dnext
+	dex
+	bne .d24
+	lda div_n2
+	beq .d16
+	lda #$ff
+	sta div_n0
+	sta div_n1
+.d16
+	rts
+
+; Unsigned nlo:nhi → prod = 32*log2(n). Clobbers nlo/nhi, mul_a, mul_b.
+log16
+	lda #0
+	sta mul_a
+	lda nlo
+	ora nhi
+	bne .lp
+.lz
+	sta prod_l
+	sta prod_h
+	rts
+.lp
+	lda nhi
+	bmi .mant
+	asl nlo
+	rol nhi
+	inc mul_a
+	lda mul_a
+	cmp #16
+	bcc .lp
+.mant
+	ldx nhi
+	beq .lz
+	lda LOGTAB,x
+	sta prod_l
+	lda #0
+	sta prod_h
+	lda #8
+	sec
+	sbc mul_a
+	sta mul_b
+	lda #0
+	sta mul_a
+	lda mul_b
+	bpl +
+	dec mul_a
++
+	ldx #5
+.s5
+	asl mul_b
+	rol mul_a
+	dex
+	bne .s5
+	clc
+	lda prod_l
+	adc mul_b
+	sta prod_l
+	lda prod_h
+	adc mul_a
+	sta prod_h
+	rts
+
+; ylo:yhi * FOCAL / z_eye:z_eye_h → A signed, clamp PERSP_MAX
+persp88
+	lda yhi
+	sta mul_sign
+	bpl .px
+	sec
+	lda #0
+	sbc ylo
+	sta nlo
+	lda #0
+	sbc yhi
+	sta nhi
+	jmp .gx
+.px
+	lda ylo
+	sta nlo
+	lda yhi
+	sta nhi
+.gx
+	lda nlo
+	ora nhi
+	bne +
+	rts
++
+	jsr log16
+	lda prod_l
+	sta dlo
+	lda prod_h
+	sta dhi
+	lda z_eye
+	sta nlo
+	lda z_eye_h
+	sta nhi
+	ora nlo
+	bne +
+	lda #PERSP_MAX
+	jmp .s88
++
+	jsr log16
+	clc
+	lda dlo
+	adc #LOG_FOCAL
+	sta dlo
+	lda dhi
+	adc #0
+	sta dhi
+	sec
+	lda dlo
+	sbc prod_l
+	sta prod_l
+	lda dhi
+	sbc prod_h
+	bcc .z88
+	sta prod_h
+	jsr alog_fetch
+	cmp #PERSP_MAX
+	bcc .s88
+	lda #PERSP_MAX
+.s88
+	bit mul_sign
+	bpl +
+	eor #$ff
+	clc
+	adc #1
++
+	rts
+.z88
+	lda #0
+	rts
+
+; prod_h:prod_l = unsigned idx → A = alog[idx], 255 if idx>=512
+alog_fetch
+	lda prod_h
+	beq .p0
+	cmp #1
+	beq .p1
+	lda #255
+	rts
+.p1
+	ldx prod_l
+	lda ALOGHI,x
+	rts
+.p0
+	ldx prod_l
+	lda ALOGTAB,x
+	rts
+
+; atan2_yaw: rot0=dx, rot1=dz (signed) → A = yaw 0..255 (0=+Z, 64=+X).
+; Octant-fold + ATAN32[round(32*atan(i/32)/(π/4))]; error < 1 yaw tick.
+atan2_yaw
+	lda rot0
+	ora rot1
+	bne .a2go
+	rts
+.a2go
+	lda #0
+	sta rot2
+	lda rot0
+	bpl .a2dxp
+	inc rot2
+	eor #$ff
+	clc
+	adc #1
+.a2dxp
+	sta nlo				; |dx|
+	lda rot1
+	bpl .a2dzp
+	tax
+	lda rot2
+	ora #2
+	sta rot2
+	txa
+	eor #$ff
+	clc
+	adc #1
+.a2dzp
+	sta nhi				; |dz|
+	lda nlo
+	cmp nhi
+	bcc .a2ns
+	beq .a2ns
+	ldx nhi
+	ldy nlo
+	stx nlo				; min
+	sty nhi				; max
+	lda rot2
+	ora #4
+	sta rot2
+.a2ns
+	lda nlo
+	beq .a2z
+	sta e0x
+	lda #0
+	sta e0xh
+	asl e0x
+	rol e0xh
+	asl e0x
+	rol e0xh
+	asl e0x
+	rol e0xh
+	asl e0x
+	rol e0xh
+	asl e0x
+	rol e0xh
+	ldx #0
+.a2div
+	lda e0xh
+	bne .a2sub
+	lda e0x
+	cmp nhi
+	bcc .a2got
+.a2sub
+	sec
+	lda e0x
+	sbc nhi
+	sta e0x
+	lda e0xh
+	sbc #0
+	sta e0xh
+	inx
+	bne .a2div
+.a2got
+	lda ATAN32,x
+	jmp .a2app
+.a2z
+	lda #0
+.a2app
+	sta nlo
+	lda rot2
+	and #4
+	beq .a2nsw
+	sec
+	lda #64
+	sbc nlo
+	sta nlo
+.a2nsw
+	lda rot2
+	and #2
+	beq .a2nz
+	sec
+	lda #128
+	sbc nlo
+	sta nlo
+.a2nz
+	lda rot2
+	and #1
+	beq .a2nx
+	sec
+	lda #0
+	sbc nlo
+	sta nlo
+.a2nx
+	lda nlo
+	rts
+
+ATAN32
+	!byte 0,1,3,4,5,6,8,9,10,11,12,13,15,16,17
+	!byte 18,19,20,21,22,23,24,25,25,26,27,28,29,29,30,31,31,32
+
+; 8-bit Galois LFSR, x^8+x^4+x^3+x^2+1. Period 255. Seed must stay nonzero.
+; The old 9*x+193 LCG left bits 0–2 as a counter, so and #3 / and #7 were not random.
+GetRandom8
+rnd8
+	lda random8
+	asl
+	bcc +
+	eor #$1D
++
+	sta random8
+	rts

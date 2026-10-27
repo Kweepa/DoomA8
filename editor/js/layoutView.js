@@ -1,0 +1,1537 @@
+import {
+  KINDS,
+  ROOM_BG_DEFAULT,
+  aabbCenter,
+  a8Hex,
+  a8InkHex,
+  clampObject,
+  objectVisible,
+  activeMap,
+  WORLD_SIZE,
+  enemyPlacementWorldVerts,
+  findEnemyTemplate,
+  isFigureObject,
+  isGhostKind,
+  figureTemplateName,
+  clampEnemyRot,
+  roomGeometry,
+  preserveRoomSplits,
+  applyRoomSplitDelta,
+  assignDoorRooms,
+  alignSwitchToContact,
+  rayCrateSwitchFace,
+  rayRoomHull,
+  xzOnRoomFloor,
+  roomById,
+  itemMeshFor,
+  itemMeshWorldSegs,
+  layoutSearchTerms,
+  objectMatchesLayoutSearch,
+  elevStopBottoms,
+} from "./model.js";
+import {
+  BOX_EDGES,
+  cornerWorld,
+  distPointToSegment2d,
+  faceCorners,
+  intersectPlane,
+  NEAR,
+  lookVectors,
+  projectLine,
+  projectPoint,
+  rayAabb,
+  rayTriangle,
+  screenRay,
+  worldToCamera,
+} from "./math3d.js";
+import {
+  GIZMO_FALLBACK_LEN,
+  drawTranslateGizmo,
+  gizmoAxisDragDelta,
+  gizmoMetrics,
+  hitTranslateGizmo,
+} from "./gizmo.js";
+
+function hexAlpha(hex, alpha) {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+/** Ramp AABB wireframe without the y=max face (open top). */
+const SLOPE_TOP = new Set([2, 3, 6, 7]);
+const SLOPE_BOX_EDGES = BOX_EDGES.filter(([i, j]) => !(SLOPE_TOP.has(i) && SLOPE_TOP.has(j)));
+
+function edgeKey(i, j) {
+  return i < j ? `${i},${j}` : `${j},${i}`;
+}
+
+/** Verticals on the low run face — phantom y=max corners, not part of the ramp. */
+function rampPhantomVerticals(obj) {
+  if (obj.axis === "x") {
+    return obj.dir === 1
+      ? [
+          [3, 0],
+          [7, 4],
+        ]
+      : [
+          [1, 2],
+          [5, 6],
+        ];
+  }
+  return obj.dir === 1
+    ? [
+        [1, 2],
+        [3, 0],
+      ]
+    : [
+        [5, 6],
+        [7, 4],
+      ];
+}
+
+function rampBoxEdges(obj) {
+  const drop = new Set(rampPhantomVerticals(obj).map(([i, j]) => edgeKey(i, j)));
+  return SLOPE_BOX_EDGES.filter(([i, j]) => !drop.has(edgeKey(i, j)));
+}
+
+function rampCorners(obj) {
+  const lowY = obj.y;
+  const highY = obj.y + obj.sy;
+  if (obj.axis === "x") {
+    const x0 = obj.dir === 1 ? obj.x : obj.x + obj.sx;
+    const x1 = obj.dir === 1 ? obj.x + obj.sx : obj.x;
+    return {
+      p0: { x: x0, y: lowY, z: obj.z },
+      p1: { x: x0, y: lowY, z: obj.z + obj.sz },
+      p2: { x: x1, y: highY, z: obj.z + obj.sz },
+      p3: { x: x1, y: highY, z: obj.z },
+    };
+  }
+  const z0 = obj.dir === 1 ? obj.z : obj.z + obj.sz;
+  const z1 = obj.dir === 1 ? obj.z + obj.sz : obj.z;
+  return {
+    p0: { x: obj.x, y: lowY, z: z0 },
+    p1: { x: obj.x + obj.sx, y: lowY, z: z0 },
+    p2: { x: obj.x + obj.sx, y: highY, z: z1 },
+    p3: { x: obj.x, y: highY, z: z1 },
+  };
+}
+
+/** Open-top AABB plus ramp surface sides and ridge. */
+function rampSegments(obj) {
+  const segs = [];
+  for (const [i, j] of rampBoxEdges(obj)) {
+    segs.push({ a: cornerWorld(obj, i), b: cornerWorld(obj, j) });
+  }
+  const { p0, p1, p2, p3 } = rampCorners(obj);
+  segs.push({ a: p0, b: p3 }, { a: p1, b: p2 }, { a: p3, b: p2 });
+  return segs;
+}
+
+const HANDLE = 7;
+const LINE_HIT = 8;
+const LAYOUT_BOX_CLICK = 4;
+const ZOOM_K = 0.008;
+
+export class LayoutView {
+  /**
+   * @param {HTMLCanvasElement} canvas
+   * @param {object} opts
+   */
+  constructor(canvas, opts) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext("2d");
+    this.opts = opts;
+    this.camera = {
+      x: 28,
+      y: 10,
+      z: -6,
+      yaw: 0.35,
+      pitch: -0.2,
+      speed: 28,
+    };
+    this.keys = new Set();
+    this.look = false;
+    this.orbit = null;
+    this.pan = null;
+    this.zoom = null;
+    this.lastT = 0;
+    this.hoverId = null;
+    this.hoverGizmo = null;
+    this.drag = null;
+    this.gridY = 0;
+    this.placePreview = null;
+    this.placePreviewOverCanvas = false;
+    this.enabled = true;
+    this._ro = new ResizeObserver(() => this.resize());
+    this._ro.observe(opts.stage || canvas.parentElement);
+    this.resize();
+
+    canvas.addEventListener("pointerdown", (e) => this.#onDown(e));
+    canvas.addEventListener("pointermove", (e) => this.#onMove(e));
+    canvas.addEventListener("pointerup", (e) => this.#onUp(e));
+    canvas.addEventListener("pointerleave", (e) => this.#onUp(e));
+    canvas.addEventListener("wheel", (e) => this.#onWheel(e), { passive: false });
+    canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+    canvas.addEventListener("mousedown", (e) => {
+      if (e.button === 1) e.preventDefault();
+    });
+    canvas.addEventListener("auxclick", (e) => {
+      if (e.button === 1) e.preventDefault();
+    });
+    window.addEventListener("keydown", (e) => this.#onKey(e, true));
+    window.addEventListener("keyup", (e) => this.#onKey(e, false));
+
+    this._raf = (t) => {
+      if (this.enabled) this.#tick(t);
+      else this.lastT = t;
+      requestAnimationFrame(this._raf);
+    };
+    requestAnimationFrame(this._raf);
+  }
+
+  resize() {
+    if (!this.enabled) return;
+    const stage = this.opts.stage || this.canvas.parentElement;
+    const rect = stage.getBoundingClientRect();
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const w = Math.max(64, Math.floor(rect.width));
+    const h = Math.max(64, Math.floor(rect.height));
+    this.canvas.width = Math.floor(w * dpr);
+    this.canvas.height = Math.floor(h * dpr);
+    this.canvas.style.width = `${w}px`;
+    this.canvas.style.height = `${h}px`;
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.cssW = w;
+    this.cssH = h;
+    this.draw();
+  }
+
+  setPlacePreview(obj, overCanvas) {
+    this.placePreview = obj;
+    this.placePreviewOverCanvas = overCanvas;
+  }
+
+  clearPlacePreview() {
+    this.placePreview = null;
+    this.placePreviewOverCanvas = false;
+  }
+
+  #focused() {
+    return document.activeElement === this.canvas;
+  }
+
+  #onKey(e, down) {
+    if (!this.enabled) return;
+    if (!this.#focused() && down) return;
+    const k = e.key.toLowerCase();
+    if ("wasdqe".includes(k) || k === "shift") {
+      if (down) this.keys.add(k);
+      else this.keys.delete(k);
+      if (down) e.preventDefault();
+    }
+  }
+
+  #tick(t) {
+    const dt = this.lastT ? Math.min(0.05, (t - this.lastT) / 1000) : 0;
+    this.lastT = t;
+    let moved = false;
+    if (this.#focused()) {
+      const { forward, right, up } = lookVectors(this.camera.yaw, this.camera.pitch);
+      const boost = this.keys.has("shift") ? 3 : 1;
+      const sp = this.camera.speed * boost * dt;
+      if (this.keys.has("w")) {
+        this.camera.x += forward.x * sp;
+        this.camera.y += forward.y * sp;
+        this.camera.z += forward.z * sp;
+        moved = true;
+      }
+      if (this.keys.has("s")) {
+        this.camera.x -= forward.x * sp;
+        this.camera.y -= forward.y * sp;
+        this.camera.z -= forward.z * sp;
+        moved = true;
+      }
+      if (this.keys.has("d")) {
+        this.camera.x += right.x * sp;
+        this.camera.y += right.y * sp;
+        this.camera.z += right.z * sp;
+        moved = true;
+      }
+      if (this.keys.has("a")) {
+        this.camera.x -= right.x * sp;
+        this.camera.y -= right.y * sp;
+        this.camera.z -= right.z * sp;
+        moved = true;
+      }
+      if (this.keys.has("e")) {
+        this.camera.x += up.x * sp;
+        this.camera.y += up.y * sp;
+        this.camera.z += up.z * sp;
+        moved = true;
+      }
+      if (this.keys.has("q")) {
+        this.camera.x -= up.x * sp;
+        this.camera.y -= up.y * sp;
+        this.camera.z -= up.z * sp;
+        moved = true;
+      }
+    }
+    if (moved) this.opts.onViewChanged?.();
+    this.draw();
+  }
+
+  #eventPos(e) {
+    const rect = this.canvas.getBoundingClientRect();
+    return {
+      x: ((e.clientX - rect.left) / rect.width) * this.cssW,
+      y: ((e.clientY - rect.top) / rect.height) * this.cssH,
+    };
+  }
+
+  #selectedIds() {
+    return this.opts.getSelectedIds?.() || [];
+  }
+
+  #primaryId() {
+    const ids = this.#selectedIds();
+    return ids.length ? ids[ids.length - 1] : null;
+  }
+
+  #onWheel(e) {
+    if (!this.enabled) return;
+    e.preventDefault();
+    this.canvas.focus();
+    const { forward } = lookVectors(this.camera.yaw, this.camera.pitch);
+    const notches = e.deltaY / 100;
+    const dist = -notches * this.camera.speed * 0.35;
+    this.camera.x += forward.x * dist;
+    this.camera.y += forward.y * dist;
+    this.camera.z += forward.z * dist;
+    this.opts.onViewChanged?.();
+    this.draw();
+  }
+
+  #onDown(e) {
+    if (!this.enabled) return;
+    this.canvas.focus();
+    const p = this.#eventPos(e);
+    if (e.button === 1) {
+      if (e.altKey) {
+        this.orbit = this.#beginOrbit(p);
+      } else {
+        this.pan = this.#beginOrbit(p);
+      }
+      this.canvas.setPointerCapture(e.pointerId);
+      return;
+    }
+    if (e.button === 2) {
+      if (e.altKey) {
+        this.zoom = this.#beginOrbit(p);
+        this.canvas.setPointerCapture(e.pointerId);
+        return;
+      }
+      this.look = true;
+      this.lookLast = p;
+      this.canvas.setPointerCapture(e.pointerId);
+      return;
+    }
+    if (e.button !== 0) return;
+    if (e.altKey) {
+      e.preventDefault();
+      this.orbit = this.#beginOrbit(p);
+      this.canvas.setPointerCapture(e.pointerId);
+      return;
+    }
+
+    const doc = this.opts.getDoc();
+    const primary = this.#primaryId();
+    const hitHandle = primary ? this.#hitHandle(doc, primary, p.x, p.y) : null;
+    if (hitHandle) {
+      this.opts.beginUndo?.();
+      const ids = this.#selectedIds().length ? this.#selectedIds() : [primary];
+      this.drag = this.#makeTransformDrag(doc, ids, hitHandle, p);
+      this.canvas.setPointerCapture(e.pointerId);
+      return;
+    }
+
+    this.drag = { kind: "box", start: p, end: p, additive: e.shiftKey };
+    this.canvas.setPointerCapture(e.pointerId);
+  }
+
+  #makeTransformDrag(doc, ids, handle, p) {
+    const objs = activeMap(doc).objects;
+    const origs = ids
+      .map((id) => objs.find((o) => o.id === id))
+      .filter(Boolean)
+      .map((o) => ({
+        ...o,
+        cuts: (o.cuts || []).map((c) => ({ su: c.su | 0, sv: c.sv | 0 })),
+      }));
+    const contents = [];
+    const claimed = new Set(ids);
+    for (const o of origs) {
+      if (o.kind !== "room") continue;
+      for (const other of objs) {
+        if (other.kind === "room" || other.kind === "doorway" || claimed.has(other.id)) continue;
+        if (other.roomId !== o.id) continue;
+        claimed.add(other.id);
+        contents.push({ ...other });
+      }
+    }
+    const primaryObj = objs.find((o) => o.id === ids[ids.length - 1]) || origs[0];
+    const gizmo = primaryObj
+      ? gizmoMetrics(aabbCenter(primaryObj), this.camera, this.cssW, this.cssH)
+      : { axisLen: GIZMO_FALLBACK_LEN, planeLen: GIZMO_FALLBACK_LEN / 3 };
+    return {
+      kind: handle.kind,
+      axis: handle.axis,
+      plane: handle.plane,
+      key: handle.key,
+      side: handle.side,
+      scale: handle.scale,
+      start: p,
+      origs,
+      contents,
+      grab: handle.world,
+      planeN: handle.planeN || lookVectors(this.camera.yaw, this.camera.pitch).forward,
+      primaryId: ids[ids.length - 1],
+      gizmoAxisLen: handle.gizmoAxisLen ?? gizmo.axisLen,
+    };
+  }
+
+  #beginOrbit(p) {
+    const cam = this.camera;
+    const doc = this.opts.getDoc();
+    const hit = this.#pick(doc, p.x, p.y);
+    let obj = hit ? activeMap(doc).objects.find((o) => o.id === hit.id) || null : null;
+    if (!obj) obj = this.#closestRoomToCursor(doc, p.x, p.y);
+    let target;
+    if (obj) {
+      target = aabbCenter(obj);
+    } else {
+      const ray = screenRay(p.x, p.y, cam, this.cssW, this.cssH);
+      const hit = intersectPlane(ray.origin, ray.dir, { x: 0, y: this.gridY, z: 0 }, { x: 0, y: 1, z: 0 });
+      if (hit && hit.t >= 1) {
+        target = hit.point;
+      } else {
+        const dist = Math.max(48, cam.speed * 2.5);
+        const { forward } = lookVectors(cam.yaw, cam.pitch);
+        target = { x: cam.x + forward.x * dist, y: cam.y + forward.y * dist, z: cam.z + forward.z * dist };
+      }
+    }
+    const local = worldToCamera(target, cam);
+    if (local.z < 1) local.z = 1;
+    return { last: p, target, local };
+  }
+
+  #setCamFromTarget(target, local) {
+    const cam = this.camera;
+    const { forward, right, up } = lookVectors(cam.yaw, cam.pitch);
+    cam.x = target.x - right.x * local.x - up.x * local.y - forward.x * local.z;
+    cam.y = target.y - right.y * local.x - up.y * local.y - forward.y * local.z;
+    cam.z = target.z - right.z * local.x - up.z * local.y - forward.z * local.z;
+  }
+
+  #screenDistToAabb(box, mx, my, cam, w, h) {
+    let minx = Infinity;
+    let miny = Infinity;
+    let maxx = -Infinity;
+    let maxy = -Infinity;
+    let any = false;
+    for (let i = 0; i < 8; i++) {
+      const pr = projectPoint(cornerWorld(box, i), cam, w, h);
+      if (!pr.ok) continue;
+      any = true;
+      minx = Math.min(minx, pr.sx);
+      miny = Math.min(miny, pr.sy);
+      maxx = Math.max(maxx, pr.sx);
+      maxy = Math.max(maxy, pr.sy);
+    }
+    if (!any) return Infinity;
+    const dx = mx < minx ? minx - mx : mx > maxx ? mx - maxx : 0;
+    const dy = my < miny ? miny - my : my > maxy ? my - maxy : 0;
+    return Math.hypot(dx, dy);
+  }
+
+  #closestRoomToCursor(doc, mx, my) {
+    const cam = this.camera;
+    const w = this.cssW;
+    const h = this.cssH;
+    let best = null;
+    let bestD = Infinity;
+    let bestDepth = Infinity;
+    for (const obj of this.#visibleObjects(doc)) {
+      if (obj.kind !== "room") continue;
+      let d = Infinity;
+      for (const c of roomGeometry(obj).colliders) {
+        const cd = this.#screenDistToAabb(c, mx, my, cam, w, h);
+        if (cd < d) d = cd;
+      }
+      if (d === Infinity) continue;
+      const c = aabbCenter(obj);
+      const depth = (c.x - cam.x) ** 2 + (c.y - cam.y) ** 2 + (c.z - cam.z) ** 2;
+      if (d < bestD - 0.01 || (Math.abs(d - bestD) < 0.01 && depth < bestDepth)) {
+        bestD = d;
+        bestDepth = depth;
+        best = obj;
+      }
+    }
+    return best;
+  }
+
+  #applyOrbit(p) {
+    const o = this.orbit;
+    const cam = this.camera;
+    const dx = p.x - o.last.x;
+    const dy = p.y - o.last.y;
+    o.last = p;
+    if (!dx && !dy) return;
+
+    cam.yaw += dx * 0.008;
+    cam.pitch = Math.max(-1.4, Math.min(1.4, cam.pitch - dy * 0.008));
+    this.#setCamFromTarget(o.target, o.local);
+  }
+
+  #applyPan(p) {
+    const pan = this.pan;
+    const cam = this.camera;
+    const dx = p.x - pan.last.x;
+    const dy = p.y - pan.last.y;
+    pan.last = p;
+    if (!dx && !dy) return;
+
+    const focal = Math.min(this.cssW, this.cssH) * 0.9;
+    const scale = pan.local.z / focal;
+    const { right, up } = lookVectors(cam.yaw, cam.pitch);
+    cam.x += (-right.x * dx + up.x * dy) * scale;
+    cam.y += (-right.y * dx + up.y * dy) * scale;
+    cam.z += (-right.z * dx + up.z * dy) * scale;
+  }
+
+  #applyZoom(p) {
+    const z = this.zoom;
+    const dx = p.x - z.last.x;
+    const dy = p.y - z.last.y;
+    z.last = p;
+    const delta = dx + dy;
+    if (!delta) return;
+
+    z.local.z = Math.max(1, z.local.z * Math.exp(-delta * ZOOM_K));
+    this.#setCamFromTarget(z.target, z.local);
+  }
+
+  #onMove(e) {
+    if (!this.enabled) return;
+    const p = this.#eventPos(e);
+    if (this.orbit) {
+      this.#applyOrbit(p);
+      return;
+    }
+    if (this.pan) {
+      this.#applyPan(p);
+      return;
+    }
+    if (this.zoom) {
+      this.#applyZoom(p);
+      return;
+    }
+    if (this.look) {
+      const dx = p.x - this.lookLast.x;
+      const dy = p.y - this.lookLast.y;
+      this.lookLast = p;
+      this.camera.yaw += dx * 0.008;
+      this.camera.pitch = Math.max(-1.4, Math.min(1.4, this.camera.pitch - dy * 0.008));
+      return;
+    }
+    if (this.drag?.kind === "box") {
+      this.drag.end = p;
+      this.draw();
+      return;
+    }
+    if (this.drag) {
+      this.#applyDrag(p);
+      this.opts.onChange?.();
+      return;
+    }
+    const doc = this.opts.getDoc();
+    const primary = this.#primaryId();
+    this.hoverGizmo = primary ? this.#hitHandle(doc, primary, p.x, p.y) : null;
+    this.hoverId = this.#pick(doc, p.x, p.y)?.id || null;
+  }
+
+  #onUp(e) {
+    if (!this.enabled) return;
+    const viewEnded = this.look || this.orbit || this.pan || this.zoom;
+    if (this.look) this.look = false;
+    if (this.orbit) this.orbit = null;
+    if (this.pan) this.pan = null;
+    if (this.zoom) this.zoom = null;
+    if (this.drag?.kind === "box") this.#finishBox();
+    else if (this.drag && this.drag.kind !== "select") {
+      this.#finishTransform();
+      this.opts.endUndo?.();
+    }
+    this.drag = null;
+    if (viewEnded) this.opts.onViewChanged?.();
+    try {
+      this.canvas.releasePointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
+    this.draw();
+  }
+
+  #finishTransform() {
+    const d = this.drag;
+    if (!d || (d.kind !== "move" && d.kind !== "axis" && d.kind !== "plane")) return;
+    const doc = this.opts.getDoc();
+    const objs = activeMap(doc).objects;
+    for (const orig of d.origs) {
+      const obj = objs.find((o) => o.id === orig.id);
+      if (!obj) continue;
+      if (obj.kind === "doorway") {
+        assignDoorRooms(doc, obj, roomById(doc, obj.roomId), false);
+        clampObject(obj);
+      } else if (obj.kind === "switch") {
+        alignSwitchToContact(
+          obj,
+          objs.filter((o) => o.kind === "room"),
+          objs.filter((o) => o.kind === "crate")
+        );
+        clampObject(obj);
+      }
+    }
+  }
+
+  #axisDelta(p, grab, axis, start, axisLen) {
+    return gizmoAxisDragDelta(p, grab, axis, start, axisLen, this.camera, this.cssW, this.cssH);
+  }
+
+  #applyFaceDelta(obj, orig, side, delta) {
+    const min = 1;
+    obj.x = orig.x;
+    obj.y = orig.y;
+    obj.z = orig.z;
+    obj.sx = orig.sx;
+    obj.sy = orig.sy;
+    obj.sz = orig.sz;
+    if (side === "x1") obj.sx = Math.max(min, orig.sx + delta);
+    else if (side === "x0") {
+      const x1 = orig.x + orig.sx;
+      obj.x = Math.min(x1 - min, orig.x + delta);
+      obj.sx = x1 - obj.x;
+    } else if (side === "y1") obj.sy = Math.max(min, orig.sy + delta);
+    else if (side === "y0") {
+      const y1 = orig.y + orig.sy;
+      obj.y = Math.min(y1 - min, orig.y + delta);
+      obj.sy = y1 - obj.y;
+    } else if (side === "z1") obj.sz = Math.max(min, orig.sz + delta);
+    else if (side === "z0") {
+      const z1 = orig.z + orig.sz;
+      obj.z = Math.min(z1 - min, orig.z + delta);
+      obj.sz = z1 - obj.z;
+    }
+  }
+
+  #boxRect() {
+    const a = this.drag.start;
+    const b = this.drag.end;
+    const x0 = Math.min(a.x, b.x);
+    const y0 = Math.min(a.y, b.y);
+    const x1 = Math.max(a.x, b.x);
+    const y1 = Math.max(a.y, b.y);
+    return { x0, y0, x1, y1, w: x1 - x0, h: y1 - y0 };
+  }
+
+  #finishBox() {
+    const rect = this.#boxRect();
+    const additive = this.drag.additive;
+    if (rect.w < LAYOUT_BOX_CLICK && rect.h < LAYOUT_BOX_CLICK) {
+      const hit = this.#pick(this.opts.getDoc(), this.drag.start.x, this.drag.start.y);
+      if (hit) {
+        if (additive) this.opts.onToggleSelect?.(hit.id);
+        else this.opts.onSelectIds?.([hit.id]);
+      } else if (!additive) {
+        this.opts.onSelectIds?.([]);
+      }
+      return;
+    }
+    const doc = this.opts.getDoc();
+    const cam = this.camera;
+    const w = this.cssW;
+    const h = this.cssH;
+    const hits = [];
+    for (const obj of this.#visibleObjects(doc)) {
+      let inside = false;
+      for (let i = 0; i < 8; i++) {
+        const pr = projectPoint(cornerWorld(obj, i), cam, w, h);
+        if (!pr.ok) continue;
+        if (pr.sx >= rect.x0 && pr.sx <= rect.x1 && pr.sy >= rect.y0 && pr.sy <= rect.y1) {
+          inside = true;
+          break;
+        }
+      }
+      if (!inside) {
+        const c = projectPoint(aabbCenter(obj), cam, w, h);
+        if (c.ok && c.sx >= rect.x0 && c.sx <= rect.x1 && c.sy >= rect.y0 && c.sy <= rect.y1) {
+          inside = true;
+        }
+      }
+      if (inside) hits.push(obj.id);
+    }
+    this.opts.onSelectIds?.(hits, additive);
+  }
+
+  #applyDrag(p) {
+    const doc = this.opts.getDoc();
+    const objs = activeMap(doc).objects;
+    const ray = screenRay(p.x, p.y, this.camera, this.cssW, this.cssH);
+    const d = this.drag;
+
+    if (d.kind === "move") {
+      const hit = intersectPlane(ray.origin, ray.dir, d.grab, d.planeN);
+      if (!hit) return;
+      const dx = Math.round(hit.point.x - d.grab.x);
+      const dy = Math.round(hit.point.y - d.grab.y);
+      const dz = Math.round(hit.point.z - d.grab.z);
+      for (const orig of d.origs) {
+        const obj = objs.find((o) => o.id === orig.id);
+        if (!obj) continue;
+        obj.x = orig.x + dx;
+        obj.y = orig.y + dy;
+        obj.z = orig.z + dz;
+        clampObject(obj);
+      }
+      for (const orig of d.contents) {
+        const obj = objs.find((o) => o.id === orig.id);
+        if (!obj) continue;
+        obj.x = orig.x + dx;
+        obj.y = orig.y + dy;
+        obj.z = orig.z + dz;
+        clampObject(obj);
+      }
+      return;
+    }
+
+    if (d.kind === "axis") {
+      const delta = this.#axisDelta(p, d.grab, d.axis, d.start, d.gizmoAxisLen ?? GIZMO_FALLBACK_LEN);
+      if (delta == null) return;
+      for (const orig of d.origs) {
+        const obj = objs.find((o) => o.id === orig.id);
+        if (!obj) continue;
+        obj[d.axis] = orig[d.axis] + delta;
+        clampObject(obj);
+      }
+      for (const orig of d.contents) {
+        const obj = objs.find((o) => o.id === orig.id);
+        if (!obj) continue;
+        obj[d.axis] = orig[d.axis] + delta;
+        clampObject(obj);
+      }
+      return;
+    }
+
+    if (d.kind === "plane") {
+      const hit = intersectPlane(ray.origin, ray.dir, d.grab, d.planeN);
+      if (!hit) return;
+      let dx = Math.round(hit.point.x - d.grab.x);
+      let dy = Math.round(hit.point.y - d.grab.y);
+      let dz = Math.round(hit.point.z - d.grab.z);
+      if (d.plane === "xy") dz = 0;
+      else if (d.plane === "xz") dy = 0;
+      else if (d.plane === "yz") dx = 0;
+      for (const orig of d.origs) {
+        const obj = objs.find((o) => o.id === orig.id);
+        if (!obj) continue;
+        obj.x = orig.x + dx;
+        obj.y = orig.y + dy;
+        obj.z = orig.z + dz;
+        clampObject(obj);
+      }
+      for (const orig of d.contents) {
+        const obj = objs.find((o) => o.id === orig.id);
+        if (!obj) continue;
+        obj.x = orig.x + dx;
+        obj.y = orig.y + dy;
+        obj.z = orig.z + dz;
+        clampObject(obj);
+      }
+      return;
+    }
+
+    if (d.kind === "split") {
+      const orig = d.origs.find((o) => o.id === d.primaryId) || d.origs[0];
+      const obj = objs.find((o) => o.id === orig.id);
+      if (!obj || obj.kind !== "room") return;
+      const delta = this.#axisDelta(p, d.grab, d.axis, d.start, d.gizmoAxisLen ?? GIZMO_FALLBACK_LEN);
+      if (delta == null) return;
+      applyRoomSplitDelta(obj, orig, d.key, delta * (d.scale || 1));
+      clampObject(obj);
+      return;
+    }
+
+    if (d.kind === "face") {
+      const orig = d.origs.find((o) => o.id === d.primaryId) || d.origs[0];
+      const obj = objs.find((o) => o.id === orig.id);
+      if (!obj || KINDS[obj.kind].fixed) return;
+      const delta = this.#axisDelta(p, d.grab, d.axis, d.start, d.gizmoAxisLen ?? GIZMO_FALLBACK_LEN);
+      if (delta == null) return;
+      this.#applyFaceDelta(obj, orig, d.side, delta);
+      if (obj.kind === "room") preserveRoomSplits(obj, orig);
+      clampObject(obj);
+    }
+  }
+
+  #visibleObjects(doc) {
+    const local = this.opts.getLocalMode?.() || false;
+    const focus = this.opts.getFocusRoom?.() || null;
+    const neighbours = !!(local && this.opts.getNeighbourMode?.());
+    const roomsOnly = !!this.opts.getRoomsOnlyMode?.();
+    return activeMap(doc).objects.filter((o) =>
+      objectVisible(doc, o, local, focus, neighbours, roomsOnly)
+    );
+  }
+
+  #objectSegments(doc, obj) {
+    /** @type {{a:{x:number,y:number,z:number},b:{x:number,y:number,z:number}}[]} */
+    const segs = [];
+    if (obj.kind === "room") {
+      const g = roomGeometry(obj);
+      for (const e of g.edges) {
+        segs.push({ a: g.verts[e.a], b: g.verts[e.b] });
+      }
+      return segs;
+    }
+    if (isFigureObject(obj)) {
+      const tmpl = findEnemyTemplate(doc, figureTemplateName(obj));
+      const verts = enemyPlacementWorldVerts(obj, tmpl);
+      if (tmpl && verts.length) {
+        for (const [i, j] of tmpl.lines) {
+          if (verts[i] && verts[j]) segs.push({ a: verts[i], b: verts[j] });
+        }
+      }
+      for (const [i, j] of BOX_EDGES) {
+        segs.push({ a: cornerWorld(obj, i), b: cornerWorld(obj, j) });
+      }
+      return segs;
+    }
+    if (obj.kind === "platform") {
+      const y = (obj.y | 0) + (obj.sy | 0);
+      segs.push(
+        { a: { x: obj.x, y, z: obj.z }, b: { x: obj.x + obj.sx, y, z: obj.z } },
+        { a: { x: obj.x + obj.sx, y, z: obj.z }, b: { x: obj.x + obj.sx, y, z: obj.z + obj.sz } },
+        { a: { x: obj.x + obj.sx, y, z: obj.z + obj.sz }, b: { x: obj.x, y, z: obj.z + obj.sz } },
+        { a: { x: obj.x, y, z: obj.z + obj.sz }, b: { x: obj.x, y, z: obj.z } }
+      );
+      return segs;
+    }
+    if (obj.kind === "pickup") {
+      const mesh = itemMeshFor(doc, obj.pickup);
+      for (const s of itemMeshWorldSegs(obj, mesh)) segs.push(s);
+      return segs;
+    }
+    if (obj.kind === "slope") {
+      for (const s of rampSegments(obj)) segs.push(s);
+      return segs;
+    }
+    for (const [i, j] of BOX_EDGES) {
+      segs.push({ a: cornerWorld(obj, i), b: cornerWorld(obj, j) });
+    }
+    for (const s of this.#glyphSegments(obj)) segs.push(s);
+    return segs;
+  }
+
+  #glyphSegments(obj) {
+    const segs = [];
+    if (obj.kind === "switch") {
+      const f = faceCorners(obj.face);
+      const a = cornerWorld(obj, f[0]);
+      const b = cornerWorld(obj, f[1]);
+      const c = cornerWorld(obj, f[2]);
+      const d = cornerWorld(obj, f[3]);
+      const apex = {
+        x: (a.x + b.x + c.x + d.x) / 4,
+        y: Math.max(a.y, b.y, c.y, d.y),
+        z: (a.z + b.z + c.z + d.z) / 4,
+      };
+      const left = { x: (a.x + d.x) / 2, y: (a.y + d.y) / 2, z: (a.z + d.z) / 2 };
+      const right = { x: (b.x + c.x) / 2, y: (b.y + c.y) / 2, z: (b.z + c.z) / 2 };
+      segs.push({ a: apex, b: left }, { a: left, b: right }, { a: right, b: apex });
+    }
+    if (obj.kind === "teleporter_dest") {
+      const c = aabbCenter(obj);
+      if (obj.keepFacing) {
+        segs.push(
+          { a: { x: c.x - 1.5, y: c.y, z: c.z }, b: { x: c.x + 1.5, y: c.y, z: c.z } },
+          { a: { x: c.x, y: c.y, z: c.z - 1.5 }, b: { x: c.x, y: c.y, z: c.z + 1.5 } }
+        );
+        return segs;
+      }
+      const rot = clampEnemyRot(obj.rot ?? 0);
+      const th = (rot * Math.PI) / 4;
+      const fx = Math.sin(th);
+      const fz = Math.cos(th);
+      segs.push(
+        { a: c, b: { x: c.x + fx * 4, y: c.y, z: c.z + fz * 4 } },
+        {
+          a: { x: c.x + fx * 4, y: c.y, z: c.z + fz * 4 },
+          b: { x: c.x + fx * 2 - fz * 1.5, y: c.y, z: c.z + fz * 2 + fx * 1.5 },
+        },
+        {
+          a: { x: c.x + fx * 4, y: c.y, z: c.z + fz * 4 },
+          b: { x: c.x + fx * 2 + fz * 1.5, y: c.y, z: c.z + fz * 2 - fx * 1.5 },
+        }
+      );
+    }
+    return segs;
+  }
+
+  #pick(doc, mx, my) {
+    const cam = this.camera;
+    const w = this.cssW;
+    const h = this.cssH;
+    let bestLine = null;
+    for (const obj of this.#visibleObjects(doc)) {
+      for (const seg of this.#objectSegments(doc, obj)) {
+        const pl = projectLine(seg.a, seg.b, cam, w, h);
+        if (!pl) continue;
+        const d = distPointToSegment2d(mx, my, pl.ax, pl.ay, pl.bx, pl.by);
+        if (d > LINE_HIT) continue;
+        const mid = {
+          x: (seg.a.x + seg.b.x) / 2,
+          y: (seg.a.y + seg.b.y) / 2,
+          z: (seg.a.z + seg.b.z) / 2,
+        };
+        const depth =
+          (mid.x - cam.x) ** 2 + (mid.y - cam.y) ** 2 + (mid.z - cam.z) ** 2;
+        if (!bestLine || d < bestLine.d - 0.01 || (Math.abs(d - bestLine.d) < 0.01 && depth < bestLine.depth)) {
+          bestLine = { id: obj.id, d, depth, point: mid };
+        }
+      }
+    }
+    if (bestLine) return { id: bestLine.id, t: bestLine.depth, point: bestLine.point };
+
+    const ray = screenRay(mx, my, cam, w, h);
+    let best = null;
+    for (const obj of this.#visibleObjects(doc)) {
+      if (obj.kind === "room") {
+        const g = roomGeometry(obj);
+        for (const c of g.colliders) {
+          const hit = rayAabb(ray.origin, ray.dir, c);
+          if (hit && (!best || hit.t < best.t)) best = { id: obj.id, t: hit.t, point: hit.point };
+        }
+        continue;
+      }
+      const hit = rayAabb(ray.origin, ray.dir, obj);
+      if (!hit) continue;
+      if (!best || hit.t < best.t) best = { id: obj.id, t: hit.t, point: hit.point };
+    }
+    return best;
+  }
+
+  #hitHandle(doc, id, mx, my) {
+    const obj = activeMap(doc).objects.find((o) => o.id === id);
+    if (!obj) return null;
+    const cam = this.camera;
+    const w = this.cssW;
+    const h = this.cssH;
+    if (obj.kind === "room") {
+      const g = roomGeometry(obj);
+      for (const handle of g.handles) {
+        const pr = projectPoint(handle.world, cam, w, h);
+        if (!pr.ok) continue;
+        if (Math.hypot(mx - pr.sx, my - pr.sy) < HANDLE + 2) {
+          if (handle.kind === "face") {
+            return { kind: "face", side: handle.side, axis: handle.axis, world: handle.world };
+          }
+          return { kind: "split", key: handle.key, axis: handle.axis, scale: handle.scale, world: handle.world };
+        }
+      }
+    } else if (!KINDS[obj.kind].fixed) {
+      for (const handle of this.#aabbFaceHandles(obj)) {
+        const pr = projectPoint(handle.world, cam, w, h);
+        if (!pr.ok) continue;
+        if (Math.hypot(mx - pr.sx, my - pr.sy) < HANDLE + 2) {
+          return { kind: "face", side: handle.side, axis: handle.axis, world: handle.world };
+        }
+      }
+    }
+    const c = aabbCenter(obj);
+    const gizmoHit = hitTranslateGizmo(c, cam, w, h, mx, my, HANDLE + 1);
+    if (gizmoHit) return gizmoHit;
+    return null;
+  }
+
+  /** Selected room or owner of the newest selected object — not lastRoomId. */
+  #selectedPlaceRoom(doc) {
+    const ids = this.#selectedIds();
+    const objs = activeMap(doc).objects;
+    for (let i = ids.length - 1; i >= 0; i--) {
+      const obj = objs.find((o) => o.id === ids[i]);
+      if (!obj) continue;
+      if (obj.kind === "room") return obj;
+      const r = roomById(doc, obj.roomId);
+      if (r) return r;
+    }
+    return null;
+  }
+
+  /** Hull hit across rooms. Selected room wins if the ray hits it at all. */
+  #nearestRoomHull(rooms, ray, pred, focus) {
+    if (focus && rooms.some((r) => r.id === focus.id)) {
+      const hit = rayRoomHull(focus, ray.origin, ray.dir, pred);
+      if (hit) return { ...hit, room: focus };
+    }
+    let best = null;
+    for (const room of rooms) {
+      const hit = rayRoomHull(room, ray.origin, ray.dir, pred);
+      if (!hit) continue;
+      if (!best || hit.t < best.t) best = { ...hit, room };
+    }
+    return best;
+  }
+
+  /** Top of elevator / solid platform, or ramp surface. */
+  #rayWalkableTop(obj, ray) {
+    if (obj.kind === "elevator" || (obj.kind === "platform" && obj.collide !== false)) {
+      const y = (obj.y | 0) + (obj.sy | 0);
+      const hit = intersectPlane(ray.origin, ray.dir, { x: 0, y, z: 0 }, { x: 0, y: 1, z: 0 });
+      if (!hit) return null;
+      const p = hit.point;
+      if (p.x < obj.x || p.x > obj.x + obj.sx || p.z < obj.z || p.z > obj.z + obj.sz) return null;
+      return { t: hit.t, point: p, y };
+    }
+    if (obj.kind !== "slope") return null;
+    const { p0, p1, p2, p3 } = rampCorners(obj);
+    let best = null;
+    for (const tri of [
+      [p0, p1, p2],
+      [p0, p2, p3],
+    ]) {
+      const hit = rayTriangle(ray.origin, ray.dir, tri[0], tri[1], tri[2]);
+      if (hit && (!best || hit.t < best.t)) best = hit;
+    }
+    if (!best) return null;
+    return { t: best.t, point: best.point, y: best.point.y };
+  }
+
+  /** If a non-floor hull hit still maps onto a floor fragment, drop there (no ray slide). */
+  #floorPoseFromHull(hit, pose) {
+    const f = hit.face;
+    if (!f) return null;
+    if (f.axis === "y" && f.sign === -1) {
+      return pose(hit.point.x, Math.round(f.plane), hit.point.z, hit.room, true);
+    }
+    if (f.axis === "y") {
+      const floor = xzOnRoomFloor(hit.room, hit.point.x, hit.point.z);
+      if (!floor) return null;
+      return pose(hit.point.x, Math.round(floor.plane), hit.point.z, hit.room, true);
+    }
+    let x = hit.point.x;
+    let z = hit.point.z;
+    if (f.axis === "x") x = f.plane - f.sign;
+    else if (f.axis === "z") z = f.plane - f.sign;
+    const floor = xzOnRoomFloor(hit.room, x, z);
+    if (!floor) return null;
+    return pose(x, Math.round(floor.plane), z, hit.room, true);
+  }
+
+  /** Drop pose from screen: hull faces under the cursor; walkable tops beat floor. */
+  placeAtScreen(mx, my, kind) {
+    const doc = this.opts.getDoc();
+    const ray = screenRay(mx, my, this.camera, this.cssW, this.cssH);
+    const def = KINDS[kind] || KINDS.crate;
+    const sx = def.defaultSize[0];
+    const sz = def.defaultSize[2];
+    const pose = (x, y, z, room, floorSnap) => ({
+      x: Math.round(x - sx / 2),
+      y,
+      z: Math.round(z - sz / 2),
+      room,
+      floorSnap: floorSnap !== false,
+    });
+
+    if (kind !== "room") {
+      const visible = this.#visibleObjects(doc);
+      const visRooms = visible.filter((o) => o.kind === "room");
+      const focus = this.#selectedPlaceRoom(doc);
+
+      if (kind === "doorway" || kind === "switch") {
+        const wall = this.#nearestRoomHull(visRooms, ray, (f) => f.axis !== "y", focus);
+        let mount = wall
+          ? { t: wall.t, point: wall.point, face: wall.face, room: wall.room }
+          : null;
+        if (kind === "switch") {
+          for (const obj of visible) {
+            if (obj.kind !== "crate") continue;
+            const hit = rayCrateSwitchFace(obj, ray.origin, ray.dir);
+            if (!hit || (mount && hit.t >= mount.t)) continue;
+            mount = {
+              t: hit.t,
+              point: hit.point,
+              face: hit.face,
+              room: roomById(doc, obj.roomId) || mount?.room || null,
+            };
+          }
+        }
+        if (mount) {
+          return {
+            ...pose(
+              mount.point.x,
+              Math.round(mount.point.y - def.defaultSize[1] / 2),
+              mount.point.z,
+              mount.room,
+              false
+            ),
+            face: mount.face,
+            hitY: mount.point.y,
+          };
+        }
+      } else {
+        const floorHit = this.#nearestRoomHull(
+          visRooms,
+          ray,
+          (f) => f.axis === "y" && f.sign === -1,
+          focus
+        );
+        let walk = null;
+        for (const obj of visible) {
+          const hit = this.#rayWalkableTop(obj, ray);
+          if (!hit) continue;
+          if (!walk || hit.t < walk.t) walk = { ...hit, obj };
+        }
+        if (walk && (!floorHit || walk.t <= floorHit.t + 1e-4)) {
+          const room = roomById(doc, walk.obj.roomId) || floorHit?.room;
+          return pose(walk.point.x, Math.round(walk.y), walk.point.z, room, false);
+        }
+        if (floorHit) {
+          return pose(
+            floorHit.point.x,
+            Math.round(floorHit.face.plane),
+            floorHit.point.z,
+            floorHit.room,
+            true
+          );
+        }
+        const any = this.#nearestRoomHull(visRooms, ray, null, focus);
+        const dropped = any && this.#floorPoseFromHull(any, pose);
+        if (dropped) return dropped;
+      }
+    }
+
+    const gy = this.gridY;
+    const grid = intersectPlane(ray.origin, ray.dir, { x: 0, y: gy, z: 0 }, { x: 0, y: 1, z: 0 });
+    if (grid) {
+      return pose(grid.point.x, gy, grid.point.z, undefined, true);
+    }
+    const { forward } = lookVectors(this.camera.yaw, this.camera.pitch);
+    return pose(this.camera.x + forward.x * 12, gy, this.camera.z + forward.z * 12, undefined, true);
+  }
+
+  #focusBox(doc, objs) {
+    let room = null;
+    for (let i = objs.length - 1; i >= 0; i--) {
+      const o = objs[i];
+      if (o.kind === "room") {
+        room = o;
+        break;
+      }
+      room = roomById(doc, o.roomId);
+      if (room) break;
+    }
+    if (!room) room = this.opts.getFocusRoom?.() || null;
+    if (room) {
+      const cols = roomGeometry(room).colliders;
+      const boxes = cols?.length ? cols : [room];
+      let minx = Infinity;
+      let miny = Infinity;
+      let minz = Infinity;
+      let maxx = -Infinity;
+      let maxy = -Infinity;
+      let maxz = -Infinity;
+      for (const c of boxes) {
+        minx = Math.min(minx, c.x);
+        miny = Math.min(miny, c.y);
+        minz = Math.min(minz, c.z);
+        maxx = Math.max(maxx, c.x + c.sx);
+        maxy = Math.max(maxy, c.y + c.sy);
+        maxz = Math.max(maxz, c.z + c.sz);
+      }
+      return { x: minx, y: miny, z: minz, sx: maxx - minx, sy: maxy - miny, sz: maxz - minz };
+    }
+    let minx = Infinity;
+    let miny = Infinity;
+    let minz = Infinity;
+    let maxx = -Infinity;
+    let maxy = -Infinity;
+    let maxz = -Infinity;
+    for (const o of objs) {
+      minx = Math.min(minx, o.x);
+      miny = Math.min(miny, o.y);
+      minz = Math.min(minz, o.z);
+      maxx = Math.max(maxx, o.x + o.sx);
+      maxy = Math.max(maxy, o.y + o.sy);
+      maxz = Math.max(maxz, o.z + o.sz);
+    }
+    return { x: minx, y: miny, z: minz, sx: maxx - minx, sy: maxy - miny, sz: maxz - minz };
+  }
+
+  /** Keep look; frame the containing room at about half the viewport. */
+  focusSelection() {
+    const ids = this.#selectedIds();
+    if (!ids.length) return false;
+    const doc = this.opts.getDoc();
+    const objs = ids
+      .map((id) => activeMap(doc).objects.find((o) => o.id === id))
+      .filter(Boolean);
+    if (!objs.length) return false;
+
+    const box = this.#focusBox(doc, objs);
+    const center = aabbCenter(box);
+    const cam = this.camera;
+    const { forward, right, up } = lookVectors(cam.yaw, cam.pitch);
+    const w = this.cssW;
+    const h = this.cssH;
+    const focal = Math.min(w, h) * 0.9;
+    const pad = 0.5;
+    const halfW = Math.max(1, w * 0.5 * pad);
+    const halfH = Math.max(1, h * 0.5 * pad);
+
+    let frameDist = 4;
+    for (let i = 0; i < 8; i++) {
+      const c = cornerWorld(box, i);
+      const rx = c.x - center.x;
+      const ry = c.y - center.y;
+      const rz = c.z - center.z;
+      const cx = rx * right.x + ry * right.y + rz * right.z;
+      const cy = rx * up.x + ry * up.y + rz * up.z;
+      const cz = rx * forward.x + ry * forward.y + rz * forward.z;
+      frameDist = Math.max(frameDist, (Math.abs(cx) * focal) / halfW - cz);
+      frameDist = Math.max(frameDist, (Math.abs(cy) * focal) / halfH - cz);
+      frameDist = Math.max(frameDist, 1 - cz);
+    }
+
+    const dist = Math.max(frameDist, 1);
+    cam.x = center.x - forward.x * dist;
+    cam.y = center.y - forward.y * dist;
+    cam.z = center.z - forward.z * dist;
+    this.opts.onViewChanged?.();
+    this.draw();
+    return true;
+  }
+
+  draw() {
+    if (!this.enabled) return;
+    const ctx = this.ctx;
+    const w = this.cssW;
+    const h = this.cssH;
+    if (!w || !h) return;
+    ctx.fillStyle = "#0a0a0c";
+    ctx.fillRect(0, 0, w, h);
+
+    const doc = this.opts.getDoc();
+    const cam = this.camera;
+    const selected = new Set(this.#selectedIds());
+    if (this.drag?.kind === "box") {
+      const r = this.#boxRect();
+      if (r.w >= LAYOUT_BOX_CLICK || r.h >= LAYOUT_BOX_CLICK) {
+        for (const obj of this.#visibleObjects(doc)) {
+          for (let i = 0; i < 8; i++) {
+            const pr = projectPoint(cornerWorld(obj, i), cam, w, h);
+            if (pr.ok && pr.sx >= r.x0 && pr.sx <= r.x1 && pr.sy >= r.y0 && pr.sy <= r.y1) {
+              selected.add(obj.id);
+              break;
+            }
+          }
+        }
+      }
+    }
+    const local = this.opts.getLocalMode?.() || false;
+    const neighbours = !!(local && this.opts.getNeighbourMode?.());
+    const tag = local ? (neighbours ? "LOCAL+N" : "LOCAL") : "ALL";
+    const primary = this.#primaryId();
+    this.#syncGridY(doc);
+
+    this.#drawGrid(ctx, cam, w, h);
+
+    const objs = [...this.#visibleObjects(doc)].sort((a, b) => {
+      const ca = aabbCenter(a);
+      const cb = aabbCenter(b);
+      const da = (ca.x - cam.x) ** 2 + (ca.y - cam.y) ** 2 + (ca.z - cam.z) ** 2;
+      const db = (cb.x - cam.x) ** 2 + (cb.y - cam.y) ** 2 + (cb.z - cam.z) ** 2;
+      return db - da;
+    });
+
+    for (const obj of objs) {
+      const sel = selected.has(obj.id);
+      const hi = sel || obj.id === this.hoverId;
+      this.#drawObject(ctx, doc, obj, cam, w, h, hi, sel, obj.id === primary);
+    }
+
+    if (this.placePreview && this.placePreviewOverCanvas) {
+      ctx.globalAlpha = 0.85;
+      this.#drawObject(ctx, doc, this.placePreview, cam, w, h, true, false, false);
+      ctx.globalAlpha = 1;
+    }
+
+    this.#drawSearchArrows(ctx, doc, cam, w, h);
+
+    const selIds = this.#selectedIds();
+    if (selIds.length === 1) {
+      const elev = objs.find((o) => o.id === selIds[0] && o.kind === "elevator");
+      if (elev) this.#drawElevDestGhosts(ctx, doc, elev, cam, w, h);
+    }
+
+    if (this.drag?.kind === "box") {
+      const r = this.#boxRect();
+      ctx.fillStyle = "rgba(212, 160, 23, 0.12)";
+      ctx.fillRect(r.x0, r.y0, r.w, r.h);
+      ctx.strokeStyle = "#d4a017";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 3]);
+      ctx.strokeRect(r.x0 + 0.5, r.y0 + 0.5, r.w, r.h);
+      ctx.setLineDash([]);
+    }
+
+    ctx.fillStyle = "#8b91a0";
+    ctx.font = "11px Segoe UI, sans-serif";
+    ctx.fillText(
+      `xyz ${cam.x | 0},${cam.y | 0},${cam.z | 0}  ${tag}  spd ${cam.speed | 0}`,
+      8,
+      16
+    );
+  }
+
+  #syncGridY(doc) {
+    const id = this.#primaryId();
+    if (!id) return;
+    const obj = activeMap(doc).objects.find((o) => o.id === id);
+    if (obj?.kind === "room") this.gridY = obj.y;
+  }
+
+  #drawGrid(ctx, cam, w, h) {
+    const y = this.gridY;
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "#3d4658";
+    for (let i = 0; i <= WORLD_SIZE; i += 8) {
+      this.#line3(ctx, { x: i, y, z: 0 }, { x: i, y, z: WORLD_SIZE }, cam, w, h);
+      this.#line3(ctx, { x: 0, y, z: i }, { x: WORLD_SIZE, y, z: i }, cam, w, h);
+    }
+    ctx.strokeStyle = "#6a7388";
+    for (let i = 0; i <= WORLD_SIZE; i += 32) {
+      this.#line3(ctx, { x: i, y, z: 0 }, { x: i, y, z: WORLD_SIZE }, cam, w, h);
+      this.#line3(ctx, { x: 0, y, z: i }, { x: WORLD_SIZE, y, z: i }, cam, w, h);
+    }
+    ctx.strokeStyle = "#9aa3b5";
+    this.#line3(ctx, { x: 0, y, z: 0 }, { x: WORLD_SIZE, y, z: 0 }, cam, w, h);
+    this.#line3(ctx, { x: 0, y, z: 0 }, { x: 0, y, z: WORLD_SIZE }, cam, w, h);
+    this.#line3(ctx, { x: 0, y: 0, z: 0 }, { x: 0, y: WORLD_SIZE, z: 0 }, cam, w, h);
+  }
+
+  /** Interior hull faces (floor and walls seen from inside), tinted with the room background. */
+  #drawRoomWalls(ctx, obj, geom, cam, w, h) {
+    const faces = [];
+    for (const f of geom.hullFaces || []) {
+      if (!f.corners || f.corners.length < 4) continue;
+      // Outward normal is `sign` along `axis`. Shade only when the camera is on the inside.
+      if ((cam[f.axis] - f.plane) * f.sign >= 0) continue;
+      const center = f.center || {
+        x: (f.corners[0].x + f.corners[2].x) / 2,
+        y: (f.corners[0].y + f.corners[2].y) / 2,
+        z: (f.corners[0].z + f.corners[2].z) / 2,
+      };
+      const cc = worldToCamera(center, cam);
+      if (cc.z < NEAR) continue;
+      const pts = [];
+      let ok = true;
+      for (let i = 0; i < 4; i++) {
+        const pr = projectPoint(f.corners[i], cam, w, h);
+        if (!pr.ok) {
+          ok = false;
+          break;
+        }
+        pts.push(pr);
+      }
+      if (!ok) continue;
+      let area = 0;
+      for (let i = 0; i < 4; i++) {
+        const a = pts[i];
+        const b = pts[(i + 1) % 4];
+        area += a.sx * b.sy - b.sx * a.sy;
+      }
+      if (Math.abs(area) < 24) continue;
+      faces.push({ pts, z: cc.z });
+    }
+    if (!faces.length) return;
+    faces.sort((a, b) => b.z - a.z);
+    ctx.fillStyle = hexAlpha(a8Hex(obj.a8Bg ?? ROOM_BG_DEFAULT), 0.4);
+    for (const face of faces) {
+      ctx.beginPath();
+      ctx.moveTo(face.pts[0].sx, face.pts[0].sy);
+      for (let i = 1; i < 4; i++) ctx.lineTo(face.pts[i].sx, face.pts[i].sy);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  #line3(ctx, a, b, cam, w, h, color) {
+    const seg = projectLine(a, b, cam, w, h);
+    if (!seg) return;
+    if (color) ctx.strokeStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(seg.ax, seg.ay);
+    ctx.lineTo(seg.bx, seg.by);
+    ctx.stroke();
+  }
+
+  /** Downward marker above each Maps-panel search hit. Ignores Local / Rooms Only. */
+  #drawSearchArrows(ctx, doc, cam, w, h) {
+    const terms = layoutSearchTerms(this.opts.getLayoutSearch?.() || "");
+    if (!terms.length) return;
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = "#5ad0ff";
+    for (const obj of activeMap(doc).objects) {
+      if (!objectMatchesLayoutSearch(obj, terms)) continue;
+      const cx = obj.x + obj.sx / 2;
+      const cz = obj.z + obj.sz / 2;
+      const tipY = (obj.y | 0) + (obj.sy | 0) + 1;
+      const head = 4;
+      const half = 2;
+      const tip = { x: cx, y: tipY, z: cz };
+      const neckY = tipY + head;
+      const tail = { x: cx, y: neckY + 16, z: cz };
+      this.#line3(ctx, tail, tip, cam, w, h);
+      this.#line3(ctx, tip, { x: cx - half, y: neckY, z: cz }, cam, w, h);
+      this.#line3(ctx, tip, { x: cx + half, y: neckY, z: cz }, cam, w, h);
+      this.#line3(ctx, tip, { x: cx, y: neckY, z: cz - half }, cam, w, h);
+      this.#line3(ctx, tip, { x: cx, y: neckY, z: cz + half }, cam, w, h);
+    }
+  }
+
+  #drawObject(ctx, doc, obj, cam, w, h, highlight, selected, primary) {
+    const color = highlight
+      ? "#f2d36b"
+      : obj.kind === "room"
+        ? a8InkHex(obj.a8Bg ?? ROOM_BG_DEFAULT)
+        : obj.kind === "spawn" && !obj.enabled
+          ? "#1a7a3c"
+          : KINDS[obj.kind].color;
+    ctx.lineWidth = selected ? 2 : 1;
+    ctx.strokeStyle = color;
+
+    if (isFigureObject(obj)) {
+      ctx.globalAlpha = selected ? 0.35 : 0.2;
+      for (const [i, j] of BOX_EDGES) {
+        this.#line3(ctx, cornerWorld(obj, i), cornerWorld(obj, j), cam, w, h);
+      }
+      ctx.globalAlpha = 1;
+      const tmpl = findEnemyTemplate(doc, figureTemplateName(obj));
+      const verts = enemyPlacementWorldVerts(obj, tmpl);
+      if (tmpl && verts.length) {
+        ctx.lineWidth = selected ? 2 : 1.5;
+        for (const [i, j] of tmpl.lines) {
+          if (verts[i] && verts[j]) this.#line3(ctx, verts[i], verts[j], cam, w, h);
+        }
+      }
+    } else if (obj.kind === "pickup") {
+      const mesh = itemMeshFor(doc, obj.pickup);
+      for (const seg of itemMeshWorldSegs(obj, mesh)) {
+        this.#line3(ctx, seg.a, seg.b, cam, w, h);
+      }
+    } else if (obj.kind === "room") {
+      const g = roomGeometry(obj);
+      this.#drawRoomWalls(ctx, obj, g, cam, w, h);
+      for (const e of g.edges) {
+        this.#line3(ctx, g.verts[e.a], g.verts[e.b], cam, w, h);
+      }
+    } else if (obj.kind === "slope") {
+      for (const seg of rampSegments(obj)) {
+        this.#line3(ctx, seg.a, seg.b, cam, w, h);
+      }
+    } else {
+      if (isGhostKind(obj.kind)) ctx.setLineDash([5, 4]);
+      for (const [i, j] of BOX_EDGES) {
+        this.#line3(ctx, cornerWorld(obj, i), cornerWorld(obj, j), cam, w, h);
+      }
+      ctx.setLineDash([]);
+      this.#drawGlyphs(ctx, obj, cam, w, h, color);
+    }
+    if (primary) this.#drawGizmo(ctx, obj, cam, w, h);
+  }
+
+  #drawElevDestGhosts(ctx, doc, elev, cam, w, h) {
+    const stops = elevStopBottoms(doc, elev);
+    const liveTop = (elev.y | 0) + (elev.sy | 0);
+    const x0 = elev.x | 0;
+    const z0 = elev.z | 0;
+    const sx = elev.sx | 0;
+    const sz = elev.sz | 0;
+    const sy = elev.sy | 0;
+    ctx.strokeStyle = KINDS.elevator.color;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 3]);
+    for (const bottom of [stops.dest, stops.home]) {
+      const top = bottom + sy;
+      if (top === liveTop) continue;
+      const corners = [
+        { x: x0, y: top, z: z0 },
+        { x: x0 + sx, y: top, z: z0 },
+        { x: x0 + sx, y: top, z: z0 + sz },
+        { x: x0, y: top, z: z0 + sz },
+      ];
+      for (let i = 0; i < 4; i++) {
+        this.#line3(ctx, corners[i], corners[(i + 1) % 4], cam, w, h);
+      }
+    }
+    ctx.setLineDash([]);
+  }
+
+  #drawGlyphs(ctx, obj, cam, w, h, color) {
+    ctx.strokeStyle = color;
+    for (const seg of this.#glyphSegments(obj)) {
+      this.#line3(ctx, seg.a, seg.b, cam, w, h);
+    }
+  }
+
+  #drawGizmo(ctx, obj, cam, w, h) {
+    const c = aabbCenter(obj);
+    drawTranslateGizmo(ctx, c, cam, w, h, { hoverGizmo: this.hoverGizmo, drag: this.drag });
+    if (KINDS[obj.kind].fixed) return;
+    ctx.fillStyle = "#7ec8e8";
+    const handles = obj.kind === "room" ? roomGeometry(obj).handles : this.#aabbFaceHandles(obj);
+    for (const handle of handles) {
+      const pr = projectPoint(handle.world, cam, w, h);
+      if (!pr.ok) continue;
+      ctx.fillRect(pr.sx - 4, pr.sy - 4, 8, 8);
+    }
+  }
+
+  #aabbFaceHandles(obj) {
+    const x0 = obj.x | 0;
+    const y0 = obj.y | 0;
+    const z0 = obj.z | 0;
+    const sx = obj.sx | 0;
+    const sy = obj.sy | 0;
+    const sz = obj.sz | 0;
+    const cx = x0 + sx / 2;
+    const cy = y0 + sy / 2;
+    const cz = z0 + sz / 2;
+    const handles = [
+      { kind: "face", side: "x0", axis: "x", world: { x: x0, y: cy, z: cz } },
+      { kind: "face", side: "x1", axis: "x", world: { x: x0 + sx, y: cy, z: cz } },
+      { kind: "face", side: "z0", axis: "z", world: { x: cx, y: cy, z: z0 } },
+      { kind: "face", side: "z1", axis: "z", world: { x: cx, y: cy, z: z0 + sz } },
+    ];
+    if (obj.kind !== "platform") {
+      handles.push(
+        { kind: "face", side: "y0", axis: "y", world: { x: cx, y: y0, z: cz } },
+        { kind: "face", side: "y1", axis: "y", world: { x: cx, y: y0 + sy, z: cz } }
+      );
+    }
+    return handles;
+  }
+}

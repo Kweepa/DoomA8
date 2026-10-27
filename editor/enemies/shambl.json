@@ -1,0 +1,190 @@
+{
+  "id": "d7c8cabb-5cad-4568-9b67-ae45cd2a1e4e",
+  "name": "Shambler",
+  "verts": 13,
+  "lines": [
+    [
+      0,
+      1
+    ],
+    [
+      1,
+      2
+    ],
+    [
+      0,
+      2
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      2,
+      4
+    ],
+    [
+      4,
+      5
+    ],
+    [
+      2,
+      6
+    ],
+    [
+      6,
+      7
+    ],
+    [
+      0,
+      8
+    ],
+    [
+      8,
+      9
+    ],
+    [
+      1,
+      10
+    ],
+    [
+      10,
+      11
+    ],
+    [
+      7,
+      12
+    ]
+  ],
+  "clips": [
+    {
+      "name": "stand"
+    },
+    {
+      "name": "walk"
+    },
+    {
+      "name": "smash",
+      "sound": "melee",
+      "soundFrame": 8
+    },
+    {
+      "name": "swingr",
+      "sound": "melee",
+      "soundFrame": 5
+    },
+    {
+      "name": "swingl",
+      "sound": "melee",
+      "soundFrame": 4
+    },
+    {
+      "name": "magic",
+      "sound": "shoot",
+      "soundFrame": 5
+    },
+    {
+      "name": "pain"
+    },
+    {
+      "name": "death"
+    }
+  ],
+  "cues": {
+    "sight": "sound/shambler/ssight.wav",
+    "wince": "sound/soldier/pain1.wav",
+    "melee": "sound/shambler/melee1.wav",
+    "shoot": "sound/weapons/lhit.wav",
+    "death": "sound/shambler/sdeath.wav"
+  },
+  "mdlRig": {
+    "jointVerts": [
+      [
+        0,
+        21,
+        27
+      ],
+      [
+        1,
+        19,
+        52
+      ],
+      [
+        5,
+        36,
+        40
+      ],
+      [
+        64,
+        70,
+        82
+      ],
+      [
+        97,
+        98,
+        102,
+        103,
+        104,
+        105,
+        107,
+        142
+      ],
+      [
+        120
+      ],
+      [
+        90,
+        95,
+        96,
+        99,
+        100,
+        118,
+        119,
+        143
+      ],
+      [
+        62
+      ],
+      [
+        15,
+        16,
+        53
+      ],
+      [
+        7,
+        46,
+        51
+      ],
+      [
+        14,
+        49,
+        54
+      ],
+      [
+        23,
+        24,
+        56
+      ],
+      [
+        94
+      ]
+    ]
+  },
+  "lodZ": 20,
+  "hp": 80,
+  "painChance": 32,
+  "customSkeleton": false,
+  "stockGraph": null,
+  "customGraph": null,
+  "spriteScale": 0.35,
+  "exportClips": [
+    "stand",
+    "walk",
+    "smash",
+    "swingr",
+    "swingl",
+    "magic",
+    "pain",
+    "death"
+  ]
+}

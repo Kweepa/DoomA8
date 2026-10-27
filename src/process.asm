@@ -1,0 +1,176 @@
+; Timed movers — doors (SquareDoom process.asm adapted); elevators in elevator.asm
+!zone process
+
+proc_init
+	ldx #0
+	lda #PROC_FREE
+.pi
+	sta PROC_KIND,x
+	inx
+	cpx #PROC_NUM
+	bne .pi
+	jsr elev_init
+	lda #0
+	sta in_use
+	sta key_use
+	sta key_use_was
+	rts
+
+proc_find_free
+	ldy #0
+.pff
+	lda PROC_KIND,y
+	beq .pff_ok
+	iny
+	cpy #PROC_NUM
+	bne .pff
+	sec
+	rts
+.pff_ok
+	clc
+	rts
+
+; proc_tmp0=kind tmp1=A (world id) tmp2=B tmp3=C lo tmp4=D hi
+; After success Y=slot; caller stores PROC_L from local SoA index.
+proc_alloc
+	jsr proc_find_free
+	bcs .pa_fail
+	lda proc_tmp0
+	sta PROC_KIND,y
+	lda proc_tmp1
+	sta PROC_A,y
+	lda proc_tmp2
+	sta PROC_B,y
+	lda proc_tmp3
+	sta PROC_C,y
+	lda proc_tmp4
+	sta PROC_D,y
+	lda #0
+	sta PROC_E,y
+	clc
+.pa_fail
+	rts
+
+; Busy if any live thinker references proc_tmp1 as PROC_A (world id)
+proc_target_busy
+	ldx #0
+.psb
+	lda PROC_KIND,x
+	beq .psb_n
+	lda PROC_A,x
+	cmp proc_tmp1
+	bne .psb_n
+	sec
+	rts
+.psb_n
+	inx
+	cpx #PROC_NUM
+	bne .psb
+	clc
+	rts
+
+proc_count_free
+	ldx #0
+	ldy #0
+.pcf
+	lda PROC_KIND,x
+	bne .pcf_n
+	iny
+.pcf_n
+	inx
+	cpx #PROC_NUM
+	bne .pcf
+	tya
+	rts
+
+; ------------------------------------------------------------------
+; Accumulate motion: add dt once, then try one 64ms step (C=0 if stepped)
+; ------------------------------------------------------------------
+proc_add_dt
+	clc
+	lda PROC_C,x
+	adc dt_ms
+	sta PROC_C,x
+	lda PROC_D,x
+	adc dt_msh
+	sta PROC_D,x
+	rts
+
+; ------------------------------------------------------------------
+; Loop / next / work are global so elevator.asm can jmp proc_update_next
+proc_update
+	ldx #0
+proc_update_loop
+	lda PROC_KIND,x
+	bne proc_update_work
+proc_update_next
+	inx
+	cpx #PROC_NUM
+	bcc proc_update_loop
+	rts
+proc_update_work
+	cmp #PROC_TIMER
+	bne .pu_n1
+	jmp .pu_timer
+.pu_n1
+	cmp #PROC_LOWER_ELEV
+	bne .pu_n2
+	jmp elev_pu_le
+.pu_n2
+	cmp #PROC_RAISE_ELEV
+	bne .pu_n3
+	jmp elev_pu_re
+.pu_n3
+	jmp proc_update_next
+
+.pu_timer
+	stx proc_tmp5
+	sec
+	lda PROC_C,x
+	sbc dt_ms
+	sta PROC_C,x
+	lda PROC_D,x
+	sbc dt_msh
+	sta PROC_D,x
+	bcs .pu_tstill
+	; fired (went negative) or hit zero
+.pu_tfire
+	lda PROC_L,x
+	pha				; local SoA for successor
+	lda PROC_A,x
+	sta proc_tmp1			; world id
+	lda PROC_B,x
+	sta proc_tmp0			; next kind
+	lda PROC_E,x
+	sta proc_tmp2			; elev home if raise
+	lda #PROC_FREE
+	sta PROC_KIND,x
+	lda proc_tmp0
+	cmp #PROC_RAISE_ELEV
+	beq .pu_talloc
+	; non-raise successors still allocate (elev lower, etc.)
+.pu_talloc
+	lda #0
+	sta proc_tmp3
+	sta proc_tmp4
+	jsr proc_alloc
+	bcs .pu_talloc_fail
+	pla
+	sta PROC_L,y
+	lda proc_tmp0
+	cmp #PROC_RAISE_ELEV
+	bne .pu_talloc_ok
+	jsr elev_noise_on
+.pu_talloc_ok
+	ldx proc_tmp5
+	jmp proc_update_next
+.pu_talloc_fail
+	pla
+	ldx proc_tmp5
+	jmp proc_update_next
+.pu_tstill
+	lda PROC_C,x
+	ora PROC_D,x
+	beq .pu_tfire
+	ldx proc_tmp5
+	jmp proc_update_next

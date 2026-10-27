@@ -1,0 +1,53 @@
+# Tech findings
+
+Runtime lessons. Prefer these over re-deriving the same dead ends.
+
+## ACME conditionals
+
+`!if !FLAG` is **not** “if flag is off.” ACME `!` is bitwise NOT, so `!1` is `$FE` (non-zero) and the block **always assembles**. Gate call sites with `!if FLAG { jsr ... }` instead of inverting the flag inside the routine.
+
+## Door / room floor alignment
+
+Door verts are one coplanar face (constant X or Z), not an 8-corner box. The BL–TR triangle split is correct. On E1M1 start the door BL sits on room edge 2–3 (far floor, `y=104`, `z=123`). A visible gap there is a **projection/clip** bug, not a mesh bug.
+
+**Do not** lerp door verts onto the room’s face corners in view or screen space. That needs a perspective-correct parameter, and doors are not always on a wall edge.
+
+Rotate error (`smul16_7`) is ~0. Log `persp88` vs an exact divide is ~1 px. Neither explains an 8–12 px floor gap.
+
+### What actually caused the gap
+
+A near-clipped room corner has large view X/Y at `z = ZCLIP` (1.0). Clamping that projection to **±127** (`PERSP_MAX`) before Cohen–Sutherland bends the 2D line. The door BL is in front of the near plane, so it projects correctly and sits **off** the bent wall.
+
+3D-colinear points stay 2D-colinear only if **both** endpoints use the true perspective (`x * FOCAL / z`) with enough range to hit the real screen edge.
+
+**8-bit screen CS is unsafe.** Clipping after a ±127 (or even 8-bit unclamped) project still bends near full-width walls: a near-plane corner wants hundreds of pixels of `x * FOCAL / z` before the frustum cut. Cohen–Sutherland in that crushed space cannot keep a 1–2 px door-wall join.
+
+**Do now:** unclamped 16-bit project (`x * FOCAL / z` via `.invz` + `.cam_to_proj`, no ±127 clamp) and 16-bit screen CS, then `.to_sx` / `.to_sy` for draw. Near clip stays 8.8 (`scale_nd` + `lerp16`, `ZCLIP`). Far enemies still `persp88`.
+
+View-space FOV lerp then 8-bit `persp88` is geometrically fine (1–2 px join) but CLIP was ~137 vs ~60 for 16-bit screen CS — a net frame-time loss. Do not revive 8-bit screen CS to “save” project.
+
+### Near-plane lerp — what not to do
+
+`.nlrun` must keep **y 16-bit** and shrink only **n and d** to signed 8-bit (`scale_nd`), then `lerp16`. That is `(y * n) / d` with the ratio preserved.
+
+**Do not** use `scale3` (ASR y, n, **and** d) and then left-shift the quotient. `scale3` already shrinks all three, so `(y>>k)*(n>>k)/(d>>k) = (y*n)/(d<<k)`. Shifting the result back overshoots and yanks clipped endpoints across the viewport (skewed door uprights, walls off course).
+
+`div24u8` saturates only if the **quotient** does not fit in 16 bits (`rot2 ≠ 0` after 24 shifts). A product like `3647×51` is fine; a broken shift-direction sim of `div24u8` will lie about saturation.
+
+### Screen clip lerp — what not to do
+
+**Do not** `scale3` + 8-bit `lerpdv` (±127) for CS. Same 2^k undershoot on long lines (near-clipped endpoints with large |ox|). Use `scale_nd` + `lerp16` and add the 16-bit delta. `lerp16` clobbers `rot0/rot1/rot2` and X — save the clip plane and endpoint index first.
+
+## Frustum cull — stay fat, fail open
+
+Vertical FOV half-angle is `atan(64/100) ≈ 33°`. Do **not** tighten the Y test to `|y| ≤ 0.64 z`. A **45°** `|y| ≤ z` compare is cheaper and still fatter than the real cone, so it never drops an on-screen pixel. Pad `ENEMY_CULL_H` (6) / `ITEM_CULL_Y` (2) covers figure height and AABB extent; error must stay on the “drew while off-screen” side.
+
+Item Y uses **Chebyshev XZ of the farthest box corner** (max of the four `|Δ|` vs camera), not nearest-z. A nearer face is a smaller z and can false-reject a box that only peeks in at the far end. Chebyshev can undershoot true view-z on a 45° look (`√2`), but `0.64 × √2 ≈ 0.90 < 1`, so `|y| ≤ z_est` is still conservative vs the 33° cone.
+
+Y runs **before** the three XZ plane dots (no muls). A height miss skips six `smul16_7`s. Do not frustum-cull the active room.
+
+## VICE dumps
+
+End of draw is after `jsr draw_enemies` in `main` (`lda #$35` / `sta $01`). `$01` must be `$34` to see RAM under I/O. A dump taken mid-`stroke_mesh` is a mix of the current mesh and leftover slots — capture after the frame, not during room draw.
+
+Do not treat `ent_wx/wy/wz` after `fill_door_verts` as door BL; those are the last vert (v5).

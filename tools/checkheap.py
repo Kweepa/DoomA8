@@ -1,0 +1,260 @@
+#!/usr/bin/env python3
+"""Simulate LoadLevel heap vs GAME size; fail the build if a map cannot load.
+
+Heap grows down from HEAP_LIM ($BC00 on the Atari, SCR_A on the C64).
+LoadLevel: one E1Mn (prefix overlay+reloc, then packed map), dump prefix
+(heap_top = map_base), then pose banks. heap_alloc fails when new top
+<= end_game, so need must be strictly less than HEAP_LIM - end_game.
+
+An OVER map (slack zero or negative) is printed and does not fail the build.
+A room with more than ROOM_MAX_TYPES types, or a missing pose, still fails.
+
+Streaming holds at most ROOM_MAX_TYPES banks — the types that cohabit in the
+room being played. The gate is the worst SINGLE ROOM pose sum, not a map-wide
+pair of the heaviest types. tools/perroom.py extracts per-room sets by
+replaying bind_tab over the packed payload.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from mkreloc import parse_labels, parse_mem_const
+from perroom import ROOM_MAX_TYPES, packed_payload, per_room_types
+
+ROOT = Path(__file__).resolve().parents[1]
+MAP_DIR = ROOT / "maps"
+ENEMY_DIR = ROOT / "enemies"
+ENEMY_SIZES = ROOT / "src" / "enemy_sizes.asm"
+PREFIX_ASM = ROOT / "src" / "level_prefix.asm"
+DOC = ROOT / "editor" / "doom64.json"
+
+LEVEL_NAMES = [f"E1M{i}" for i in range(1, 9)]
+DOS_NAME = ["poss", "baron", "pinky", "imp"]
+ENEMY_NTYPES = len(DOS_NAME)
+
+
+def prg_payload(path: Path) -> bytes:
+    raw = path.read_bytes()
+    if len(raw) < 2:
+        raise SystemExit(f"{path}: too short")
+    return raw[2:]
+
+
+def parse_size_table(path: Path, lo_name: str, hi_name: str) -> list[int]:
+    text = path.read_text(encoding="utf-8")
+
+    def row(name: str) -> list[int]:
+        m = re.search(rf"^{re.escape(name)}\s+!byte\s+(.+)$", text, re.M)
+        if not m:
+            raise SystemExit(f"{path}: missing {name}")
+        return [int(x.strip()) for x in m.group(1).split(",")]
+
+    lo, hi = row(lo_name), row(hi_name)
+    if len(lo) != len(hi):
+        raise SystemExit(f"{path}: {lo_name}/{hi_name} length mismatch")
+    return [l + (h << 8) for l, h in zip(lo, hi)]
+
+
+def parse_level_prefix() -> int:
+    if not PREFIX_ASM.is_file():
+        raise SystemExit(f"missing: {PREFIX_ASM}")
+    m = re.search(r"^LEVEL_PREFIX\s*=\s*(\d+)\s*$", PREFIX_ASM.read_text(), re.M)
+    if not m:
+        raise SystemExit(f"{PREFIX_ASM}: no LEVEL_PREFIX")
+    return int(m.group(1))
+
+
+def enemy_sizes() -> list[int]:
+    sizes = [0] * ENEMY_NTYPES
+    table: list[int] | None = None
+    if ENEMY_SIZES.is_file():
+        table = parse_size_table(ENEMY_SIZES, "enemy_size_lo", "enemy_size_hi")
+        if len(table) < ENEMY_NTYPES:
+            raise SystemExit(f"{ENEMY_SIZES}: expected {ENEMY_NTYPES} sizes")
+        sizes = table[:ENEMY_NTYPES]
+    for i, dos in enumerate(DOS_NAME):
+        prg = ENEMY_DIR / f"{dos}.prg"
+        if prg.is_file() and prg.stat().st_size > 2:
+            sizes[i] = len(prg_payload(prg))
+    return sizes
+
+
+def level_room_names() -> dict[str, list[str]]:
+    """Room names in packed-index order. Blank when the editor left the room unnamed."""
+    if not DOC.is_file():
+        return {}
+    doc = json.loads(DOC.read_text(encoding="utf-8"))
+    out: dict[str, list[str]] = {}
+    for key, level in (doc.get("maps") or {}).items():
+        names: list[str] = []
+        for obj in level.get("objects") or []:
+            if obj.get("kind") != "room":
+                continue
+            names.append(str(obj.get("name") or "").strip())
+        out[key] = names
+    return out
+
+
+def used_types(per_room: dict[int, set[int]]) -> list[int]:
+    out: set[int] = set()
+    for ts in per_room.values():
+        out |= ts
+    return sorted(out)
+
+
+def heap_report(labels_path: Path | str) -> tuple[dict, bool]:
+    """Per-level heap manifest. (report, failed).
+
+    Missing labels or map PRGs raise SystemExit. A room over ROOM_MAX_TYPES
+    or a missing pose sets failed and still returns the manifest.
+    """
+    lbl = Path(labels_path)
+    if not lbl.is_file():
+        lbl = ROOT / labels_path
+    if not lbl.is_file():
+        print(f"missing: {labels_path}", file=sys.stderr)
+        sys.exit(1)
+
+    labels = parse_labels(lbl)
+    if "end_game" not in labels:
+        print(f"{lbl}: no end_game", file=sys.stderr)
+        sys.exit(1)
+
+    end_game = labels["end_game"]
+    locode = parse_mem_const("LOCODE_BASE")
+    heap_lim = parse_mem_const("HEAP_LIM")
+    prefix = parse_level_prefix()
+    avail = heap_lim - end_game
+    poses = enemy_sizes()
+    names_by_level = level_room_names()
+
+    failed = False
+    any_level = False
+    report = {
+        "game": {
+            "load": locode,
+            "end": end_game,
+            "bytes": end_game - locode,
+            "heap_available": avail,
+        },
+        "level_prefix": prefix,
+        "room_max_types": ROOM_MAX_TYPES,
+        "enemy_sizes": {DOS_NAME[i]: poses[i] for i in range(ENEMY_NTYPES)},
+        "levels": {},
+    }
+    for key in LEVEL_NAMES:
+        prg = MAP_DIR / f"{key.lower()}.prg"
+        if not prg.is_file() or prg.stat().st_size <= 2:
+            continue
+        payload = prg_payload(prg)
+        if not payload:
+            continue
+        any_level = True
+        packed = packed_payload(payload)
+
+        per_room = per_room_types(payload)
+        for room, ts in sorted(per_room.items()):
+            if len(ts) > ROOM_MAX_TYPES:
+                print(
+                    f"{key}: room {room} has {len(ts)} types "
+                    f"(max {ROOM_MAX_TYPES})",
+                    file=sys.stderr,
+                )
+                failed = True
+
+        types = used_types(per_room)
+        for t in types:
+            if poses[t] == 0:
+                print(
+                    f"{key}: missing pose PRG for {DOS_NAME[t]}",
+                    file=sys.stderr,
+                )
+                failed = True
+
+        worst_room, worst_sum, worst_names = -1, 0, []
+        for room in sorted(per_room):
+            s = sum(poses[t] for t in per_room.get(room, ()))
+            names = [DOS_NAME[t] for t in sorted(per_room.get(room, ()))]
+            if s > worst_sum:
+                worst_room = room
+                worst_sum = s
+                worst_names = names
+
+        need = len(packed) + max(prefix, worst_sum)
+        slack = avail - need
+        labels = names_by_level.get(key) or []
+        room_label = labels[worst_room] if 0 <= worst_room < len(labels) else ""
+        if room_label:
+            where = room_label
+        elif worst_room >= 0:
+            where = f"room {worst_room}"
+        else:
+            where = "no enemies"
+        report["levels"][key] = {
+            "map_bytes": len(packed),
+            "load_peak": len(packed) + prefix,
+            "worst_room": worst_room,
+            "where": where,
+            "worst_types": worst_names,
+            "room_assets": worst_sum,
+            "play_peak": len(packed) + worst_sum,
+            "need": need,
+            "slack": slack,
+            "types": [DOS_NAME[t] for t in types],
+            "rooms": {
+                str(room): [DOS_NAME[t] for t in sorted(per_room[room])]
+                for room in sorted(per_room)
+            },
+        }
+
+    if not any_level:
+        print("checkheap: no map PRGs", file=sys.stderr)
+        sys.exit(1)
+    return report, failed
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description="Check LoadLevel heap vs GAME size")
+    ap.add_argument("--labels", default="game.lbl")
+    ap.add_argument("--json", type=Path, default=None, help="write the per-level manifest")
+    args = ap.parse_args()
+
+    report, failed = heap_report(args.labels)
+    game = report["game"]
+    avail = int(game["heap_available"])
+    prefix = int(report["level_prefix"])
+    print(
+        f"heap  GAME ${game['load']:04X}-${game['end']:04X}  "
+        f"avail {avail}  prefix {prefix}"
+    )
+    print(
+        f"      per-room model (max {report['room_max_types']} types/room): "
+        "gate is packed + max(prefix, worst room pose sum)."
+    )
+    for key, lv in report["levels"].items():
+        pose_s = ",".join(lv["worst_types"]) if lv["worst_types"] else "-"
+        head = (
+            f"{key}  map {lv['map_bytes']}  "
+            f"worst {lv['room_assets']} ({lv['where']}: {pose_s})"
+        )
+        if lv["slack"] <= 0:
+            print(f"{head}  OVER {lv['need'] - avail}")
+        else:
+            print(f"{head}  slack {lv['slack']}")
+
+    if args.json is not None:
+        out = args.json if args.json.is_absolute() else ROOT / args.json
+        out.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+        print(f"Wrote {out}")
+    if failed:
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
