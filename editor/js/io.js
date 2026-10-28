@@ -1,7 +1,6 @@
 const HANDLE_DB = "doom64-editor";
 const HANDLE_STORE = "handles";
 const SHAREWARE_KEY = "shareware";
-const SOUND_BANK_KEY = "sound-banks";
 const WEAPONS_PNG_KEY = "weapons-png";
 const REPO_KEY = "repo";
 // Project root. The old "doc" file handle is left unread so a Doom64 path cannot be restored.
@@ -391,53 +390,6 @@ async function getFileInDir(dir, relPath) {
   } catch {
     return null;
   }
-}
-
-export async function tryRestoreSoundBankDir() {
-  const handle = await loadStoredHandle(SOUND_BANK_KEY);
-  if (!handle) return null;
-  const state = await queryPermission(handle, "read");
-  if (state !== "granted") return null;
-  return handle;
-}
-
-export async function pickSoundBankDirectory() {
-  if (!window.showDirectoryPicker) {
-    throw new Error("This browser cannot open a folder (needs Chromium file access)");
-  }
-  try {
-    const handle = await window.showDirectoryPicker({
-      id: "doom-sound-banks",
-      mode: "read",
-    });
-    await storeHandle(SOUND_BANK_KEY, handle);
-    return handle;
-  } catch (e) {
-    if (e.name === "AbortError") return null;
-    throw e;
-  }
-}
-
-const SOUND_BANK_FILES = ["AUDIOHED.WL1", "AUDIOT.WL1", "DOOM.WAD", "DAVE.EXE", "SOUNDS.CK1"];
-
-/** Read the five ref/ banks from the picked folder or its ref/ child. */
-export async function loadSoundBankBuffers(dirHandle) {
-  const roots = [dirHandle];
-  try {
-    roots.push(await dirHandle.getDirectoryHandle("ref"));
-  } catch {
-    /* the folder may already be ref/ */
-  }
-  const out = {};
-  for (const name of SOUND_BANK_FILES) {
-    for (const root of roots) {
-      const fh = await getFileInDir(root, name);
-      if (!fh) continue;
-      out[name] = await (await fh.getFile()).arrayBuffer();
-      break;
-    }
-  }
-  return out;
 }
 
 /** Load pak0 then pak1 from the folder or an id1/ child. */

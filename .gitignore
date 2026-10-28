@@ -6,6 +6,7 @@
 !krill/*.prg
 
 # Build outputs
+build/stamps/
 *.lbl
 *.o
 *.sym

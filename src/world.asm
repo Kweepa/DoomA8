@@ -747,7 +747,7 @@ sync_eye
 ; ------------------------------------------------------------------
 ; update_fall — snap if gap <= FALL_LEDGE; else accelerate down (no WASD).
 ; Call after update_floor. Landing: snap, maybe take_damage(FALL_DAMAGE).
-; Step-up: rise <= STEP_UP snaps (SOUND_PLAYER_LAND at exactly 2, unless elevator).
+; Step-up: rise <= STEP_UP snaps (SOUND_OOF at exactly 2, unless elevator).
 ; ------------------------------------------------------------------
 update_fall
 	lda pl_falling
@@ -784,7 +784,7 @@ update_fall
 .ufl_riseok
 	cmp #STEP_UP
 	bne .ufl_sync			; 1-unit ledge: silent
-	lda #SOUND_PLAYER_LAND
+	lda #SOUND_OOF
 	jsr play_sound
 	jmp .ufl_sync
 
@@ -1473,10 +1473,9 @@ apply_move_world
 	lda cam_zh
 	cmp mv0_zh
 	bne .am_rts
-	lda #SOUND_WEAPONS_TINK1
-	jmp play_sound
+	rts
 .am_hydro
-	lda #SOUND_DOORS_HYDRO1
+	lda #SOUND_DOROPN
 	jsr play_sound
 .am_rts
 	rts
@@ -1612,7 +1611,7 @@ try_proximity
 	rts
 
 ; X = switch. Low 7 bits of sw_kind are the dest. SW_SHOOT is ignored.
-; Menu sound unless the dest is none or elev_activate refuses (C=1).
+; Switch sound unless the dest is none or elev_activate refuses (C=1).
 fire_switch
 	+lda_mx sw_kind
 	and #$7f
@@ -1635,7 +1634,7 @@ fire_switch
 	jsr elev_activate
 	bcs .fs_rts
 .fs_sfx
-	lda #SOUND_MISC_MENU2
+	lda #SOUND_SWTCHN
 	jsr play_sound
 .fs_rts
 	rts
@@ -1646,7 +1645,9 @@ try_backpack_pickup
 	+slice_x room_bp_o
 .tbp_lp
 	cpx sl_end
-	bcs .tbp_rts
+	bcc .tbp_body
+	jmp .tbp_rts
+.tbp_body
 	stx obj_i
 	lda bp_taken,x
 	bne .tbp_n
@@ -1672,6 +1673,11 @@ try_backpack_pickup
 	jsr player_overlaps_y
 	bcc .tbp_n
 	ldx obj_i
+	+lda_mx bp_type
+	cmp #BP_LIGHTPOST
+	beq .tbp_n
+	cmp #BP_BARREL
+	beq .tbp_n
 	jsr grant_backpack
 	bcc .tbp_n
 	jsr hud_ammo
@@ -1685,7 +1691,7 @@ try_backpack_pickup
 	lda #1
 	sta bp_taken,x
 	+lda_mx bp_type
-	cmp #BP_RUNE
+	cmp #BP_KEY_RED
 	bne .tbp_n
 	lda #1
 	sta rune_taken
@@ -1737,7 +1743,7 @@ try_backpack_pickup
 	ldx obj_i
 	lda #1
 	sta drop_taken,x
-	lda #SOUND_WEAPONS_PKUP
+	lda #SOUND_WPNUP
 	jsr play_sound
 .tdp_n
 	ldx obj_i
@@ -1753,10 +1759,9 @@ grant_backpack
 ; A = BP_* type; C=1 granted
 grant_bp_type
 	cmp #BP_NTYPES
-	bcc .gb_go
-	clc
-	rts
-.gb_go
+	bcs .gb_bad
+	cmp #BP_LIGHTPOST
+	bcs .gb_bad
 	tay
 	lda gb_mode,y
 	asl
@@ -1766,49 +1771,79 @@ grant_bp_type
 	lda gb_mh+1,x
 	sta rot1
 	jmp (rot0)
+.gb_bad
+	clc
+	rts
 
 GB_ADD = 0
 GB_GUN = 1
 GB_ARM = 2
 GB_PU  = 3
 GB_KEY = 4
+GB_PACK = 5
+
+PS_HP = 0
+PS_AMMO = 1
+PS_BONUS = 2
+PS_KEY = 3
 
 gb_mh
-	!word gb_do_add, gb_do_gun, gb_do_arm, gb_do_pu, gb_do_key
+	!word gb_do_add, gb_do_gun, gb_do_arm, gb_do_pu, gb_do_key, gb_do_pack
 
+; Row = BP_*. gb_max is the add cap, or the armor value set for GB_ARM.
+; gb_dbl = 1: have_pack doubles that cap (byte saturates at 255).
 gb_mode
-	!byte GB_ADD, GB_GUN, GB_ADD, GB_GUN, GB_ADD
-	!byte GB_ADD, GB_ADD, GB_ADD, GB_ARM, GB_PU
-	!byte GB_PU, GB_PU, GB_KEY, GB_KEY, GB_KEY
+	!byte GB_ADD, GB_ADD, GB_ARM, GB_ARM, GB_ADD
+	!byte GB_ADD, GB_ADD, GB_GUN, GB_GUN, GB_GUN
+	!byte GB_GUN, GB_PACK, GB_KEY, GB_KEY, GB_KEY
+	!byte GB_ADD, GB_PU, GB_ADD, GB_ADD
 
 gb_ptr_lo
-	!byte <ammo_shells, <ammo_nails, <ammo_nails, <ammo_grenades, <ammo_grenades
-	!byte <player_hp, <player_hp, <ammo_shells, 0, 0
-	!byte 0, 0, 0, 0, 0
+	!byte <player_hp, <player_hp, 0, 0, <ammo_bullets
+	!byte <ammo_shells, <ammo_grenades, <ammo_shells, <ammo_nails, 0
+	!byte <ammo_grenades, 0, 0, 0, 0
+	!byte <player_hp, 0, 0, 0
 gb_ptr_hi
-	!byte >ammo_shells, >ammo_nails, >ammo_nails, >ammo_grenades, >ammo_grenades
-	!byte >player_hp, >player_hp, >ammo_shells, 0, 0
-	!byte 0, 0, 0, 0, 0
+	!byte >player_hp, >player_hp, 0, 0, >ammo_bullets
+	!byte >ammo_shells, >ammo_grenades, >ammo_shells, >ammo_nails, 0
+	!byte >ammo_grenades, 0, 0, 0, 0
+	!byte >player_hp, 0, 0, 0
 
 gb_add
-	!byte AMMO_SHELLS_BOX, AMMO_NAILS_GUN, AMMO_NAILS_BOX, AMMO_GRENADES_GUN, AMMO_GRENADES_BOX
-	!byte HP_PACK_25, HP_PACK_50, AMMO_SHELLS_DEATH, 0, 0
-	!byte 0, 0, 0, 0, 0
+	!byte HP_STIM, HP_MEDIKIT, 0, 0, AMMO_BULLETS_BOX
+	!byte AMMO_SHELLS_BOX, AMMO_GRENADES_BOX, AMMO_SHELLS_BOX, AMMO_NAILS_GUN, 0
+	!byte AMMO_GRENADES_GUN, 0, 0, 0, 0
+	!byte HP_SOUL, 0, 0, 0
 
 gb_max
-	!byte AMMO_SHELLS_MAX, AMMO_NAILS_MAX, AMMO_NAILS_MAX, AMMO_GRENADES_MAX, AMMO_GRENADES_MAX
-	!byte PLAYER_HP_MAX, PLAYER_HP_MAX, AMMO_SHELLS_MAX, PLAYER_ARMOUR_MAX, 0
-	!byte 0, 0, 0, 0, 0
+	!byte PLAYER_HP_MAX, PLAYER_HP_MAX, ARMOR_GREEN, ARMOR_BLUE, AMMO_BULLETS_MAX
+	!byte AMMO_SHELLS_MAX, AMMO_GRENADES_MAX, AMMO_SHELLS_MAX, AMMO_NAILS_MAX, 0
+	!byte AMMO_GRENADES_MAX, 0, 0, 0, 0
+	!byte HP_SOUL_MAX, 0, 0, 0
+
+gb_dbl
+	!byte 0, 0, 0, 0, 1
+	!byte 1, 1, 1, 1, 0
+	!byte 1, 0, 0, 0, 0
+	!byte 0, 0, 0, 0
 
 gb_bits
-	!byte 0, HAVE_NAIL, 0, HAVE_GREN, 0
 	!byte 0, 0, 0, 0, 0
-	!byte 0, 0, HAVE_SILVER, HAVE_GOLD, HAVE_EARTH
+	!byte 0, 0, HAVE_SHOT, HAVE_NAIL, HAVE_AXE
+	!byte HAVE_GREN, 0, HAVE_RED, HAVE_YELLOW, HAVE_BLUE
+	!byte 0, 0, 0, 0
 
 gb_wpn
-	!byte 0, WPN_NAIL, 0, WPN_GREN, 0
 	!byte 0, 0, 0, 0, 0
-	!byte 0, 0, 0, 0, 0
+	!byte 0, 0, WPN_SHOT, WPN_NAIL, WPN_AXE
+	!byte WPN_GREN, 0, 0, 0, 0
+	!byte 0, 0, 0, 0
+
+gb_snd
+	!byte PS_HP, PS_HP, PS_AMMO, PS_AMMO, PS_AMMO
+	!byte PS_AMMO, PS_AMMO, PS_AMMO, PS_AMMO, PS_AMMO
+	!byte PS_AMMO, PS_BONUS, PS_KEY, PS_KEY, PS_KEY
+	!byte PS_HP, PS_BONUS, PS_AMMO, PS_AMMO
 
 ; Y = BP_*. rot2=0 fail if at cap, 1 always add+clamp. C=1 stored. Restores Y.
 gb_add_amt
@@ -1818,28 +1853,44 @@ gb_add_amt
 	sta rot1
 	tya
 	tax
+	jsr gb_load_cap
 	ldy #0
 	lda (rot0),y
 	ldy rot2
 	bne .ga_add
-	cmp gb_max,x
+	cmp gb_cap
 	bcc .ga_add
 	jmp gb_no
 .ga_add
 	clc
 	adc gb_add,x
 	bcs .ga_cap
-	cmp gb_max,x
+	cmp gb_cap
 	bcc .ga_ok
 	beq .ga_ok
 .ga_cap
-	lda gb_max,x
+	lda gb_cap
 .ga_ok
 	ldy #0
 	sta (rot0),y
 	txa
 	tay
 	sec
+	rts
+
+; X = BP_*. gb_cap = gb_max, doubled when have_pack and gb_dbl (saturate 255).
+gb_load_cap
+	lda gb_max,x
+	sta gb_cap
+	lda have_pack
+	beq .glc_rts
+	lda gb_dbl,x
+	beq .glc_rts
+	asl gb_cap
+	bcc .glc_rts
+	lda #255
+	sta gb_cap
+.glc_rts
 	rts
 
 gb_do_add
@@ -1851,14 +1902,21 @@ gb_do_gun
 	lda have_wpn
 	and gb_bits,y
 	beq .gg_new
-	jmp gb_no
+	lda gb_add,y
+	beq gb_no
+	lda #0
+	sta rot2
+	jmp gb_add_amt
 .gg_new
 	lda have_wpn
 	ora gb_bits,y
 	sta have_wpn
+	lda gb_add,y
+	beq .gg_sw
 	lda #1
 	sta rot2
 	jsr gb_add_amt
+.gg_sw
 	ldx gb_wpn,y
 	jsr switch_weapon
 	sec
@@ -1866,11 +1924,11 @@ gb_do_gun
 
 gb_do_arm
 	lda player_armour
-	cmp #PLAYER_ARMOUR_MAX
+	cmp gb_max,y
 	bcc .gar_ok
 	jmp gb_no
 .gar_ok
-	lda #PLAYER_ARMOUR_MAX
+	lda gb_max,y
 	sta player_armour
 	sec
 	rts
@@ -1897,30 +1955,41 @@ gb_do_key
 	sec
 	rts
 
+gb_do_pack
+	lda have_pack
+	bne gb_no
+	lda #1
+	sta have_pack
+	sec
+	rts
+
 gb_no
 	clc
 	rts
 
 ; A = BP_* — health / ammo / bonus / key
 pickup_sound
-	cmp #BP_HEALTH25
+	cmp #BP_NTYPES
+	bcc .ps_ok
+	rts
+.ps_ok
+	tay
+	lda gb_snd,y
 	beq .ps_hp
-	cmp #BP_HEALTH50
-	beq .ps_hp
-	cmp #BP_QUAD
-	bcc .ps_ammo
-	cmp #BP_SILVER
-	bcc .ps_bonus
-	lda #SOUND_ITEMS_ITEMBK2
+	cmp #PS_AMMO
+	beq .ps_ammo
+	cmp #PS_BONUS
+	beq .ps_bonus
+	lda #SOUND_ITEMUP
 	jmp play_sound
 .ps_bonus
-	lda #SOUND_ITEMS_DAMAGE
+	lda #SOUND_ITEMUP
 	jmp play_sound
 .ps_ammo
-	lda #SOUND_WEAPONS_PKUP
+	lda #SOUND_WPNUP
 	jmp play_sound
 .ps_hp
-	lda #SOUND_ITEMS_HEALTH1
+	lda #SOUND_ITEMUP
 	jmp play_sound
 
 ; X=switch; C=1 if within SW_USE_RANGE of pad XZ, Y overlaps, facing the face

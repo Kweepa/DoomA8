@@ -131,14 +131,6 @@ export const WEAPON_LABELS = {
   rock: "Grenade launcher",
 };
 
-export const SOUND_TICK_HZ = 50;
-export const SOUND_MAX_TICKS = 255;
-export const SOUND_PAYLOAD_MAX = 4096;
-export const PC_TIMER = 1193181;
-export const SOUND_HZ_MIN = 80;
-export const SOUND_HZ_MAX = 4000;
-export const SOUND_VOICE_LABELS = ["Player", "Enemy", "World"];
-
 /** Fixed enemy cue set. sight/wince/death play generically; melee/shoot bind to clips. */
 export const ENEMY_CUES = ["sight", "wince", "melee", "shoot", "death"];
 export const ENEMY_CUE_LABELS = {
@@ -151,215 +143,6 @@ export const ENEMY_CUE_LABELS = {
 export const ENEMY_CUES_REQUIRED = ["sight", "wince", "death"];
 /** Cues that a clip may carry (timed to an animation frame). */
 export const ENEMY_ATTACK_CUES = ["melee", "shoot"];
-
-/** Locked in-game aliases (resident, always exported). extraAliases share the same ID. */
-export const SOUND_LOCKED = [
-  { alias: "HITWALL", path: "sound/weapons/tink1.wav", voice: 0, priority: 1, origin: "wolf", library: "HITWALL" },
-  {
-    alias: "PLAYERDEATH",
-    path: "sound/player/death1.wav",
-    voice: 0,
-    priority: 99,
-    origin: "wolf",
-    library: "PLAYERDEATH",
-  },
-  {
-    alias: "TAKEDAMAGE",
-    path: "sound/player/pain1.wav",
-    voice: 0,
-    priority: 90,
-    origin: "wolf",
-    library: "TAKEDAMAGE",
-  },
-  {
-    alias: "OPENDOOR",
-    path: "sound/doors/hydro1.wav",
-    voice: 2,
-    priority: 20,
-    origin: "wolf",
-    library: "OPENDOOR",
-  },
-  { alias: "ATKMACHINEGUN", path: "sound/weapons/spike2.wav", voice: 0, priority: 50, origin: "wolf", library: "ATKMACHINEGUN" },
-  { alias: "HITENEMY", path: "sound/weapons/lhit.wav", voice: 0, priority: 50, origin: "wolf", library: "HITENEMY" },
-  { alias: "SHOOT", path: "sound/weapons/grenade.wav", voice: 1, priority: 20, origin: "wolf", library: "SHOOT" },
-  {
-    alias: "GETKEY",
-    path: "sound/items/itembk2.wav",
-    voice: 0,
-    priority: 90,
-    origin: "wolf",
-    library: "GETKEY",
-  },
-  {
-    alias: "GETAMMO",
-    path: "sound/weapons/pkup.wav",
-    voice: 0,
-    priority: 80,
-    origin: "wolf",
-    library: "GETAMMO",
-  },
-  {
-    alias: "HEALTH1",
-    extraAliases: ["HEALTH2"],
-    path: "sound/items/health1.wav",
-    voice: 0,
-    priority: 85,
-    origin: "wolf",
-    library: "HEALTH1",
-  },
-  { alias: "SWITCH", path: "sound/misc/menu2.wav", voice: 0, priority: 1, origin: "wolf", library: "MOVEGUN1" },
-  {
-    alias: "BONUS1",
-    path: "sound/items/damage.wav",
-    voice: 0,
-    priority: 70,
-    origin: "wolf",
-    library: "BONUS1",
-  },
-  {
-    alias: "SHOTGN",
-    path: "sound/weapons/shotgn2.wav",
-    voice: 0,
-    priority: 50,
-    origin: "doom",
-    library: "DPSHOTGN",
-  },
-  {
-    alias: "BAREXP",
-    path: "sound/weapons/r_exp3.wav",
-    voice: 1,
-    priority: 80,
-    origin: "doom",
-    library: "DPRXPLOD",
-  },
-  { alias: "OOF", path: "sound/player/land.wav", voice: 0, priority: 50, origin: "doom", library: "DPOOF" },
-];
-
-export const SOUND_LOCKED_BY_PATH = Object.fromEntries(SOUND_LOCKED.map((s) => [s.path, s]));
-export const SOUND_LOCKED_ALIASES = new Set(
-  SOUND_LOCKED.flatMap((s) => [s.alias, ...(s.extraAliases || [])])
-);
-
-export function wolfByteToHz(b) {
-  const n = b | 0;
-  if (n <= 0) return 0;
-  return PC_TIMER / (n * 60);
-}
-
-export function hzToWolfByte(hz) {
-  const v = Number(hz);
-  if (!Number.isFinite(v) || v <= 0) return 0;
-  return Math.max(1, Math.min(255, Math.round(PC_TIMER / (v * 60))));
-}
-
-export function clampSoundVoice(n) {
-  const v = n | 0;
-  if (v < 0) return 0;
-  if (v > 2) return 2;
-  return v;
-}
-
-export function clampSoundPriority(n) {
-  const v = n | 0;
-  if (v < 0) return 0;
-  if (v > 99) return 99;
-  return v;
-}
-
-export function clampSoundVol(n) {
-  const v = n | 0;
-  if (v < 0) return 0;
-  if (v > 15) return 15;
-  return v;
-}
-
-export function clampSoundAttack(n) {
-  const v = n | 0;
-  if (v < 0) return 0;
-  if (v > 15) return 15;
-  return v;
-}
-
-export function clampSoundFreqByte(n) {
-  const v = n | 0;
-  if (v < 0) return 0;
-  if (v > 255) return 255;
-  return v;
-}
-
-const LIBRARY_ORIGINS = new Set(["wolf", "doom", "dave", "keen"]);
-
-export function defaultSoundEntry(locked) {
-  const origin = LIBRARY_ORIGINS.has(locked.origin) || locked.origin === "empty" ? locked.origin : "empty";
-  const entry = {
-    export: true,
-    alias: locked.alias,
-    extraAliases: locked.extraAliases ? [...locked.extraAliases] : undefined,
-    voice: clampSoundVoice(locked.voice),
-    priority: clampSoundPriority(locked.priority),
-    attack: 0,
-    origin,
-  };
-  if (typeof locked.library === "string" && locked.library.trim()) {
-    entry.library = locked.library.trim().toUpperCase();
-  }
-  return entry;
-}
-
-export function defaultSounds() {
-  const sounds = {};
-  for (const locked of SOUND_LOCKED) sounds[locked.path] = defaultSoundEntry(locked);
-  return sounds;
-}
-
-export function emptySoundEntry() {
-  return { export: false, voice: 0, priority: 50, attack: 0, origin: "empty" };
-}
-
-export function isSoundLocked(path) {
-  return !!SOUND_LOCKED_BY_PATH[path];
-}
-
-export function soundFolder(path) {
-  const rest = String(path || "").replace(/^sound\//i, "");
-  const i = rest.lastIndexOf("/");
-  return i >= 0 ? rest.slice(0, i) : "";
-}
-
-export function soundShortName(path) {
-  const rest = String(path || "").replace(/^sound\//i, "");
-  return rest.replace(/\.wav$/i, "") || rest;
-}
-
-export function soundIdent(path) {
-  return soundShortName(path)
-    .replace(/[^a-zA-Z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "")
-    .toUpperCase() || "SFX";
-}
-
-/** Suffix of SOUND_FOLDER_STEM. The list already groups by folder. */
-export function soundLeafIdent(path) {
-  const ident = soundIdent(path);
-  const folder = soundFolder(path)
-    .replace(/[^a-zA-Z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "")
-    .toUpperCase();
-  const prefix = folder ? `${folder}_` : "";
-  return prefix && ident.startsWith(prefix) ? ident.slice(prefix.length) : ident;
-}
-
-export function alignSoundArrays(snd) {
-  if (Array.isArray(snd.freq)) {
-    let freq = snd.freq.map(clampSoundFreqByte);
-    if (freq.length > SOUND_MAX_TICKS) freq = freq.slice(0, SOUND_MAX_TICKS);
-    snd.freq = freq;
-  }
-  delete snd.vol;
-  delete snd.wave;
-  snd.attack = clampSoundAttack(snd.attack);
-  return snd.freq?.length || 0;
-}
 
 /** Normalize a cue value to a sound path, or "" when it is not one. */
 export function normalizeCuePath(raw) {
@@ -378,107 +161,6 @@ export function parseEnemyCues(raw) {
     if (p) out[cue] = p;
   }
   return out;
-}
-
-/** Paths referenced by any enemy cue. Those are exported; locked paths are resident. */
-export function cueReferencedPaths(doc) {
-  const out = new Set();
-  for (const e of doc?.enemies || []) {
-    for (const cue of ENEMY_CUES) {
-      const p = e.cues?.[cue];
-      if (p) out.add(p);
-    }
-  }
-  return out;
-}
-
-/** True when the path rides on enemy pose banks (cue-referenced, not a resident alias). */
-export function soundIsStreamed(doc, path) {
-  return !SOUND_LOCKED_BY_PATH[path] && cueReferencedPaths(doc).has(path);
-}
-
-/** Exported = resident alias or referenced by an enemy cue. */
-export function soundIsExported(doc, path) {
-  return !!SOUND_LOCKED_BY_PATH[path] || cueReferencedPaths(doc).has(path);
-}
-
-/** Resident payload only (locked aliases). Enemy cues stream with the poses. */
-export function soundPayloadBytes(sounds, resolveFreq) {
-  let total = 0;
-  const seen = new Set();
-  for (const [path, snd] of Object.entries(sounds || {})) {
-    if (!SOUND_LOCKED_BY_PATH[path]) continue;
-    if (seen.has(path)) continue;
-    seen.add(path);
-    let freq = null;
-    if (typeof resolveFreq === "function") {
-      const got = resolveFreq(snd);
-      if (!got) continue;
-      freq = got;
-    } else if (Array.isArray(snd.freq)) {
-      freq = snd.freq;
-    } else {
-      continue;
-    }
-    const n = Math.min(SOUND_MAX_TICKS, freq.length || 0);
-    total += 2 + n;
-  }
-  return total;
-}
-
-export function getSound(doc, path) {
-  const cur = doc?.sounds?.[path];
-  if (cur) return cur;
-  const locked = SOUND_LOCKED_BY_PATH[path];
-  if (locked) return defaultSoundEntry(locked);
-  return emptySoundEntry();
-}
-
-export function ensureSound(doc, path) {
-  if (!doc.sounds) doc.sounds = {};
-  if (!doc.sounds[path]) {
-    const locked = SOUND_LOCKED_BY_PATH[path];
-    doc.sounds[path] = locked ? defaultSoundEntry(locked) : emptySoundEntry();
-  }
-  return doc.sounds[path];
-}
-
-function parseSoundEntry(path, raw, fallback) {
-  const locked = SOUND_LOCKED_BY_PATH[path];
-  const base = fallback || (locked ? defaultSoundEntry(locked) : emptySoundEntry());
-  const src = raw && typeof raw === "object" ? raw : {};
-  const origin = LIBRARY_ORIGINS.has(src.origin) || src.origin === "empty" ? src.origin : base.origin;
-  const snd = {
-    export: locked ? true : !!src.export,
-    voice: clampSoundVoice(src.voice != null ? src.voice : base.voice),
-    priority: clampSoundPriority(src.priority != null ? src.priority : base.priority),
-    attack: clampSoundAttack(src.attack != null ? src.attack : base.attack),
-    origin,
-  };
-  if (LIBRARY_ORIGINS.has(snd.origin)) {
-    const fromSrc = LIBRARY_ORIGINS.has(src.origin) && typeof src.library === "string" && src.library.trim();
-    const lib = fromSrc ? src.library : base.library;
-    if (typeof lib === "string" && lib.trim()) snd.library = lib.trim().toUpperCase();
-  }
-  if (locked) {
-    snd.alias = locked.alias;
-    if (locked.extraAliases) snd.extraAliases = [...locked.extraAliases];
-  } else if (typeof src.alias === "string" && src.alias.trim() && !SOUND_LOCKED_ALIASES.has(src.alias.trim().toUpperCase())) {
-    snd.alias = src.alias.trim().toUpperCase();
-  }
-  alignSoundArrays(snd);
-  return snd;
-}
-
-export function parseSounds(raw) {
-  const sounds = defaultSounds();
-  if (!raw || typeof raw !== "object") return sounds;
-  for (const [path, src] of Object.entries(raw)) {
-    const key = String(path || "").replace(/\\/g, "/").toLowerCase();
-    if (!key.startsWith("sound/") || !key.endsWith(".wav")) continue;
-    sounds[key] = parseSoundEntry(key, src, sounds[key]);
-  }
-  return sounds;
 }
 
 export function clampMdlScale(n) {
@@ -736,7 +418,7 @@ export function doorUsesTag(lockKey) {
 }
 
 /** Layout placements draw the first stick frame at this fraction of anim units (Possessed ~4 world high). */
-export const LAYOUT_ENEMY_SCALE = 1 / 8;
+export const LAYOUT_ENEMY_SCALE = 1 / 4;
 
 /** Yaw octants, 0 = +Z (N / game forward). */
 export const ENEMY_FACINGS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
@@ -887,36 +569,42 @@ export function elevStopBottoms(doc, elev) {
   return { dest, home };
 }
 
-/** Placeable pickup contents (not including death-drop shells5). */
+/** Placeable pickup contents. Lightpost and barrel are drawn props. */
 export const PICKUP_TYPES = [
+  "small health",
+  "large health",
+  "green armor",
+  "blue armor",
+  "ammo box",
   "shells",
-  "nailgun",
-  "nails",
-  "grenade launcher",
-  "grenades",
-  "health 25%",
-  "health 50%",
-  "armour",
-  "quad damage",
-  "pentagram of protection",
-  "ring of shadows",
-  "silver key",
-  "gold key",
-  "rune of earth magic",
+  "box of rockets",
+  "shotgun",
+  "chaingun",
+  "chainsaw",
+  "rocket launcher",
+  "backpack",
+  "red keycard",
+  "yellow keycard",
+  "blue keycard",
+  "soulsphere",
+  "radsuit",
+  "lightpost",
+  "barrel",
 ];
 /** @deprecated Use PICKUP_TYPES */
 export const BACKPACK_TYPES = PICKUP_TYPES;
 
-export const ITEM_MESH_KEYS = ["backpack", ...PICKUP_TYPES];
+export const ITEM_MESH_KEYS = PICKUP_TYPES;
 export const DOOR_TYPES = ["Tech", "Arch", "Tri", "Crack"];
 export const DOOR_MESH_KEYS = DOOR_TYPES;
 export const ALL_MESH_KEYS = [...ITEM_MESH_KEYS, ...DOOR_MESH_KEYS];
 /** Items-tab floor/cube and paste-nudge window. Not a coord cap. */
 export const ITEM_MIN = -4;
 export const ITEM_MAX = 4;
-/** Signed 8-bit local X/Y/Z. $80 is −128. */
-export const ITEM_COORD_MIN = -128;
-export const ITEM_COORD_MAX = 127;
+/** Quarter-unit locals. Packed byte is round(v*4), still −128..127. */
+export const ITEM_POS_Q = 4;
+export const ITEM_COORD_MIN = -128 / ITEM_POS_Q;
+export const ITEM_COORD_MAX = 127 / ITEM_POS_Q;
 export const ITEM_ORIGIN = 0;
 /** Editor 0 sits at the centre of the 2×2 pickup footprint. */
 export const ITEM_WORLD_BIAS = 1;
@@ -924,11 +612,12 @@ export const ITEM_MAX_VERTS = 16;
 export const ITEM_MAX_LINES = 16;
 export const ITEM_MAX_UNIQUE = 6;
 
-export const DOOR_LOCKS = ["unlocked", "silver", "gold", "remote"];
+export const DOOR_LOCKS = ["unlocked", "yellow", "blue", "red", "remote"];
 export const DOOR_LOCK_LABELS = {
   unlocked: "Unlocked",
-  silver: "Silver key",
-  gold: "Gold key",
+  yellow: "Yellow keycard",
+  blue: "Blue keycard",
+  red: "Red keycard",
   remote: "Remote",
 };
 /** Discrete AABB scales of the 4×5×1 doorway. Thickness stays 1. */
@@ -941,8 +630,26 @@ export const BACKPACK_HEIGHT = 1.5;
 export const BACKPACK_SIDE = BACKPACK_HEIGHT / GOLDEN_RATIO;
 export const BACKPACK_DEPTH = (BACKPACK_SIDE * Math.sqrt(3)) / 2;
 
+const PICKUP_ALIAS = {
+  nailgun: "chaingun",
+  nails: "ammo box",
+  "grenade launcher": "rocket launcher",
+  grenades: "box of rockets",
+  "health 25%": "small health",
+  "health 50%": "large health",
+  armour: "green armor",
+  armor: "green armor",
+  "quad damage": "radsuit",
+  "pentagram of protection": "soulsphere",
+  "ring of shadows": "radsuit",
+  "silver key": "yellow keycard",
+  "gold key": "blue keycard",
+  "rune of earth magic": "red keycard",
+};
+
 export function clampPickupType(s) {
-  return PICKUP_TYPES.includes(s) ? s : "shells";
+  const n = PICKUP_ALIAS[s] || s;
+  return PICKUP_TYPES.includes(n) ? n : "shells";
 }
 
 /** @deprecated Use clampPickupType */
@@ -951,7 +658,11 @@ export function clampBackpackType(s) {
 }
 
 export function clampDoorLock(s) {
-  return s === "silver" || s === "gold" || s === "remote" ? s : "unlocked";
+  if (s === "silver" || s === "yellow") return "yellow";
+  if (s === "gold" || s === "blue") return "blue";
+  if (s === "red") return "red";
+  if (s === "remote") return "remote";
+  return "unlocked";
 }
 
 export function clampDoorType(s) {
@@ -986,10 +697,10 @@ export function isDoorMeshKey(key) {
 }
 
 export function clampItemCoord(n) {
-  const v = n | 0;
-  if (v < ITEM_COORD_MIN) return ITEM_COORD_MIN;
-  if (v > ITEM_COORD_MAX) return ITEM_COORD_MAX;
-  return v;
+  const q = Math.round(Number(n) * ITEM_POS_Q) / ITEM_POS_Q;
+  if (q < ITEM_COORD_MIN) return ITEM_COORD_MIN;
+  if (q > ITEM_COORD_MAX) return ITEM_COORD_MAX;
+  return q;
 }
 
 export function emptyItemMesh() {
@@ -1023,7 +734,7 @@ export function defaultItemMeshes() {
         [3, 2],
       ]
     ),
-    "health 25%": meshOf(
+    "small health": meshOf(
       [
         [0, 2, 0],
         [-1, 1, 0],
@@ -1047,7 +758,7 @@ export function defaultItemMeshes() {
         [0, 3],
       ]
     ),
-    "health 50%": meshOf(
+    "large health": meshOf(
       [
         [0, 4, 0],
         [-2, 2, 0],
@@ -1071,7 +782,7 @@ export function defaultItemMeshes() {
         [0, 3],
       ]
     ),
-    "quad damage": meshOf(
+    "green armor": meshOf(
       [
         [-1, 0, -1],
         [1, 0, -1],
@@ -1090,7 +801,7 @@ export function defaultItemMeshes() {
         [4, 3],
       ]
     ),
-    "pentagram of protection": meshOf(
+    "soulsphere": meshOf(
       [
         [0, 0, -2],
         [2, 0, 0],
@@ -1109,7 +820,7 @@ export function defaultItemMeshes() {
         [4, 3],
       ]
     ),
-    "ring of shadows": meshOf(
+    "radsuit": meshOf(
       [
         [-2, 2, 0],
         [-1, 1, 0],
@@ -1127,7 +838,7 @@ export function defaultItemMeshes() {
         [5, 0],
       ]
     ),
-    "silver key": meshOf(
+    "yellow keycard": meshOf(
       [
         [-2, 1, 0],
         [-2, 2, 0],
@@ -1145,7 +856,7 @@ export function defaultItemMeshes() {
         [4, 5],
       ]
     ),
-    "gold key": meshOf(
+    "blue keycard": meshOf(
       [
         [-2, 1, 0],
         [-2, 3, 0],
@@ -1165,7 +876,7 @@ export function defaultItemMeshes() {
         [4, 6],
       ]
     ),
-    "rune of earth magic": meshOf(
+    "red keycard": meshOf(
       [
         [0, 0, 0],
         [-2, 1, 0],
@@ -1188,6 +899,172 @@ export function defaultItemMeshes() {
         [6, 0],
         [6, 7],
         [6, 8],
+      ]
+    ),
+    "blue armor": meshOf(
+      [
+        [-1, 0, -1],
+        [1, 0, -1],
+        [1, 0, 1],
+        [-1, 0, 1],
+        [0, 4, 0],
+      ],
+      [
+        [0, 1],
+        [1, 2],
+        [2, 3],
+        [3, 0],
+        [4, 0],
+        [4, 1],
+        [4, 2],
+        [4, 3],
+      ]
+    ),
+    "ammo box": meshOf(
+      [
+        [-1, 0, -1],
+        [1, 0, -1],
+        [1, 1, -1],
+        [-1, 1, -1],
+        [0, 0, 1],
+        [0, 1, 1],
+      ],
+      [
+        [0, 1],
+        [1, 2],
+        [2, 3],
+        [3, 0],
+        [0, 4],
+        [1, 4],
+        [3, 5],
+        [2, 5],
+        [4, 5],
+      ]
+    ),
+    shells: meshOf(
+      [
+        [-1, 0, 0],
+        [1, 0, 0],
+        [1, 1, 0],
+        [-1, 1, 0],
+      ],
+      [
+        [0, 1],
+        [1, 2],
+        [2, 3],
+        [3, 0],
+      ]
+    ),
+    "box of rockets": meshOf(
+      [
+        [-1, 0, 0],
+        [1, 0, 0],
+        [0, 2, 0],
+        [0, 1, 1],
+      ],
+      [
+        [0, 1],
+        [1, 2],
+        [2, 0],
+        [0, 3],
+        [1, 3],
+        [2, 3],
+      ]
+    ),
+    shotgun: meshOf(
+      [
+        [-2, 1, 0],
+        [2, 1, 0],
+        [1, 0, 0],
+        [0, 2, 0],
+      ],
+      [
+        [0, 1],
+        [1, 2],
+        [2, 0],
+        [0, 3],
+        [1, 3],
+      ]
+    ),
+    chaingun: meshOf(
+      [
+        [-2, 1, 0],
+        [2, 1, 0],
+        [1, 0, 0],
+        [0, 2, 0],
+      ],
+      [
+        [0, 1],
+        [1, 2],
+        [2, 0],
+        [0, 3],
+        [1, 3],
+      ]
+    ),
+    chainsaw: meshOf(
+      [
+        [0, 0, 0],
+        [0, 3, 0],
+        [-1, 3, 0],
+        [1, 3, 0],
+      ],
+      [
+        [0, 1],
+        [1, 2],
+        [1, 3],
+      ]
+    ),
+    "rocket launcher": meshOf(
+      [
+        [-1, 0, 0],
+        [1, 0, 0],
+        [1, 2, 0],
+        [-1, 2, 0],
+        [0, 3, 0],
+      ],
+      [
+        [0, 1],
+        [1, 2],
+        [2, 3],
+        [3, 0],
+        [2, 4],
+        [3, 4],
+      ]
+    ),
+    lightpost: meshOf(
+      [
+        [0, 0, 0],
+        [0, 4, 0],
+        [-1, 4, 0],
+        [1, 4, 0],
+        [0, 4, -1],
+        [0, 4, 1],
+      ],
+      [
+        [0, 1],
+        [2, 3],
+        [4, 5],
+      ]
+    ),
+    barrel: meshOf(
+      [
+        [-1, 0, 0],
+        [1, 0, 0],
+        [1, 2, 0],
+        [-1, 2, 0],
+        [0, 0, 1],
+        [0, 2, 1],
+      ],
+      [
+        [0, 1],
+        [1, 2],
+        [2, 3],
+        [3, 0],
+        [0, 4],
+        [1, 4],
+        [3, 5],
+        [2, 5],
+        [4, 5],
       ]
     ),
     Tech: meshOf(
@@ -1295,6 +1172,25 @@ export function parseItemMeshes(raw) {
   const d = defaultItemMeshes();
   if (!raw || typeof raw !== "object") return d;
   const src = { ...raw };
+  const meshAlias = {
+    "health 25%": "small health",
+    "health 50%": "large health",
+    armour: "green armor",
+    nails: "ammo box",
+    grenades: "box of rockets",
+    nailgun: "chaingun",
+    "grenade launcher": "rocket launcher",
+    "silver key": "yellow keycard",
+    "gold key": "blue keycard",
+    "rune of earth magic": "red keycard",
+    "pentagram of protection": "soulsphere",
+    "ring of shadows": "radsuit",
+  };
+  for (const [oldKey, newKey] of Object.entries(meshAlias)) {
+    if (src[oldKey] != null && src[newKey] == null) src[newKey] = src[oldKey];
+  }
+  if (src.chaingun != null && src.shotgun == null) src.shotgun = src.chaingun;
+  if (src["green armor"] != null && src["blue armor"] == null) src["blue armor"] = src["green armor"];
   if (src.tech != null && src.Tech == null) src.Tech = src.tech;
   if (src.arch != null && src.Arch == null) src.Arch = src.arch;
   if (src.tri != null && src.Tri == null) src.Tri = src.tri;
@@ -1376,8 +1272,8 @@ export function itemUniqueXZ(verts) {
   const xs = new Set();
   const zs = new Set();
   for (const v of verts || []) {
-    xs.add(v.x | 0);
-    zs.add(v.z | 0);
+    xs.add(Math.round(v.x * ITEM_POS_Q));
+    zs.add(Math.round(v.z * ITEM_POS_Q));
   }
   return { nx: xs.size, nz: zs.size, xs, zs };
 }
@@ -1398,12 +1294,39 @@ export function itemMeshStats(mesh) {
   };
 }
 
+export const ITEM_TABLE_MAX = 256;
+
+function addMeshBudget(sum, mesh) {
+  const stats = itemMeshStats(mesh);
+  sum.nv += stats.nv;
+  sum.nx += stats.nx;
+  sum.nz += stats.nz;
+  sum.ne += stats.ne;
+}
+
+export function itemGlobalBudgets(doc) {
+  const items = doc?.items || {};
+  const pickups = { nv: 0, nx: 0, nz: 0, ne: 0 };
+  for (const key of ITEM_MESH_KEYS) {
+    const mesh = items[key];
+    if (!itemMeshHasGeom(mesh)) continue;
+    addMeshBudget(pickups, mesh);
+  }
+  const doors = { nv: 0, nx: 0, nz: 0, ne: 0 };
+  const defaults = defaultItemMeshes();
+  for (const key of DOOR_MESH_KEYS) {
+    const mesh = itemMeshHasGeom(items[key]) ? items[key] : defaults[key];
+    addMeshBudget(doors, mesh);
+  }
+  return { pickups, doors };
+}
+
 export function itemMeshWorldSegs(obj, mesh) {
   const m = mesh && itemMeshHasGeom(mesh) ? mesh : defaultItemMeshes().backpack;
   const verts = m.verts.map((v) => ({
-    x: obj.x + (v.x | 0) + ITEM_WORLD_BIAS,
-    y: obj.y + (v.y | 0),
-    z: obj.z + (v.z | 0) + ITEM_WORLD_BIAS,
+    x: obj.x + Number(v.x) + ITEM_WORLD_BIAS,
+    y: obj.y + Number(v.y),
+    z: obj.z + Number(v.z) + ITEM_WORLD_BIAS,
   }));
   const segs = [];
   for (const [a, b] of m.lines) {
@@ -2067,7 +1990,7 @@ export function createObject(kind, x, y, z, extra = {}) {
   }
   if (kind === "pickup") obj.pickup = clampPickupType(extra.pickup);
   if (kind === "doorway") {
-    obj.lockKey = clampDoorLock(extra.lockKey ?? (extra.locked ? "silver" : "unlocked"));
+    obj.lockKey = clampDoorLock(extra.lockKey ?? (extra.locked ? "yellow" : "unlocked"));
     obj.doorType = clampDoorType(extra.doorType);
     obj.doorScale = clampDoorScale(extra.doorScale);
     obj.tag = clampTag(extra.tag);
@@ -2175,7 +2098,7 @@ export function figureTemplateName(obj) {
   return obj.kind === "spawn" ? "Possessed" : obj.enemy || "Possessed";
 }
 
-/** World-space first-frame stick verts for a placed enemy (1/8 scale, feet on floor center). */
+/** World-space first-frame stick verts for a placed enemy (1/4 scale, feet on floor center). */
 export function enemyPreviewFrame(template) {
   const frames = template?.frames;
   if (!frames?.length) return null;
@@ -3114,13 +3037,21 @@ function parseClipSound(raw) {
 }
 
 /** Map a legacy stem onto the attack cue whose path ident matches. Drop anything else. */
+function cuePathIdent(path) {
+  let rest = String(path || "").replace(/\\/g, "/");
+  if (rest.toLowerCase().startsWith("sound/")) rest = rest.slice(6);
+  if (rest.toLowerCase().endsWith(".wav")) rest = rest.slice(0, -4);
+  const ident = rest.replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toUpperCase();
+  return ident || "SFX";
+}
+
 function migrateClipSounds(clips, cues) {
   if (!Array.isArray(clips)) return;
   const byIdent = new Map();
   for (const cue of ENEMY_ATTACK_CUES) {
     const path = cues?.[cue];
-    if (!path || byIdent.has(soundIdent(path))) continue;
-    byIdent.set(soundIdent(path), cue);
+    if (!path || byIdent.has(cuePathIdent(path))) continue;
+    byIdent.set(cuePathIdent(path), cue);
   }
   for (const c of clips) {
     if (!c?.sound) continue;
@@ -3299,7 +3230,8 @@ function migrateDoorLock(o) {
   if (o.lockKey != null) return clampDoorLock(o.lockKey);
   if (o.locked) {
     const t = String(o.keyTag || o.tag || "").toLowerCase();
-    return t.includes("gold") ? "gold" : "silver";
+    if (t.includes("red")) return "red";
+    return t.includes("gold") || t.includes("blue") ? "blue" : "yellow";
   }
   return "unlocked";
 }
@@ -3314,7 +3246,9 @@ function migrateLoadedObject(o) {
   if (out.kind === "key") {
     out.kind = "pickup";
     const t = `${out.tag || ""} ${out.keyTag || ""} ${out.pickup || ""}`.toLowerCase();
-    out.pickup = t.includes("gold") ? "gold key" : "silver key";
+    if (t.includes("red")) out.pickup = "red keycard";
+    else if (t.includes("gold") || t.includes("blue")) out.pickup = "blue keycard";
+    else out.pickup = "yellow keycard";
   }
   if (out.kind === "doorway") out.lockKey = migrateDoorLock(out);
   return out;
@@ -3477,9 +3411,6 @@ export function defaultEditorState() {
     layoutCameras: {},
     item: "backpack",
     itemOrbit: { yaw: 0.6, pitch: 0.35, dist: 16, target: { x: 0, y: 0, z: 0 } },
-    sound: SOUND_LOCKED[0].path,
-    hideUnused: true,
-    collapsedSoundFolders: [],
   };
 }
 
@@ -3555,7 +3486,6 @@ export function parseEditorState(raw) {
     raw.mode === "layout" ||
     raw.mode === "weapons" ||
     raw.mode === "items" ||
-    raw.mode === "sounds" ||
     raw.mode === "build"
   ) {
     d.mode = raw.mode;
@@ -3614,12 +3544,6 @@ export function parseEditorState(raw) {
     d.activeLevel = null;
   }
   if (typeof raw.item === "string" && ALL_MESH_KEYS.includes(raw.item)) d.item = raw.item;
-  if (typeof raw.sound === "string" && raw.sound) d.sound = raw.sound.replace(/\\/g, "/").toLowerCase();
-  if (raw.hideUnused != null) d.hideUnused = !!raw.hideUnused;
-  else if (raw.showAmbience != null) d.hideUnused = !raw.showAmbience;
-  if (Array.isArray(raw.collapsedSoundFolders)) {
-    d.collapsedSoundFolders = raw.collapsedSoundFolders.map((name) => String(name).toLowerCase());
-  }
   const io = raw.itemOrbit || {};
   const tgt = io.target || {};
   d.itemOrbit = {
@@ -3635,16 +3559,6 @@ export function parseEditorState(raw) {
   return d;
 }
 
-function persistSounds(sounds) {
-  const out = {};
-  for (const [path, snd] of Object.entries(sounds || {})) {
-    if (!snd || typeof snd !== "object") continue;
-    const { freq, vol, wave, ...rest } = snd;
-    out[path] = rest;
-  }
-  return out;
-}
-
 /** Game JSON only — no editor camera/tab/selection. */
 export function gameDocument(doc) {
   return {
@@ -3652,7 +3566,6 @@ export function gameDocument(doc) {
     maps: doc.maps,
     weapons: doc.weapons,
     items: doc.items,
-    sounds: persistSounds(doc.sounds),
   };
 }
 
@@ -3667,7 +3580,6 @@ export function createDefaultDocument() {
     enemies: createAllCreatures(),
     weapons: defaultWeapons(),
     items: defaultItemMeshes(),
-    sounds: defaultSounds(),
   };
 }
 
@@ -3794,7 +3706,6 @@ export function normalizeDocument(raw) {
   doc.version = DOC_VERSION;
   doc.weapons = parseWeapons(raw.weapons);
   doc.items = parseItemMeshes(migrateItemMeshes(raw.items, fromVersion));
-  doc.sounds = parseSounds(raw.sounds);
   doc.editor = parseEditorState(raw.editor);
   doc.enemies = (doc.enemies || []).filter((e) => DOOM_SPRITE_PREFIX[e.name]);
   if (!doc.enemies.length) {

@@ -271,7 +271,7 @@ export class ItemView {
     return {
       verts: indices.map((i) => {
         const v = mesh.verts[i];
-        return { x: v.x | 0, y: v.y | 0, z: v.z | 0 };
+        return { x: clampItemCoord(v.x), y: clampItemCoord(v.y), z: clampItemCoord(v.z) };
       }),
       lines: [...edgeKeys].map((k) => {
         const [a, b] = k.split(",").map(Number);
@@ -702,7 +702,8 @@ export class ItemView {
         this.drag.gizmoAxisLen ?? GIZMO_FALLBACK_LEN,
         cam,
         this.cssW,
-        this.cssH
+        this.cssH,
+        false
       );
       if (delta == null) return;
       if (
@@ -720,9 +721,9 @@ export class ItemView {
       const ray = screenRay(p.x, p.y, cam, this.cssW, this.cssH);
       const hit = intersectPlane(ray.origin, ray.dir, this.drag.grab, this.drag.planeN);
       if (!hit) return;
-      let dx = Math.round(hit.point.x - this.drag.grab.x);
-      let dy = Math.round(hit.point.y - this.drag.grab.y);
-      let dz = Math.round(hit.point.z - this.drag.grab.z);
+      let dx = hit.point.x - this.drag.grab.x;
+      let dy = hit.point.y - this.drag.grab.y;
+      let dz = hit.point.z - this.drag.grab.z;
       if (this.drag.plane === "xy") dz = 0;
       else if (this.drag.plane === "xz") dy = 0;
       else if (this.drag.plane === "yz") dx = 0;

@@ -304,7 +304,7 @@ draw_custom_enemy
 	adc #0
 	sta skel_bp+1
 
-; Baked batch: nslot, nedge, slot→vert[nslot], slot pairs[nedge*2].
+; Baked batch: nslot, nedge, slot→vert[nslot], starts[nedge], ends[nedge].
 ; Terminated by nslot = 0.
 .db_batch
 	lda skel_bp
@@ -350,11 +350,18 @@ draw_custom_enemy
 	lda src_ptr+1
 	adc #0
 	sta edge_ptr+1
+	clc
 	lda mesh_ne
-	asl
 	adc edge_ptr
-	sta skel_bp
+	sta edge_b
 	lda edge_ptr+1
+	adc #0
+	sta edge_b+1
+	clc
+	lda mesh_ne
+	adc edge_b
+	sta skel_bp
+	lda edge_b+1
 	adc #0
 	sta skel_bp+1
 	lda #$ff

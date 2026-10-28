@@ -234,7 +234,7 @@ apply_god
 	ldy #>cheat_msg_off
 .ag_msg
 	jsr cheat_show
-	lda #SOUND_ITEMS_DAMAGE
+	lda #SOUND_ITEMUP
 	jmp play_sound
 
 apply_kfa
@@ -251,13 +251,13 @@ apply_kfa
 	lda #PLAYER_ARMOUR_MAX
 	sta player_armour
 	lda have_keys
-	ora #HAVE_SILVER | HAVE_GOLD
+	ora #HAVE_YELLOW | HAVE_BLUE | HAVE_RED
 	sta have_keys
 	jsr hud_ammo
 	lda #<cheat_msg_kfa
 	ldy #>cheat_msg_kfa
 	jsr cheat_show
-	lda #SOUND_WEAPONS_PKUP
+	lda #SOUND_WPNUP
 	jmp play_sound
 
 ; X = episode digit, Y = map digit. Message after play_up2 (inside restart).

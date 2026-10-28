@@ -171,8 +171,8 @@ def run_mesh(b: Build, mesh: dict) -> tuple[list, int]:
         b.poke16("CAM_Y", "CAM_YH", i, y)
         b.poke16("CAM_Z", "CAM_ZH", i, z)
     for i, (e0, e1) in enumerate(edges):
-        mem[EDGES_AT + 2 * i] = e0
-        mem[EDGES_AT + 2 * i + 1] = e1
+        mem[EDGES_AT + i] = e0
+        mem[EDGES_AT + MAX_EDGES + i] = e1
         if b.evert:
             va, vb = verts[e0], verts[e1]
             mem[EVERT_AT + i] = 1 if va[0] == vb[0] and va[2] == vb[2] and va[1] != vb[1] else 0
@@ -186,6 +186,8 @@ def run_mesh(b: Build, mesh: dict) -> tuple[list, int]:
     mem[lab["col_ptr"] + 1] = col >> 8
     mem[lab["edge_ptr"]] = EDGES_AT & 0xFF
     mem[lab["edge_ptr"] + 1] = EDGES_AT >> 8
+    mem[lab["edge_b"]] = (EDGES_AT + MAX_EDGES) & 0xFF
+    mem[lab["edge_b"] + 1] = (EDGES_AT + MAX_EDGES) >> 8
     if b.evert:
         mem[lab["edge_vert_ptr"]] = EVERT_AT & 0xFF
         mem[lab["edge_vert_ptr"] + 1] = EVERT_AT >> 8

@@ -126,9 +126,9 @@ function pvDoorMeshSegs(obj, mesh) {
   const c = Math.cos(o.yaw);
   const sn = Math.sin(o.yaw);
   const verts = m.verts.map((v) => {
-    const lx = (v.x | 0) * s;
-    const ly = (v.y | 0) * s;
-    const lz = v.z | 0;
+    const lx = Number(v.x) * s;
+    const ly = Number(v.y) * s;
+    const lz = Number(v.z);
     return {
       x: o.x + lx * c + lz * sn,
       y: o.y + ly,

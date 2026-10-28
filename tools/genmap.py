@@ -294,15 +294,19 @@ def obj_tag(o) -> str:
 
 def door_lock_key(d) -> int:
     lk = str(d.get("lockKey") or "").strip().lower()
-    if lk == "gold":
+    if lk in ("blue", "gold"):
         return 2
-    if lk == "silver":
+    if lk in ("yellow", "silver"):
         return 1
+    if lk == "red":
+        return 4
     if lk == "remote":
         return 3
     if d.get("locked"):
         tag = str(d.get("keyTag") or "").lower()
-        return 2 if "gold" in tag else 1
+        if "red" in tag:
+            return 4
+        return 2 if "gold" in tag or "blue" in tag else 1
     return 0
 
 
@@ -354,20 +358,38 @@ def cook_one(level: dict, map_key: str) -> bytes:
     map_id = {id(o): i for i, o in enumerate(objs)}
 
     BP_TYPE = {
-        "shells": 0,
-        "nailgun": 1,
-        "nails": 2,
-        "grenade launcher": 3,
-        "grenades": 4,
-        "health 25%": 5,
-        "health 50%": 6,
-        "armour": 8,
-        "quad damage": 9,
-        "pentagram of protection": 10,
-        "ring of shadows": 11,
-        "silver key": 12,
-        "gold key": 13,
-        "rune of earth magic": 14,
+        "small health": 0,
+        "large health": 1,
+        "green armor": 2,
+        "blue armor": 3,
+        "ammo box": 4,
+        "shells": 5,
+        "box of rockets": 6,
+        "shotgun": 7,
+        "chaingun": 8,
+        "chainsaw": 9,
+        "rocket launcher": 10,
+        "backpack": 11,
+        "red keycard": 12,
+        "yellow keycard": 13,
+        "blue keycard": 14,
+        "soulsphere": 15,
+        "radsuit": 16,
+        "lightpost": 17,
+        "barrel": 18,
+        "health 25%": 0,
+        "health 50%": 1,
+        "armour": 2,
+        "nails": 4,
+        "grenades": 6,
+        "nailgun": 8,
+        "grenade launcher": 10,
+        "quad damage": 16,
+        "pentagram of protection": 15,
+        "ring of shadows": 16,
+        "silver key": 13,
+        "gold key": 14,
+        "rune of earth magic": 12,
     }
 
     # Tag → elevator index
@@ -896,7 +918,12 @@ def cook_one(level: dict, map_key: str) -> bytes:
         ri = room_index(rooms, b, "pickup")
         if kind == "key":
             tag = f"{b.get('tag') or ''} {b.get('keyTag') or ''} {b.get('pickup') or ''}".lower()
-            bt = 13 if "gold" in tag else 12
+            if "red" in tag:
+                bt = 12
+            elif "blue" in tag or "gold" in tag:
+                bt = 14
+            else:
+                bt = 13
         else:
             name = (b.get("pickup") or b.get("backpack") or "shells").strip()
             bt = BP_TYPE.get(name, 0)
@@ -1163,26 +1190,31 @@ FACE_PZ	= 0
 FACE_MZ	= 1
 FACE_PX	= 2
 FACE_MX	= 3
-BP_SHELLS	= 0
-BP_NAILGUN	= 1
-BP_NAILS	= 2
-BP_GRENLAUNCHER	= 3
-BP_GRENADES	= 4
-BP_HEALTH25	= 5
-BP_HEALTH50	= 6
-BP_SHELLS5	= 7
-BP_ARMOUR	= 8
-BP_QUAD	= 9
-BP_PENT	= 10
-BP_RING	= 11
-BP_SILVER	= 12
-BP_GOLD	= 13
-BP_RUNE	= 14
-BP_NTYPES	= 15
+BP_HEALTH_SM	= 0
+BP_HEALTH_LG	= 1
+BP_ARMOR_G	= 2
+BP_ARMOR_B	= 3
+BP_BULLETS	= 4
+BP_SHELLS	= 5
+BP_ROCKETS	= 6
+BP_SHOTGUN	= 7
+BP_CHAINGUN	= 8
+BP_CHAINSAW	= 9
+BP_ROCKETLAUNCHER	= 10
+BP_BACKPACK	= 11
+BP_KEY_RED	= 12
+BP_KEY_YELLOW	= 13
+BP_KEY_BLUE	= 14
+BP_SOUL	= 15
+BP_RADSUIT	= 16
+BP_LIGHTPOST	= 17
+BP_BARREL	= 18
+BP_NTYPES	= 19
 DOOR_KEY_NONE	= 0
-DOOR_KEY_SILVER	= 1
-DOOR_KEY_GOLD	= 2
+DOOR_KEY_YELLOW	= 1
+DOOR_KEY_BLUE	= 2
 DOOR_KEY_REMOTE	= 3
+DOOR_KEY_RED	= 4
 DOOR_TECH	= 0
 DOOR_ARCH	= 1
 DOOR_TRI	= 2

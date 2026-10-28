@@ -112,12 +112,12 @@
         {
           "id": "6d3a308a-b4e4-481f-b42b-109c2c531e49",
           "kind": "room",
-          "x": 29,
+          "x": 24,
           "y": 56,
-          "z": 131,
-          "sx": 24,
-          "sy": 9,
-          "sz": 12,
+          "z": 128,
+          "sx": 29,
+          "sy": 13,
+          "sz": 18,
           "face": "+z",
           "axis": "z",
           "dir": 1,
@@ -130,18 +130,18 @@
           "cuts": [
             {
               "su": 7,
-              "sv": 4
+              "sv": 7
             }
           ]
         },
         {
           "id": "5789a188-e76f-45a4-83f8-0ea77d252196",
           "kind": "slope",
-          "x": 36,
+          "x": 31,
           "y": 56,
           "z": 135,
-          "sx": 12,
-          "sy": 4,
+          "sx": 14,
+          "sy": 7,
           "sz": 4,
           "face": "+z",
           "axis": "x",
@@ -152,7 +152,7 @@
         {
           "id": "77918d14-ca9a-4214-a59b-a0d3506e30c9",
           "kind": "crate",
-          "x": 41,
+          "x": 38,
           "y": 56,
           "z": 141,
           "sx": 2,
@@ -166,7 +166,7 @@
         {
           "id": "45c20905-c8cb-40de-8a1b-3f33f4617db3",
           "kind": "crate",
-          "x": 41,
+          "x": 38,
           "y": 56,
           "z": 131,
           "sx": 2,
@@ -180,8 +180,8 @@
         {
           "id": "eafb69af-66b0-49c0-92d4-b1169426e1ff",
           "kind": "pickup",
-          "x": 30,
-          "y": 60,
+          "x": 26,
+          "y": 63,
           "z": 136,
           "sx": 0.9270509831248422,
           "sy": 1.5,
@@ -190,14 +190,14 @@
           "axis": "z",
           "dir": 1,
           "roomId": "6d3a308a-b4e4-481f-b42b-109c2c531e49",
-          "pickup": "armour"
+          "pickup": "green armor"
         },
         {
           "id": "e4c51a3c-b90b-4dd0-866d-2cf3b23959c5",
           "kind": "enemy",
-          "x": 34,
-          "y": 60,
-          "z": 138,
+          "x": 29,
+          "y": 63,
+          "z": 141,
           "sx": 2,
           "sy": 4,
           "sz": 2,
@@ -211,7 +211,7 @@
         {
           "id": "64b97c85-71f4-4675-b88a-8af1c7452a97",
           "kind": "enemy",
-          "x": 38,
+          "x": 34,
           "y": 56,
           "z": 131,
           "sx": 2,
@@ -395,7 +395,7 @@
           "face": "+z",
           "axis": "z",
           "dir": 1,
-          "name": "",
+          "name": "Path",
           "a8Bg": 6,
           "shape": "L",
           "rx": 0,
@@ -501,7 +501,7 @@
           "face": "+z",
           "axis": "z",
           "dir": 1,
-          "name": "",
+          "name": "Branch",
           "a8Bg": 36,
           "shape": "box",
           "rx": 0,
@@ -536,13 +536,13 @@
           "y": 52,
           "z": 102,
           "sx": 21,
-          "sy": 12,
+          "sy": 11,
           "sz": 19,
           "face": "+z",
           "axis": "z",
           "dir": 1,
           "name": "Underpass",
-          "a8Bg": 36,
+          "a8Bg": 4,
           "shape": "L",
           "rx": 0,
           "ry": 0,
@@ -597,7 +597,7 @@
           "axis": "z",
           "dir": 1,
           "name": "Courtyard",
-          "a8Bg": 36,
+          "a8Bg": 166,
           "shape": "box",
           "rx": 0,
           "ry": 0,
@@ -637,7 +637,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "50ad4e7e-0c58-4e24-8678-49d596e40ac3",
-          "pickup": "armour"
+          "pickup": "green armor"
         },
         {
           "id": "e8273f44-22c1-4b8b-9625-540ae9febcd9",
@@ -651,8 +651,8 @@
           "face": "+z",
           "axis": "z",
           "dir": 1,
-          "name": "",
-          "a8Bg": 36,
+          "name": "End",
+          "a8Bg": 38,
           "shape": "box",
           "rx": 0,
           "ry": 0,
@@ -706,13 +706,13 @@
           "y": 57,
           "z": 62,
           "sx": 11,
-          "sy": 12,
+          "sy": 8,
           "sz": 11,
           "face": "+z",
           "axis": "z",
           "dir": 1,
-          "name": "",
-          "a8Bg": 36,
+          "name": "Exit",
+          "a8Bg": 100,
           "shape": "box",
           "rx": 0,
           "ry": 0,
@@ -737,9 +737,9 @@
         {
           "id": "560263f7-4d73-41a2-8629-d050ed58bb42",
           "kind": "enemy",
-          "x": 97,
+          "x": 99,
           "y": 52,
-          "z": 103,
+          "z": 104,
           "sx": 2,
           "sy": 4,
           "sz": 2,
@@ -831,6 +831,322 @@
           "tag": "",
           "enableTag": "end",
           "roomId": "7402caf1-af1e-4f03-ab38-5a008a255b7f"
+        },
+        {
+          "id": "ae284ada-6156-47d8-9fc7-5af715465936",
+          "kind": "pickup",
+          "x": 65,
+          "y": 57,
+          "z": 144,
+          "sx": 0.9270509831248422,
+          "sy": 1.5,
+          "sz": 0.8028497019894523,
+          "face": "+z",
+          "axis": "z",
+          "dir": 1,
+          "roomId": "8841eb7b-abb9-4365-b2ce-44a25e3ca288",
+          "pickup": "barrel"
+        },
+        {
+          "id": "35078301-e093-4cf4-a1b9-b42627c3805e",
+          "kind": "platform",
+          "x": 87,
+          "y": 56,
+          "z": 132,
+          "sx": 18,
+          "sy": 1,
+          "sz": 8,
+          "face": "+z",
+          "axis": "z",
+          "dir": 1,
+          "roomId": "50ad4e7e-0c58-4e24-8678-49d596e40ac3",
+          "collide": false
+        },
+        {
+          "id": "eb29fe36-37c1-412d-84e9-68c3d6290e05",
+          "kind": "trigger",
+          "x": 87,
+          "y": 57,
+          "z": 132,
+          "sx": 18,
+          "sy": 4,
+          "sz": 8,
+          "face": "+z",
+          "axis": "z",
+          "dir": 1,
+          "purpose": "hurt_small",
+          "text": "",
+          "tag": "",
+          "roomId": "50ad4e7e-0c58-4e24-8678-49d596e40ac3"
+        },
+        {
+          "id": "cecd2931-d06a-48f0-b87d-e186a90d096b",
+          "kind": "pickup",
+          "x": 123,
+          "y": 57,
+          "z": 63,
+          "sx": 0.9270509831248422,
+          "sy": 1.5,
+          "sz": 0.8028497019894523,
+          "face": "+z",
+          "axis": "z",
+          "dir": 1,
+          "roomId": "7402caf1-af1e-4f03-ab38-5a008a255b7f",
+          "pickup": "small health"
+        },
+        {
+          "id": "89119da7-36f6-4f4b-8455-70a454b70004",
+          "kind": "pickup",
+          "x": 97,
+          "y": 52,
+          "z": 106,
+          "sx": 0.9270509831248422,
+          "sy": 1.5,
+          "sz": 0.8028497019894523,
+          "face": "+z",
+          "axis": "z",
+          "dir": 1,
+          "roomId": "4b34c033-cb5a-48bd-b984-2d5ddc1c9a30",
+          "pickup": "large health"
+        },
+        {
+          "id": "f74717e7-c98f-4181-82c1-2f3648ed1e86",
+          "kind": "elevator",
+          "x": 130,
+          "y": 72,
+          "z": 115,
+          "sx": 8,
+          "sy": 1,
+          "sz": 4,
+          "face": "+z",
+          "axis": "z",
+          "dir": 1,
+          "roomId": "7829dd75-fb2b-45f0-8433-12f03dd4f80f",
+          "tag": "violator",
+          "elevAuto": false,
+          "elevLow": 0,
+          "elevHigh": 7
+        },
+        {
+          "id": "5aaad6fc-804a-4465-a118-70320e8d06ab",
+          "kind": "trigger",
+          "x": 131,
+          "y": 61,
+          "z": 115,
+          "sx": 7,
+          "sy": 2,
+          "sz": 3,
+          "face": "+z",
+          "axis": "z",
+          "dir": 1,
+          "purpose": "message",
+          "text": "",
+          "tag": "",
+          "roomId": "7829dd75-fb2b-45f0-8433-12f03dd4f80f"
+        },
+        {
+          "id": "26cfcff8-1f5b-490a-bd2a-155fb0b9e1ff",
+          "kind": "doorway",
+          "x": 138,
+          "y": 65,
+          "z": 109,
+          "sx": 1,
+          "sy": 5,
+          "sz": 4,
+          "face": "+x",
+          "axis": "z",
+          "dir": 1,
+          "roomId": "7829dd75-fb2b-45f0-8433-12f03dd4f80f",
+          "lockKey": "unlocked",
+          "doorType": "Tech",
+          "doorScale": 1,
+          "tag": "",
+          "locked": false,
+          "otherRoomId": null
+        },
+        {
+          "id": "00aeb867-15d6-47b6-b4b4-a470a4532db4",
+          "kind": "room",
+          "x": 129,
+          "y": 64,
+          "z": 101,
+          "sx": 16,
+          "sy": 6,
+          "sz": 35,
+          "face": "+z",
+          "axis": "z",
+          "dir": 1,
+          "name": "Mezzanine",
+          "a8Bg": 36,
+          "shape": "L",
+          "rx": 0,
+          "ry": 3,
+          "rz": 0,
+          "cuts": [
+            {
+              "su": 29,
+              "sv": 10
+            }
+          ]
+        },
+        {
+          "id": "0a64c666-352c-4f29-99aa-aea65b79a980",
+          "kind": "doorway",
+          "x": 138,
+          "y": 64,
+          "z": 131,
+          "sx": 1,
+          "sy": 5,
+          "sz": 4,
+          "face": "-x",
+          "axis": "z",
+          "dir": 1,
+          "roomId": "00aeb867-15d6-47b6-b4b4-a470a4532db4",
+          "lockKey": "unlocked",
+          "doorType": "Tech",
+          "doorScale": 1,
+          "tag": "",
+          "otherRoomId": "7829dd75-fb2b-45f0-8433-12f03dd4f80f",
+          "locked": false
+        },
+        {
+          "id": "76f1968a-2db7-47d2-ab9e-577fb7fb6e7f",
+          "kind": "enemy",
+          "x": 133,
+          "y": 64,
+          "z": 103,
+          "sx": 2,
+          "sy": 4,
+          "sz": 2,
+          "face": "+z",
+          "axis": "z",
+          "dir": 1,
+          "rot": 2,
+          "enemy": "Possessed",
+          "roomId": "00aeb867-15d6-47b6-b4b4-a470a4532db4"
+        },
+        {
+          "id": "8462fa2b-1b23-453e-b4a7-f876503e669b",
+          "kind": "pickup",
+          "x": 130,
+          "y": 64,
+          "z": 102,
+          "sx": 0.9270509831248422,
+          "sy": 1.5,
+          "sz": 0.8028497019894523,
+          "face": "+z",
+          "axis": "z",
+          "dir": 1,
+          "roomId": "00aeb867-15d6-47b6-b4b4-a470a4532db4",
+          "pickup": "shotgun"
+        },
+        {
+          "id": "a87faed4-ec5a-4db6-afc9-fbecb83efdcd",
+          "kind": "pickup",
+          "x": 141,
+          "y": 64,
+          "z": 115,
+          "sx": 0.9270509831248422,
+          "sy": 1.5,
+          "sz": 0.8028497019894523,
+          "face": "+z",
+          "axis": "z",
+          "dir": 1,
+          "roomId": "00aeb867-15d6-47b6-b4b4-a470a4532db4",
+          "pickup": "small health"
+        },
+        {
+          "id": "d3bc260d-9d77-4617-bf1e-aca2d451fc3e",
+          "kind": "pickup",
+          "x": 141,
+          "y": 64,
+          "z": 127,
+          "sx": 0.9270509831248422,
+          "sy": 1.5,
+          "sz": 0.8028497019894523,
+          "face": "+z",
+          "axis": "z",
+          "dir": 1,
+          "roomId": "00aeb867-15d6-47b6-b4b4-a470a4532db4",
+          "pickup": "small health"
+        },
+        {
+          "id": "fc738627-48b1-4609-aae0-dd0d9bbff3df",
+          "kind": "pickup",
+          "x": 96,
+          "y": 52,
+          "z": 103,
+          "sx": 0.9270509831248422,
+          "sy": 1.5,
+          "sz": 0.8028497019894523,
+          "face": "+z",
+          "axis": "z",
+          "dir": 1,
+          "roomId": "4b34c033-cb5a-48bd-b984-2d5ddc1c9a30",
+          "pickup": "ammo box"
+        },
+        {
+          "id": "2a58c9d6-752b-4501-8ede-01d8263770fb",
+          "kind": "pickup",
+          "x": 118,
+          "y": 57,
+          "z": 81,
+          "sx": 0.9270509831248422,
+          "sy": 1.5,
+          "sz": 0.8028497019894523,
+          "face": "+z",
+          "axis": "z",
+          "dir": 1,
+          "roomId": "e8273f44-22c1-4b8b-9625-540ae9febcd9",
+          "pickup": "barrel"
+        },
+        {
+          "id": "e1dfefc9-ffb8-4206-bcd8-24a150469242",
+          "kind": "pickup",
+          "x": 85,
+          "y": 57,
+          "z": 168,
+          "sx": 0.9270509831248422,
+          "sy": 1.5,
+          "sz": 0.8028497019894523,
+          "face": "+z",
+          "axis": "z",
+          "dir": 1,
+          "roomId": "6d086918-ee13-48f3-8f3a-95c9f66c993b",
+          "pickup": "shells"
+        },
+        {
+          "id": "cce2d6e3-87a1-4b43-ae13-b2c6a3f91f60",
+          "kind": "trigger",
+          "x": 116,
+          "y": 57,
+          "z": 85,
+          "sx": 8,
+          "sy": 4,
+          "sz": 8,
+          "face": "+z",
+          "axis": "z",
+          "dir": 1,
+          "purpose": "summon",
+          "text": "",
+          "tag": "violator",
+          "roomId": "e8273f44-22c1-4b8b-9625-540ae9febcd9"
+        },
+        {
+          "id": "7fdf085b-6949-4c18-9056-6e3787cff21c",
+          "kind": "spawn",
+          "x": 50,
+          "y": 56,
+          "z": 136,
+          "sx": 2,
+          "sy": 4,
+          "sz": 2,
+          "face": "+z",
+          "axis": "z",
+          "dir": 1,
+          "rot": 6,
+          "enabled": false,
+          "roomId": "6d3a308a-b4e4-481f-b42b-109c2c531e49"
         }
       ]
     },
@@ -1067,7 +1383,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "48f4bb7c-f85b-4837-acf3-8a81214372de",
-          "pickup": "health 25%"
+          "pickup": "small health"
         },
         {
           "id": "c657232a-aafe-4d83-8b6d-2212ddec74ae",
@@ -1186,7 +1502,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "c657232a-aafe-4d83-8b6d-2212ddec74ae",
-          "pickup": "armour"
+          "pickup": "green armor"
         },
         {
           "id": "2ba8dd8e-b484-477e-b66d-fe68b0f9d035",
@@ -1500,7 +1816,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "bca3293b-77d8-485a-bd79-37df6d5a2208",
-          "lockKey": "silver",
+          "lockKey": "yellow",
           "doorType": "Arch",
           "doorScale": 1,
           "tag": "",
@@ -1558,7 +1874,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "ec707e69-9eec-4e53-a32b-681dccd8ec0f",
-          "pickup": "silver key"
+          "pickup": "yellow keycard"
         },
         {
           "id": "7b2e58fd-ad8a-4d66-b1bb-9855f518c055",
@@ -1704,7 +2020,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "a4ecfeb2-96ea-43bc-afb7-6d92efb18b0c",
-          "pickup": "armour"
+          "pickup": "green armor"
         },
         {
           "id": "d368af96-26e6-486c-a6d5-2d30ea2677fa",
@@ -1990,7 +2306,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "8a01a665-f76f-410a-b450-5e8c86ec10d5",
-          "lockKey": "silver",
+          "lockKey": "yellow",
           "doorType": "Tech",
           "doorScale": 1,
           "tag": "",
@@ -2109,7 +2425,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "ec707e69-9eec-4e53-a32b-681dccd8ec0f",
-          "pickup": "health 25%"
+          "pickup": "small health"
         },
         {
           "id": "f4e06f74-2241-47d5-b3f9-209ec641af23",
@@ -2171,7 +2487,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "80430749-edbc-4d7d-bbca-332263790b75",
-          "pickup": "nails"
+          "pickup": "ammo box"
         },
         {
           "id": "3e61e9df-94b9-4082-b2a4-93756d16d03f",
@@ -2186,7 +2502,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "dfd0d1a8-cc60-40ad-8c32-b76b5e15f085",
-          "pickup": "nails"
+          "pickup": "ammo box"
         },
         {
           "id": "4f834588-3c31-4e7a-8c54-f3fb6b4c5e5c",
@@ -2201,7 +2517,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "7b2e58fd-ad8a-4d66-b1bb-9855f518c055",
-          "pickup": "health 25%"
+          "pickup": "small health"
         },
         {
           "id": "b2bf173c-8931-40d1-86e5-a18e02f0edeb",
@@ -2216,7 +2532,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "0e15ffe3-9bc5-4237-8af7-48366c877a92",
-          "pickup": "health 50%"
+          "pickup": "large health"
         },
         {
           "id": "2ad7e383-fd15-4a91-9e7c-1a233e2c4800",
@@ -2246,7 +2562,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "80430749-edbc-4d7d-bbca-332263790b75",
-          "pickup": "health 25%"
+          "pickup": "small health"
         },
         {
           "id": "314b1933-b87d-4635-b48c-3cdf7e941cc3",
@@ -2261,7 +2577,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "7b2e58fd-ad8a-4d66-b1bb-9855f518c055",
-          "pickup": "nailgun"
+          "pickup": "chaingun"
         },
         {
           "id": "f6a2d3d4-d63f-43a2-9a36-fedd6d6e7415",
@@ -2347,7 +2663,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "d289447c-7d65-46a0-a426-d49a80025710",
-          "pickup": "quad damage"
+          "pickup": "radsuit"
         },
         {
           "id": "6d4bb8e7-e558-415d-b24b-6a4bfff3ce5d",
@@ -2682,7 +2998,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "56e26635-7a43-4841-9ca2-973f198bb227",
-          "pickup": "grenade launcher"
+          "pickup": "rocket launcher"
         },
         {
           "id": "a49f8a50-b7b1-47e8-9159-089a169b8b39",
@@ -2697,7 +3013,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "9d1ada4a-b970-45f5-857b-8d98e65e879a",
-          "pickup": "health 25%"
+          "pickup": "small health"
         },
         {
           "id": "5d404438-4d1c-4125-bc53-cca68befe1bc",
@@ -2727,7 +3043,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "78b8eb7f-dfd6-42ce-884c-8a073f345446",
-          "pickup": "nailgun"
+          "pickup": "chaingun"
         },
         {
           "id": "9f904c28-ca5e-4b89-bafb-66ec6a5b4087",
@@ -2742,7 +3058,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "af5ce2d5-46fe-41f0-a786-902b097223c4",
-          "pickup": "armour"
+          "pickup": "green armor"
         },
         {
           "id": "8748e6dd-29e4-40f0-b419-05f17d8efe25",
@@ -2896,7 +3212,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "509b8043-73ee-4e67-be27-fb3df68cf6dd",
-          "lockKey": "gold",
+          "lockKey": "blue",
           "doorType": "Arch",
           "doorScale": 1.5,
           "tag": "",
@@ -2916,7 +3232,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "509b8043-73ee-4e67-be27-fb3df68cf6dd",
-          "pickup": "gold key"
+          "pickup": "blue keycard"
         },
         {
           "id": "2dacc365-a0c2-4ae3-b88e-327e433512d4",
@@ -3974,7 +4290,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "78b8eb7f-dfd6-42ce-884c-8a073f345446",
-          "pickup": "grenades"
+          "pickup": "box of rockets"
         },
         {
           "id": "c562be3d-d9d1-46e6-a834-90059ea53236",
@@ -3989,7 +4305,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "2dacc365-a0c2-4ae3-b88e-327e433512d4",
-          "pickup": "health 25%"
+          "pickup": "small health"
         },
         {
           "id": "4ae06a1d-c195-404c-8e96-57aadafc9c4c",
@@ -4019,7 +4335,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "f8a948cc-7a09-45e9-af37-a6cb119e36aa",
-          "pickup": "health 50%"
+          "pickup": "large health"
         },
         {
           "id": "e4f0b24a-04d4-413e-bd54-e3f454db2532",
@@ -4034,7 +4350,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "f8a948cc-7a09-45e9-af37-a6cb119e36aa",
-          "pickup": "grenades"
+          "pickup": "box of rockets"
         },
         {
           "id": "b677b75c-b733-440f-a73f-a2e9be2b9e14",
@@ -4049,7 +4365,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "7cc30490-9e84-47d3-8991-5015ca448267",
-          "pickup": "health 50%"
+          "pickup": "large health"
         },
         {
           "id": "3e64e997-1b89-4757-a05c-a0b168e73da8",
@@ -4079,7 +4395,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "7cc30490-9e84-47d3-8991-5015ca448267",
-          "pickup": "nails"
+          "pickup": "ammo box"
         },
         {
           "id": "fb74a8cc-250d-46c8-a7da-7702753a6aea",
@@ -4094,7 +4410,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "f8a948cc-7a09-45e9-af37-a6cb119e36aa",
-          "pickup": "nails"
+          "pickup": "ammo box"
         },
         {
           "id": "c7b9242d-ef57-4eb3-a350-63fc2cdfa3cf",
@@ -4149,7 +4465,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "537a8136-843f-4d8e-bda5-8313250fca16",
-          "pickup": "ring of shadows"
+          "pickup": "radsuit"
         },
         {
           "id": "556258d2-1afa-4f17-bf9f-0faf9c90ba17",
@@ -4329,7 +4645,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "c7acfec4-2746-4fb3-b6ed-d743bf8e3f4b",
-          "pickup": "health 25%"
+          "pickup": "small health"
         },
         {
           "id": "773d257d-abee-4475-bb1c-fb2732c7aa0d",
@@ -4460,7 +4776,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "773d257d-abee-4475-bb1c-fb2732c7aa0d",
-          "pickup": "armour"
+          "pickup": "green armor"
         },
         {
           "id": "7fe64a99-3835-477d-ae04-71bd5d9a6bce",
@@ -4584,7 +4900,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "39c84000-9ffc-448a-9cb7-ff085efe413c",
-          "pickup": "silver key"
+          "pickup": "yellow keycard"
         },
         {
           "id": "7e82a628-d83b-4350-ac40-64626490307b",
@@ -4724,7 +5040,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "162c7559-fbba-41ca-809f-6677e337945f",
-          "lockKey": "silver",
+          "lockKey": "yellow",
           "doorType": "Arch",
           "doorScale": 1.5,
           "tag": "",
@@ -4773,7 +5089,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "9f4e32a6-ad59-41d0-9a84-98c03bd908c7",
-          "pickup": "nailgun"
+          "pickup": "chaingun"
         },
         {
           "id": "c49882e5-176e-4fdb-ada4-b37da33837b7",
@@ -5482,7 +5798,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "9f4e32a6-ad59-41d0-9a84-98c03bd908c7",
-          "pickup": "health 50%"
+          "pickup": "large health"
         },
         {
           "id": "8f1a2c02-d2ae-4452-9e8e-a2ef901d97a2",
@@ -5497,7 +5813,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "e6520f20-0c62-4bb7-8b0e-e464acd302e5",
-          "pickup": "health 25%"
+          "pickup": "small health"
         },
         {
           "id": "dfae5dfd-4d2a-4af1-8cd4-a32cc5c32a8e",
@@ -5512,7 +5828,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "89e94f61-c8bc-4c0c-acb3-a4ff8baece79",
-          "pickup": "health 50%"
+          "pickup": "large health"
         },
         {
           "id": "3e8e5656-cedd-4c61-a3e8-822e8ea9a994",
@@ -5542,7 +5858,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "52d9a56f-4cff-4b71-9071-ca2675a7e39d",
-          "pickup": "health 25%"
+          "pickup": "small health"
         },
         {
           "id": "0b67db9a-dafb-44e9-b294-d03af421825c",
@@ -5557,7 +5873,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "156da2b6-105d-4a9d-aa43-65d8663f5971",
-          "pickup": "nails"
+          "pickup": "ammo box"
         },
         {
           "id": "01224fff-951c-4668-af6e-5c6a665cd79c",
@@ -5572,7 +5888,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "7fe64a99-3835-477d-ae04-71bd5d9a6bce",
-          "pickup": "nails"
+          "pickup": "ammo box"
         }
       ]
     },
@@ -6000,7 +6316,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "8c558ed0-a32a-4209-a5f6-9e28a8f7ca3f",
-          "lockKey": "silver",
+          "lockKey": "yellow",
           "doorType": "Arch",
           "doorScale": 1.5,
           "tag": "",
@@ -6109,7 +6425,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "01215261-3def-4148-b68d-88125dff50fd",
-          "lockKey": "gold",
+          "lockKey": "blue",
           "doorType": "Arch",
           "doorScale": 1.5,
           "tag": "",
@@ -6254,7 +6570,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "67be8a4a-c42b-4d5e-bb49-1fcf6eb052aa",
-          "pickup": "health 50%"
+          "pickup": "large health"
         },
         {
           "id": "ee7ac3fe-6aa6-4622-a643-3d2009808772",
@@ -6462,7 +6778,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "2ce4109e-bfa0-4de3-a429-6d28b248c2f1",
-          "pickup": "health 50%"
+          "pickup": "large health"
         },
         {
           "id": "3e54c340-6f7b-4f2b-9d3f-62b8afcf2c41",
@@ -6628,7 +6944,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "9fd8315b-6a3a-4376-b66c-2a44e2ebb86e",
-          "pickup": "silver key"
+          "pickup": "yellow keycard"
         },
         {
           "id": "2683aec3-42b5-47fe-9878-afb76eba731a",
@@ -6785,7 +7101,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "4fb535bb-a6a6-4a51-b721-8f2adce23d95",
-          "pickup": "nailgun"
+          "pickup": "chaingun"
         },
         {
           "id": "798cbd6f-1f50-430d-aba1-f4fcb9499deb",
@@ -7214,7 +7530,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "682e64f6-145d-46ac-8508-6d9743f5186f",
-          "pickup": "gold key"
+          "pickup": "blue keycard"
         },
         {
           "id": "609caf6c-965b-4585-aefa-851ab17b43d4",
@@ -7409,7 +7725,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "a6b5711e-686b-4e63-a190-c84995af006c",
-          "pickup": "grenades"
+          "pickup": "box of rockets"
         },
         {
           "id": "33c06116-01a2-44cf-b31f-9c3a41686e06",
@@ -7454,7 +7770,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "5a27cfc1-63ed-4fd2-bd91-f1cbb0cd9528",
-          "pickup": "health 25%"
+          "pickup": "small health"
         },
         {
           "id": "a535afbd-2760-4a28-9d7f-ff7729769879",
@@ -7469,7 +7785,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "88c08981-d567-42d7-b47c-19f04ec0e6e6",
-          "pickup": "health 25%"
+          "pickup": "small health"
         },
         {
           "id": "2f67e20f-a6e5-4dc2-8a8f-54c1afc8bc1c",
@@ -7499,7 +7815,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "6630f0ea-8abd-4c03-8f72-073c736c3f2a",
-          "pickup": "health 25%"
+          "pickup": "small health"
         },
         {
           "id": "656d9c5e-501f-40ac-905d-8ddec42daa4c",
@@ -7529,7 +7845,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "ee7ac3fe-6aa6-4622-a643-3d2009808772",
-          "pickup": "health 25%"
+          "pickup": "small health"
         },
         {
           "id": "6ee0f4b8-38c8-40b3-8bff-b7584dcc2b7a",
@@ -7559,7 +7875,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "8c558ed0-a32a-4209-a5f6-9e28a8f7ca3f",
-          "pickup": "pentagram of protection"
+          "pickup": "soulsphere"
         },
         {
           "id": "06176a9b-3464-4627-a949-72ce81e6da9a",
@@ -7574,7 +7890,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "8c558ed0-a32a-4209-a5f6-9e28a8f7ca3f",
-          "pickup": "health 25%"
+          "pickup": "small health"
         },
         {
           "id": "b7d5aef2-3a5f-422b-aa69-4083d5bd3e36",
@@ -7589,7 +7905,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "01215261-3def-4148-b68d-88125dff50fd",
-          "pickup": "grenade launcher"
+          "pickup": "rocket launcher"
         },
         {
           "id": "74f2e96b-4836-4f88-bf93-dda18e37f8a3",
@@ -7604,7 +7920,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "3e54c340-6f7b-4f2b-9d3f-62b8afcf2c41",
-          "pickup": "grenades"
+          "pickup": "box of rockets"
         },
         {
           "id": "489d4574-6db9-4edb-b87c-a6c6f4345edc",
@@ -7619,7 +7935,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "9fd8315b-6a3a-4376-b66c-2a44e2ebb86e",
-          "pickup": "health 25%"
+          "pickup": "small health"
         },
         {
           "id": "7eadc4c5-8079-4cf3-ac9b-62b883bdbc4b",
@@ -7634,7 +7950,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "9fd8315b-6a3a-4376-b66c-2a44e2ebb86e",
-          "pickup": "nails"
+          "pickup": "ammo box"
         },
         {
           "id": "3f064707-f1a6-48fe-8ada-a56dce08ac27",
@@ -7664,7 +7980,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "4fb535bb-a6a6-4a51-b721-8f2adce23d95",
-          "pickup": "health 25%"
+          "pickup": "small health"
         },
         {
           "id": "9933525b-be23-4832-835f-557e5af0e9e3",
@@ -7679,7 +7995,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "6ea37ef6-9498-4caa-bedd-1605f29b391f",
-          "pickup": "grenades"
+          "pickup": "box of rockets"
         },
         {
           "id": "bfac0449-c5b5-4d1d-abde-c397458e4159",
@@ -7694,7 +8010,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "8debc017-9e21-450f-9a65-9d73a94f56cd",
-          "pickup": "health 25%"
+          "pickup": "small health"
         },
         {
           "id": "601b85c5-ff00-4192-9fa6-e11045db0cd9",
@@ -7709,7 +8025,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "8debc017-9e21-450f-9a65-9d73a94f56cd",
-          "pickup": "health 25%"
+          "pickup": "small health"
         },
         {
           "id": "570e853e-82ad-4376-91c3-cd181e8fbe20",
@@ -7739,7 +8055,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "993497f0-db83-4c39-9434-0467b167d53c",
-          "pickup": "health 50%"
+          "pickup": "large health"
         },
         {
           "id": "1ac808c5-6c1b-4904-abef-5bdc660e60ff",
@@ -7869,7 +8185,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "72fade6e-d174-4ce5-9531-b7fa2b517b5c",
-          "pickup": "health 50%"
+          "pickup": "large health"
         },
         {
           "id": "1f5db5c7-3ea6-452f-85fa-53f5593099ab",
@@ -7884,7 +8200,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "682e64f6-145d-46ac-8508-6d9743f5186f",
-          "pickup": "armour"
+          "pickup": "green armor"
         },
         {
           "id": "3f82825d-e1c4-49e0-bac5-19965a2adb2d",
@@ -7899,7 +8215,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "2fe44a8b-7a6a-4532-a1aa-3c5ba8e0f99a",
-          "pickup": "armour"
+          "pickup": "green armor"
         },
         {
           "id": "20012f84-b7d2-4835-b238-6ec99f37ef4a",
@@ -7914,7 +8230,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "72fade6e-d174-4ce5-9531-b7fa2b517b5c",
-          "pickup": "nails"
+          "pickup": "ammo box"
         },
         {
           "id": "d4b58184-8b9d-4655-a779-840f9fdb893a",
@@ -8006,7 +8322,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "5702c10c-957d-4691-85bf-21979e572529",
-          "lockKey": "silver",
+          "lockKey": "yellow",
           "doorType": "Tech",
           "doorScale": 1,
           "tag": "twisty",
@@ -8066,7 +8382,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "bc91a887-ba3c-4cb3-809e-8ec376b66624",
-          "lockKey": "gold",
+          "lockKey": "blue",
           "doorType": "Tech",
           "doorScale": 1.5,
           "tag": "",
@@ -8133,7 +8449,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "21c50b84-4075-4e1f-b529-3c23b884b3b5",
-          "pickup": "gold key"
+          "pickup": "blue keycard"
         },
         {
           "id": "bb18e9ec-86c3-4a34-88dd-91c01c6bab5b",
@@ -8336,7 +8652,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "82533313-7848-44cd-a8c7-31238fa2d7c6",
-          "pickup": "silver key"
+          "pickup": "yellow keycard"
         },
         {
           "id": "5c69c285-cbe2-4743-b7fb-7bb9d3cc80d9",
@@ -8597,7 +8913,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "3a478ba8-ea8f-4687-95c9-3b7f1b9562da",
-          "pickup": "armour"
+          "pickup": "green armor"
         },
         {
           "id": "c205cbec-45ea-4918-bcc3-b2049a9c5ad0",
@@ -9056,7 +9372,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "bb18e9ec-86c3-4a34-88dd-91c01c6bab5b",
-          "pickup": "health 25%"
+          "pickup": "small health"
         },
         {
           "id": "362b11ae-74e0-4e08-8bc7-459560381e00",
@@ -9086,7 +9402,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "82533313-7848-44cd-a8c7-31238fa2d7c6",
-          "pickup": "health 25%"
+          "pickup": "small health"
         },
         {
           "id": "e936b228-d8d3-41aa-a0df-d0fa43351bde",
@@ -9116,7 +9432,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "b5e9c243-d723-4125-b390-bcb7dd3e3175",
-          "pickup": "health 25%"
+          "pickup": "small health"
         },
         {
           "id": "d5be717b-bb08-4564-b111-3a7fb57017d5",
@@ -9131,7 +9447,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "03802a49-dde4-4c63-96d4-2f9ebcf565cb",
-          "pickup": "health 50%"
+          "pickup": "large health"
         },
         {
           "id": "b6d1b8e5-f8bd-45f3-9d4b-5884a732b6f6",
@@ -9161,7 +9477,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "03802a49-dde4-4c63-96d4-2f9ebcf565cb",
-          "pickup": "nails"
+          "pickup": "ammo box"
         },
         {
           "id": "c8034c4b-250e-4c42-a670-8429a99c9d6c",
@@ -9176,7 +9492,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "f3664b5f-16e6-4cc4-b8fc-9ce0e4d7f19b",
-          "pickup": "nailgun"
+          "pickup": "chaingun"
         },
         {
           "id": "3a0660e8-e77d-4a91-961d-4f00eccbea43",
@@ -9208,7 +9524,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "b5e9c243-d723-4125-b390-bcb7dd3e3175",
-          "pickup": "nails"
+          "pickup": "ammo box"
         },
         {
           "id": "bb04f08e-6ee3-4f29-8982-487d73e08eca",
@@ -9315,7 +9631,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "476f3607-776d-4415-92ea-63b8f7459318",
-          "pickup": "quad damage"
+          "pickup": "radsuit"
         },
         {
           "id": "22d1043f-eccf-4c03-9d3c-1d6b50a78db8",
@@ -9456,7 +9772,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "e95d6d7f-634f-4576-909e-d02657fd611a",
-          "pickup": "rune of earth magic"
+          "pickup": "red keycard"
         },
         {
           "id": "358a0e79-dd7e-4f6b-a87e-d4344e1d4a93",
@@ -9758,7 +10074,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "fc7c4ccd-058b-49f1-95f1-e6c9a9b36c60",
-          "pickup": "health 50%"
+          "pickup": "large health"
         },
         {
           "id": "5e72691e-630e-4afb-b561-f6ec310f95da",
@@ -9773,7 +10089,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "fc7c4ccd-058b-49f1-95f1-e6c9a9b36c60",
-          "pickup": "health 50%"
+          "pickup": "large health"
         },
         {
           "id": "b8d230ee-5fa1-4595-af29-0bf6889f1ab1",
@@ -9788,7 +10104,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "0a7366a8-43be-4018-a7aa-9a44c8508266",
-          "pickup": "health 50%"
+          "pickup": "large health"
         },
         {
           "id": "74b63cd1-5413-4a24-a248-6e8ba10d4366",
@@ -9895,7 +10211,7 @@
           "axis": "z",
           "dir": 1,
           "roomId": "091a9086-6d15-46cb-8130-d2cef0ed1eae",
-          "pickup": "armour"
+          "pickup": "green armor"
         },
         {
           "id": "0fb7fb63-b6b5-49a2-9aff-4adca5e0a5e6",
@@ -9970,12 +10286,12 @@
         {
           "x": -1,
           "y": 0,
-          "z": -1
+          "z": -0.5
         },
         {
           "x": 1,
           "y": 0,
-          "z": -1
+          "z": -0.5
         },
         {
           "x": 0,
@@ -9985,7 +10301,7 @@
         {
           "x": 0,
           "y": 2,
-          "z": -1
+          "z": 0
         }
       ],
       "lines": [
@@ -10015,348 +10331,552 @@
         ]
       ]
     },
-    "health 25%": {
+    "small health": {
       "verts": [
         {
-          "x": 0,
-          "y": 2,
-          "z": 0
+          "x": -0.75,
+          "y": 0.25,
+          "z": -0.5
         },
         {
-          "x": -1,
-          "y": 1,
-          "z": 0
+          "x": -0.75,
+          "y": 0.25,
+          "z": 0.5
         },
         {
-          "x": 0,
-          "y": 1,
-          "z": 1
+          "x": 0.75,
+          "y": 0.25,
+          "z": -0.5
         },
         {
-          "x": 1,
-          "y": 1,
-          "z": 0
+          "x": 0.75,
+          "y": 0.25,
+          "z": 0.5
         },
         {
-          "x": 0,
-          "y": 1,
-          "z": -1
-        },
-        {
-          "x": 0,
+          "x": 0.75,
           "y": 0,
+          "z": -0.5
+        },
+        {
+          "x": 0.75,
+          "y": 0,
+          "z": 0.5
+        },
+        {
+          "x": -0.75,
+          "y": 0,
+          "z": 0.5
+        },
+        {
+          "x": -0.75,
+          "y": 0,
+          "z": -0.5
+        },
+        {
+          "x": 0.25,
+          "y": 0.25,
           "z": 0
+        },
+        {
+          "x": -0.25,
+          "y": 0.25,
+          "z": 0
+        },
+        {
+          "x": 0,
+          "y": 0.25,
+          "z": -0.25
+        },
+        {
+          "x": 0,
+          "y": 0.25,
+          "z": 0.25
         }
       ],
       "lines": [
-        [
-          4,
-          5
-        ],
-        [
-          3,
-          5
-        ],
-        [
-          1,
-          5
-        ],
-        [
-          2,
-          5
-        ],
-        [
-          1,
-          4
-        ],
-        [
-          1,
-          2
-        ],
         [
           2,
           3
         ],
         [
-          3,
-          4
+          0,
+          2
         ],
         [
           0,
           1
         ],
         [
-          0,
-          2
-        ],
-        [
-          0,
-          4
-        ],
-        [
-          0,
-          3
-        ]
-      ]
-    },
-    "health 50%": {
-      "verts": [
-        {
-          "x": 0,
-          "y": 4,
-          "z": 0
-        },
-        {
-          "x": -2,
-          "y": 2,
-          "z": 0
-        },
-        {
-          "x": 0,
-          "y": 2,
-          "z": 2
-        },
-        {
-          "x": 2,
-          "y": 2,
-          "z": 0
-        },
-        {
-          "x": 0,
-          "y": 2,
-          "z": -2
-        },
-        {
-          "x": 0,
-          "y": 0,
-          "z": 0
-        }
-      ],
-      "lines": [
-        [
-          4,
-          5
-        ],
-        [
-          3,
-          5
-        ],
-        [
           1,
-          5
-        ],
-        [
-          2,
-          5
-        ],
-        [
-          1,
-          4
-        ],
-        [
-          1,
-          2
-        ],
-        [
-          2,
           3
         ],
         [
           3,
-          4
+          5
         ],
         [
-          0,
-          1
+          5,
+          6
         ],
         [
-          0,
-          2
+          6,
+          7
         ],
-        [
-          0,
-          4
-        ],
-        [
-          0,
-          3
-        ]
-      ]
-    },
-    "quad damage": {
-      "verts": [
-        {
-          "x": -1,
-          "y": 1,
-          "z": 0
-        },
-        {
-          "x": 1,
-          "y": 1,
-          "z": 0
-        },
-        {
-          "x": 2,
-          "y": 2,
-          "z": 0
-        },
-        {
-          "x": -2,
-          "y": 2,
-          "z": 0
-        },
-        {
-          "x": 0,
-          "y": 2,
-          "z": 0
-        },
-        {
-          "x": -1,
-          "y": 4,
-          "z": 0
-        },
-        {
-          "x": 1,
-          "y": 4,
-          "z": 0
-        },
-        {
-          "x": 0,
-          "y": 0,
-          "z": 0
-        }
-      ],
-      "lines": [
         [
           4,
           7
         ],
         [
+          4,
+          5
+        ],
+        [
+          0,
+          7
+        ],
+        [
+          1,
+          6
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          10,
+          11
+        ],
+        [
+          8,
+          9
+        ]
+      ]
+    },
+    "large health": {
+      "verts": [
+        {
+          "x": -0.75,
+          "y": 1,
+          "z": -0.75
+        },
+        {
+          "x": -0.75,
+          "y": 1,
+          "z": 0.75
+        },
+        {
+          "x": 0.75,
+          "y": 1,
+          "z": -0.75
+        },
+        {
+          "x": 0.75,
+          "y": 1,
+          "z": 0.75
+        },
+        {
+          "x": 0.75,
+          "y": 0,
+          "z": -0.75
+        },
+        {
+          "x": 0.75,
+          "y": 0,
+          "z": 0.75
+        },
+        {
+          "x": -0.75,
+          "y": 0,
+          "z": 0.75
+        },
+        {
+          "x": -0.75,
+          "y": 0,
+          "z": -0.75
+        },
+        {
+          "x": 0,
+          "y": 0.25,
+          "z": 0.75
+        },
+        {
+          "x": 0,
+          "y": 0.75,
+          "z": 0.75
+        },
+        {
+          "x": -0.25,
+          "y": 0.5,
+          "z": 0.75
+        },
+        {
+          "x": 0.25,
+          "y": 0.5,
+          "z": 0.75
+        }
+      ],
+      "lines": [
+        [
+          2,
+          3
+        ],
+        [
+          0,
+          2
+        ],
+        [
           0,
           1
         ],
         [
-          0,
+          1,
           3
         ],
         [
           3,
           5
+        ],
+        [
+          5,
+          6
+        ],
+        [
+          6,
+          7
+        ],
+        [
+          4,
+          7
+        ],
+        [
+          4,
+          5
+        ],
+        [
+          0,
+          7
+        ],
+        [
+          1,
+          6
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          10,
+          11
+        ],
+        [
+          8,
+          9
+        ]
+      ]
+    },
+    "green armor": {
+      "verts": [
+        {
+          "x": -1,
+          "y": 2,
+          "z": 0.5
+        },
+        {
+          "x": 1,
+          "y": 2,
+          "z": 0.5
+        },
+        {
+          "x": -1,
+          "y": 2,
+          "z": -0.5
+        },
+        {
+          "x": 1,
+          "y": 2,
+          "z": -0.5
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        }
+      ],
+      "lines": [
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          0,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ]
+    },
+    "soulsphere": {
+      "verts": [
+        {
+          "x": 0.75,
+          "y": 0.75,
+          "z": 0.25
+        },
+        {
+          "x": -0.75,
+          "y": 0.75,
+          "z": 0.25
+        },
+        {
+          "x": 0,
+          "y": 0.75,
+          "z": 0.75
+        },
+        {
+          "x": -0.5,
+          "y": 0.75,
+          "z": -0.75
+        },
+        {
+          "x": 0.5,
+          "y": 0.75,
+          "z": -0.75
+        },
+        {
+          "x": 0,
+          "y": 1.5,
+          "z": 0
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        }
+      ],
+      "lines": [
+        [
+          1,
+          2
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          3,
+          4
+        ],
+        [
+          0,
+          4
+        ],
+        [
+          4,
+          5
+        ],
+        [
+          3,
+          5
+        ],
+        [
+          1,
+          5
+        ],
+        [
+          2,
+          5
+        ],
+        [
+          0,
+          5
+        ],
+        [
+          1,
+          6
+        ],
+        [
+          3,
+          6
+        ],
+        [
+          0,
+          6
         ],
         [
           2,
           6
         ],
         [
-          1,
-          2
+          4,
+          6
         ]
       ]
     },
-    "pentagram of protection": {
+    "radsuit": {
       "verts": [
         {
-          "x": -2,
-          "y": 2,
-          "z": 0
-        },
-        {
-          "x": 0,
-          "y": 1,
-          "z": 0
-        },
-        {
-          "x": 2,
-          "y": 2,
-          "z": 0
-        },
-        {
           "x": 1,
-          "y": 4,
-          "z": 0
+          "y": 0,
+          "z": 1.25
         },
         {
           "x": -1,
-          "y": 4,
-          "z": 0
+          "y": 0,
+          "z": 1.25
+        },
+        {
+          "x": 0.75,
+          "y": 0,
+          "z": -1.25
+        },
+        {
+          "x": -0.75,
+          "y": 0,
+          "z": -1.25
+        },
+        {
+          "x": 1,
+          "y": 0.5,
+          "z": 1.25
+        },
+        {
+          "x": -1,
+          "y": 0.5,
+          "z": 1.25
+        },
+        {
+          "x": 0.75,
+          "y": 0.5,
+          "z": -1
+        },
+        {
+          "x": -0.75,
+          "y": 0.5,
+          "z": -1
         }
       ],
       "lines": [
         [
-          1,
-          2
-        ],
-        [
           2,
           3
-        ],
-        [
-          3,
-          4
-        ],
-        [
-          0,
-          4
         ],
         [
           0,
           1
         ],
         [
-          1,
+          6,
+          7
+        ],
+        [
+          4,
+          5
+        ],
+        [
+          0,
           4
         ],
         [
-          1,
-          3
+          2,
+          6
+        ],
+        [
+          3,
+          7
         ],
         [
           0,
           2
         ],
         [
-          0,
+          4,
+          6
+        ],
+        [
+          1,
           3
         ],
         [
-          2,
-          4
+          5,
+          7
+        ],
+        [
+          1,
+          5
         ]
       ]
     },
-    "ring of shadows": {
+    "yellow keycard": {
       "verts": [
         {
-          "x": -2,
-          "y": 3,
-          "z": 0
-        },
-        {
-          "x": -1,
-          "y": 1,
-          "z": 0
-        },
-        {
-          "x": 1,
-          "y": 1,
-          "z": 0
-        },
-        {
-          "x": 2,
-          "y": 3,
+          "x": 0.5,
+          "y": 0,
           "z": 0
         },
         {
           "x": 0,
-          "y": 5,
+          "y": 1.75,
+          "z": 0
+        },
+        {
+          "x": -0.5,
+          "y": 1.75,
+          "z": 0
+        },
+        {
+          "x": -0.5,
+          "y": 0,
+          "z": 0
+        },
+        {
+          "x": 0.5,
+          "y": 1.25,
+          "z": 0
+        },
+        {
+          "x": 0.5,
+          "y": 1,
+          "z": 0
+        },
+        {
+          "x": -0.25,
+          "y": 1.75,
+          "z": 0
+        },
+        {
+          "x": 0.5,
+          "y": 0.75,
           "z": 0
         }
       ],
       "lines": [
-        [
-          0,
-          1
-        ],
         [
           1,
           2
@@ -10366,64 +10886,15 @@
           3
         ],
         [
-          3,
-          4
-        ],
-        [
-          0,
-          4
-        ]
-      ]
-    },
-    "silver key": {
-      "verts": [
-        {
-          "x": -1,
-          "y": 3,
-          "z": 0
-        },
-        {
-          "x": 1,
-          "y": 0,
-          "z": 0
-        },
-        {
-          "x": 1,
-          "y": 3,
-          "z": 0
-        },
-        {
-          "x": 0,
-          "y": 2,
-          "z": 0
-        },
-        {
-          "x": 0,
-          "y": 0,
-          "z": 0
-        },
-        {
-          "x": 1,
-          "y": 1,
-          "z": 0
-        },
-        {
-          "x": 0,
-          "y": 1,
-          "z": 0
-        }
-      ],
-      "lines": [
-        [
-          2,
-          3
-        ],
-        [
           0,
           3
         ],
         [
-          3,
+          0,
+          4
+        ],
+        [
+          1,
           4
         ],
         [
@@ -10431,58 +10902,109 @@
           6
         ],
         [
-          1,
-          4
-        ],
-        [
-          0,
-          2
+          2,
+          7
         ]
       ]
     },
-    "gold key": {
+    "blue keycard": {
       "verts": [
         {
-          "x": 0,
-          "y": 2,
-          "z": 0
-        },
-        {
-          "x": 1,
-          "y": 3,
-          "z": 0
-        },
-        {
-          "x": -1,
-          "y": 3,
-          "z": 0
-        },
-        {
-          "x": -1,
-          "y": 2,
-          "z": 0
-        },
-        {
-          "x": 0,
+          "x": 0.5,
           "y": 0,
           "z": 0
         },
         {
-          "x": 1,
+          "x": 0.5,
+          "y": 1.25,
+          "z": 0
+        },
+        {
+          "x": -0.5,
+          "y": 1.75,
+          "z": 0
+        },
+        {
+          "x": -0.5,
+          "y": 0,
+          "z": 0
+        },
+        {
+          "x": 0.5,
           "y": 1,
           "z": 0
         },
         {
-          "x": -1,
-          "y": 1,
+          "x": 0,
+          "y": 1.75,
+          "z": 0
+        },
+        {
+          "x": -0.25,
+          "y": 1.75,
           "z": 0
         }
       ],
       "lines": [
         [
-          0,
-          1
+          2,
+          3
         ],
+        [
+          0,
+          3
+        ],
+        [
+          0,
+          4
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          1,
+          5
+        ],
+        [
+          2,
+          5
+        ],
+        [
+          4,
+          6
+        ]
+      ]
+    },
+    "red keycard": {
+      "verts": [
+        {
+          "x": 0.5,
+          "y": 0,
+          "z": 0
+        },
+        {
+          "x": 0,
+          "y": 1.75,
+          "z": 0
+        },
+        {
+          "x": -0.5,
+          "y": 1.75,
+          "z": 0
+        },
+        {
+          "x": -0.5,
+          "y": 0,
+          "z": 0
+        },
+        {
+          "x": 0.5,
+          "y": 1.25,
+          "z": 0
+        }
+      ],
+      "lines": [
         [
           1,
           2
@@ -10494,101 +11016,896 @@
         [
           0,
           3
+        ],
+        [
+          0,
+          4
+        ],
+        [
+          1,
+          4
+        ]
+      ]
+    },
+    "blue armor": {
+      "verts": [
+        {
+          "x": -1,
+          "y": 2,
+          "z": 0.5
+        },
+        {
+          "x": 1,
+          "y": 2,
+          "z": 0.5
+        },
+        {
+          "x": -1,
+          "y": 2,
+          "z": -0.5
+        },
+        {
+          "x": 1,
+          "y": 2,
+          "z": -0.5
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        {
+          "x": 1,
+          "y": 1.5,
+          "z": 0
+        },
+        {
+          "x": -1,
+          "y": 1.5,
+          "z": 0
+        }
+      ],
+      "lines": [
+        [
+          2,
+          3
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          3,
+          5
+        ],
+        [
+          1,
+          5
         ],
         [
           4,
           5
         ],
         [
+          0,
+          6
+        ],
+        [
+          2,
+          6
+        ],
+        [
           4,
           6
         ],
         [
+          1,
+          3
+        ],
+        [
           0,
-          4
+          2
         ]
       ]
     },
-    "rune of earth magic": {
+    "ammo box": {
       "verts": [
+        {
+          "x": -1,
+          "y": 1.25,
+          "z": -0.75
+        },
+        {
+          "x": -1,
+          "y": 1.25,
+          "z": 0.75
+        },
+        {
+          "x": 1,
+          "y": 1.25,
+          "z": -0.75
+        },
+        {
+          "x": 1,
+          "y": 1.25,
+          "z": 0.75
+        },
         {
           "x": 1,
           "y": 0,
-          "z": 0
-        },
-        {
-          "x": -2,
-          "y": 1,
-          "z": 0
-        },
-        {
-          "x": -1,
-          "y": 4,
-          "z": 0
-        },
-        {
-          "x": 2,
-          "y": 3,
-          "z": 0
+          "z": -0.75
         },
         {
           "x": 1,
-          "y": 3,
-          "z": 0
+          "y": 0,
+          "z": 0.75
         },
         {
           "x": -1,
-          "y": 3,
-          "z": 0
-        },
-        {
-          "x": 1,
-          "y": 2,
-          "z": 0
+          "y": 0,
+          "z": 0.75
         },
         {
           "x": -1,
-          "y": 2,
-          "z": 0
+          "y": 0,
+          "z": -0.75
         },
         {
           "x": 0,
           "y": 1,
-          "z": 0
+          "z": 0.75
+        },
+        {
+          "x": 0,
+          "y": 0.5,
+          "z": 0.75
         }
       ],
       "lines": [
-        [
-          0,
-          1
-        ],
         [
           2,
           3
         ],
         [
           0,
-          3
-        ],
-        [
-          1,
           2
         ],
         [
-          4,
-          6
+          0,
+          1
         ],
         [
-          4,
+          1,
+          3
+        ],
+        [
+          3,
           5
         ],
         [
           5,
+          6
+        ],
+        [
+          6,
           7
+        ],
+        [
+          4,
+          7
+        ],
+        [
+          4,
+          5
+        ],
+        [
+          0,
+          7
+        ],
+        [
+          1,
+          6
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          8,
+          9
+        ]
+      ]
+    },
+    "shells": {
+      "verts": [
+        {
+          "x": -0.5,
+          "y": 0.25,
+          "z": -0.25
+        },
+        {
+          "x": -0.5,
+          "y": 0.25,
+          "z": 0.25
+        },
+        {
+          "x": 0.5,
+          "y": 0.25,
+          "z": -0.25
+        },
+        {
+          "x": 0.5,
+          "y": 0.25,
+          "z": 0.25
+        },
+        {
+          "x": 0.5,
+          "y": 0,
+          "z": -0.25
+        },
+        {
+          "x": 0.5,
+          "y": 0,
+          "z": 0.25
+        },
+        {
+          "x": -0.5,
+          "y": 0,
+          "z": 0.25
+        },
+        {
+          "x": -0.5,
+          "y": 0,
+          "z": -0.25
+        },
+        {
+          "x": -0.25,
+          "y": 0.25,
+          "z": 0.25
+        },
+        {
+          "x": -0.25,
+          "y": 0.25,
+          "z": -0.25
+        }
+      ],
+      "lines": [
+        [
+          2,
+          3
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          3,
+          5
+        ],
+        [
+          5,
+          6
+        ],
+        [
+          6,
+          7
+        ],
+        [
+          4,
+          7
+        ],
+        [
+          4,
+          5
+        ],
+        [
+          0,
+          7
+        ],
+        [
+          1,
+          6
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          8,
+          9
+        ]
+      ]
+    },
+    "box of rockets": {
+      "verts": [
+        {
+          "x": -1.25,
+          "y": 1.25,
+          "z": -0.5
+        },
+        {
+          "x": -1.25,
+          "y": 1.25,
+          "z": 0.5
+        },
+        {
+          "x": 1.25,
+          "y": 1.25,
+          "z": -0.5
+        },
+        {
+          "x": 1.25,
+          "y": 1.25,
+          "z": 0.5
+        },
+        {
+          "x": 1.25,
+          "y": 0,
+          "z": -0.5
+        },
+        {
+          "x": 1.25,
+          "y": 0,
+          "z": 0.5
+        },
+        {
+          "x": -1.25,
+          "y": 0,
+          "z": 0.5
+        },
+        {
+          "x": -1.25,
+          "y": 0,
+          "z": -0.5
+        },
+        {
+          "x": 0.25,
+          "y": 0.75,
+          "z": 0.5
+        },
+        {
+          "x": -0.25,
+          "y": 0.75,
+          "z": 0.5
+        }
+      ],
+      "lines": [
+        [
+          2,
+          3
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          3,
+          5
+        ],
+        [
+          5,
+          6
+        ],
+        [
+          6,
+          7
+        ],
+        [
+          4,
+          7
+        ],
+        [
+          4,
+          5
+        ],
+        [
+          0,
+          7
+        ],
+        [
+          1,
+          6
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          8,
+          9
+        ]
+      ]
+    },
+    "shotgun": {
+      "verts": [
+        {
+          "x": 0,
+          "y": 0.5,
+          "z": 1.5
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "z": -1
+        },
+        {
+          "x": 0,
+          "y": 0.75,
+          "z": 1.5
+        },
+        {
+          "x": 0,
+          "y": 0.75,
+          "z": -0.5
+        },
+        {
+          "x": 0,
+          "y": 0.25,
+          "z": -1.5
+        },
+        {
+          "x": 0,
+          "y": 0.5,
+          "z": -0.5
+        }
+      ],
+      "lines": [
+        [
+          2,
+          3
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          5
+        ],
+        [
+          3,
+          5
+        ],
+        [
+          1,
+          5
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ]
+    },
+    "chaingun": {
+      "verts": [
+        {
+          "x": 0,
+          "y": 0.5,
+          "z": 1.5
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "z": -0.75
+        },
+        {
+          "x": 0,
+          "y": 1.5,
+          "z": 1.5
+        },
+        {
+          "x": 0,
+          "y": 1.5,
+          "z": -0.5
+        },
+        {
+          "x": 0,
+          "y": 0.5,
+          "z": -1.5
+        },
+        {
+          "x": 0,
+          "y": 0.5,
+          "z": -0.5
+        }
+      ],
+      "lines": [
+        [
+          2,
+          3
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          5
+        ],
+        [
+          3,
+          5
+        ],
+        [
+          1,
+          5
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ]
+    },
+    "chainsaw": {
+      "verts": [
+        {
+          "x": 0,
+          "y": 1,
+          "z": -1.5
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "z": -1.5
+        },
+        {
+          "x": 0,
+          "y": 1,
+          "z": 1.25
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "z": 1.25
+        },
+        {
+          "x": 0,
+          "y": 0.75,
+          "z": 1.5
+        },
+        {
+          "x": 0,
+          "y": 0.25,
+          "z": 1.5
+        },
+        {
+          "x": 0,
+          "y": 1,
+          "z": -0.5
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "z": -0.5
+        },
+        {
+          "x": 0,
+          "y": 1.5,
+          "z": -0.75
+        },
+        {
+          "x": 0,
+          "y": 1.5,
+          "z": -1.5
+        }
+      ],
+      "lines": [
+        [
+          0,
+          1
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          5
+        ],
+        [
+          4,
+          5
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          6,
+          7
+        ],
+        [
+          0,
+          9
+        ],
+        [
+          8,
+          9
+        ],
+        [
+          6,
+          8
+        ]
+      ]
+    },
+    "rocket launcher": {
+      "verts": [
+        {
+          "x": 0,
+          "y": 1,
+          "z": 1.5
+        },
+        {
+          "x": 0,
+          "y": 1,
+          "z": -1.5
+        },
+        {
+          "x": 0,
+          "y": 1,
+          "z": 0.25
+        },
+        {
+          "x": 0,
+          "y": 0.25,
+          "z": 0.25
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "z": -1.5
+        },
+        {
+          "x": 0,
+          "y": 0.75,
+          "z": 1.5
+        },
+        {
+          "x": 0,
+          "y": 0.75,
+          "z": 0.25
+        }
+      ],
+      "lines": [
+        [
+          0,
+          1
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          0,
+          5
+        ],
+        [
+          5,
+          6
+        ],
+        [
+          4,
+          6
+        ]
+      ]
+    },
+    "lightpost": {
+      "verts": [
+        {
+          "x": 0,
+          "y": 2.25,
+          "z": 0
+        },
+        {
+          "x": 0,
+          "y": 0.75,
+          "z": 0
+        },
+        {
+          "x": -0.75,
+          "y": 0,
+          "z": 0
+        },
+        {
+          "x": 0.75,
+          "y": 0,
+          "z": 0
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "z": -0.75
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "z": 0.75
+        }
+      ],
+      "lines": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          5
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          3,
+          4
+        ],
+        [
+          3,
+          5
+        ],
+        [
+          2,
+          5
+        ]
+      ]
+    },
+    "barrel": {
+      "verts": [
+        {
+          "x": -1.25,
+          "y": 0,
+          "z": 0.25
+        },
+        {
+          "x": 1.25,
+          "y": 0,
+          "z": 0.25
+        },
+        {
+          "x": 1.25,
+          "y": 2.25,
+          "z": 0.25
+        },
+        {
+          "x": -1.25,
+          "y": 2.25,
+          "z": 0.25
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "z": 1.25
+        },
+        {
+          "x": 0,
+          "y": 2.25,
+          "z": 1.25
+        },
+        {
+          "x": -0.75,
+          "y": 2.25,
+          "z": -1
+        },
+        {
+          "x": -0.75,
+          "y": 0,
+          "z": -1
+        },
+        {
+          "x": 0.75,
+          "y": 2.25,
+          "z": -1
+        },
+        {
+          "x": 0.75,
+          "y": 0,
+          "z": -1
+        }
+      ],
+      "lines": [
+        [
+          1,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          0,
+          4
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          3,
+          5
+        ],
+        [
+          2,
+          5
+        ],
+        [
+          4,
+          5
+        ],
+        [
+          3,
+          6
+        ],
+        [
+          6,
+          7
+        ],
+        [
+          0,
+          7
+        ],
+        [
+          6,
+          8
         ],
         [
           7,
+          9
+        ],
+        [
+          1,
+          9
+        ],
+        [
+          2,
           8
+        ],
+        [
+          8,
+          9
         ]
       ]
     },
@@ -10761,723 +12078,6 @@
           3
         ]
       ]
-    },
-    "shells": {
-      "verts": [
-        {
-          "x": 1,
-          "y": 0,
-          "z": 0
-        },
-        {
-          "x": 1,
-          "y": 2,
-          "z": 0
-        },
-        {
-          "x": 0,
-          "y": 2,
-          "z": 0
-        },
-        {
-          "x": -1,
-          "y": 2,
-          "z": 0
-        },
-        {
-          "x": -1,
-          "y": 0,
-          "z": 0
-        },
-        {
-          "x": 0,
-          "y": 0,
-          "z": 0
-        }
-      ],
-      "lines": [
-        [
-          0,
-          1
-        ],
-        [
-          2,
-          5
-        ],
-        [
-          3,
-          4
-        ]
-      ]
-    },
-    "nailgun": {
-      "verts": [
-        {
-          "x": 1,
-          "y": 1,
-          "z": 2
-        },
-        {
-          "x": 1,
-          "y": 1,
-          "z": 1
-        },
-        {
-          "x": -1,
-          "y": 1,
-          "z": 2
-        },
-        {
-          "x": -1,
-          "y": 1,
-          "z": 1
-        },
-        {
-          "x": 0,
-          "y": 0,
-          "z": -1
-        },
-        {
-          "x": 0,
-          "y": 0,
-          "z": 0
-        }
-      ],
-      "lines": [
-        [
-          0,
-          1
-        ],
-        [
-          2,
-          3
-        ],
-        [
-          4,
-          5
-        ],
-        [
-          3,
-          5
-        ],
-        [
-          1,
-          5
-        ]
-      ]
-    },
-    "nails": {
-      "verts": [
-        {
-          "x": 1,
-          "y": 1,
-          "z": 0
-        },
-        {
-          "x": 0,
-          "y": 1,
-          "z": 0
-        },
-        {
-          "x": 0,
-          "y": 1,
-          "z": 1
-        },
-        {
-          "x": 1,
-          "y": 0,
-          "z": 0
-        },
-        {
-          "x": 0,
-          "y": 0,
-          "z": 1
-        },
-        {
-          "x": 0,
-          "y": 0,
-          "z": 0
-        }
-      ],
-      "lines": [
-        [
-          0,
-          3
-        ],
-        [
-          1,
-          5
-        ],
-        [
-          2,
-          4
-        ]
-      ]
-    },
-    "grenade launcher": {
-      "verts": [
-        {
-          "x": 0,
-          "y": 1,
-          "z": 2
-        },
-        {
-          "x": 0,
-          "y": 1,
-          "z": -1
-        },
-        {
-          "x": 0,
-          "y": 1,
-          "z": 1
-        },
-        {
-          "x": 0,
-          "y": 0,
-          "z": 1
-        },
-        {
-          "x": 0,
-          "y": 0,
-          "z": -1
-        }
-      ],
-      "lines": [
-        [
-          0,
-          1
-        ],
-        [
-          2,
-          3
-        ],
-        [
-          1,
-          4
-        ],
-        [
-          2,
-          4
-        ]
-      ]
-    },
-    "grenades": {
-      "verts": [
-        {
-          "x": 0,
-          "y": 1,
-          "z": 0
-        },
-        {
-          "x": 0,
-          "y": 1,
-          "z": 1
-        },
-        {
-          "x": 1,
-          "y": 1,
-          "z": 0
-        },
-        {
-          "x": 0,
-          "y": 0,
-          "z": 0
-        }
-      ],
-      "lines": [
-        [
-          2,
-          3
-        ],
-        [
-          0,
-          2
-        ],
-        [
-          0,
-          1
-        ],
-        [
-          1,
-          3
-        ],
-        [
-          1,
-          2
-        ],
-        [
-          0,
-          3
-        ]
-      ]
-    },
-    "armour": {
-      "verts": [
-        {
-          "x": -1,
-          "y": 2,
-          "z": 0
-        },
-        {
-          "x": 1,
-          "y": 2,
-          "z": 0
-        },
-        {
-          "x": -1,
-          "y": 2,
-          "z": -1
-        },
-        {
-          "x": 1,
-          "y": 2,
-          "z": -1
-        },
-        {
-          "x": 0,
-          "y": 0,
-          "z": 0
-        }
-      ],
-      "lines": [
-        [
-          1,
-          3
-        ],
-        [
-          2,
-          3
-        ],
-        [
-          0,
-          2
-        ],
-        [
-          0,
-          1
-        ],
-        [
-          1,
-          4
-        ],
-        [
-          0,
-          4
-        ],
-        [
-          2,
-          4
-        ],
-        [
-          3,
-          4
-        ]
-      ]
-    }
-  },
-  "sounds": {
-    "sound/weapons/tink1.wav": {
-      "export": true,
-      "voice": 0,
-      "priority": 1,
-      "attack": 0,
-      "origin": "wolf",
-      "library": "HITWALL",
-      "alias": "HITWALL"
-    },
-    "sound/player/death1.wav": {
-      "export": true,
-      "voice": 0,
-      "priority": 99,
-      "attack": 0,
-      "origin": "wolf",
-      "library": "PLAYERDEATH",
-      "alias": "PLAYERDEATH"
-    },
-    "sound/player/pain1.wav": {
-      "export": true,
-      "voice": 0,
-      "priority": 90,
-      "attack": 0,
-      "origin": "wolf",
-      "library": "TAKEDAMAGE",
-      "alias": "TAKEDAMAGE"
-    },
-    "sound/doors/hydro1.wav": {
-      "export": true,
-      "voice": 2,
-      "priority": 20,
-      "attack": 0,
-      "origin": "doom",
-      "library": "DPDOROPN",
-      "alias": "OPENDOOR"
-    },
-    "sound/weapons/spike2.wav": {
-      "export": true,
-      "voice": 0,
-      "priority": 50,
-      "attack": 0,
-      "origin": "wolf",
-      "library": "ATKMACHINEGUN",
-      "alias": "ATKMACHINEGUN"
-    },
-    "sound/weapons/lhit.wav": {
-      "export": true,
-      "voice": 1,
-      "priority": 50,
-      "attack": 0,
-      "origin": "wolf",
-      "library": "HITENEMY",
-      "alias": "HITENEMY"
-    },
-    "sound/weapons/grenade.wav": {
-      "export": true,
-      "voice": 1,
-      "priority": 20,
-      "attack": 0,
-      "origin": "wolf",
-      "library": "SHOOT",
-      "alias": "SHOOT"
-    },
-    "sound/items/itembk2.wav": {
-      "export": true,
-      "voice": 0,
-      "priority": 90,
-      "attack": 0,
-      "origin": "wolf",
-      "library": "GETKEY",
-      "alias": "GETKEY"
-    },
-    "sound/weapons/pkup.wav": {
-      "export": true,
-      "voice": 0,
-      "priority": 80,
-      "attack": 0,
-      "origin": "wolf",
-      "library": "GETAMMO",
-      "alias": "GETAMMO"
-    },
-    "sound/items/health1.wav": {
-      "export": true,
-      "voice": 0,
-      "priority": 85,
-      "attack": 0,
-      "origin": "wolf",
-      "library": "HEALTH1",
-      "alias": "HEALTH1",
-      "extraAliases": [
-        "HEALTH2"
-      ]
-    },
-    "sound/misc/menu2.wav": {
-      "export": true,
-      "voice": 0,
-      "priority": 1,
-      "attack": 0,
-      "origin": "wolf",
-      "library": "MOVEGUN1",
-      "alias": "SWITCH"
-    },
-    "sound/items/damage.wav": {
-      "export": true,
-      "voice": 0,
-      "priority": 70,
-      "attack": 0,
-      "origin": "wolf",
-      "library": "BONUS1",
-      "alias": "BONUS1"
-    },
-    "sound/weapons/shotgn2.wav": {
-      "export": true,
-      "voice": 0,
-      "priority": 50,
-      "attack": 0,
-      "origin": "doom",
-      "library": "DPSHOTGN",
-      "alias": "SHOTGN"
-    },
-    "sound/weapons/r_exp3.wav": {
-      "export": true,
-      "voice": 1,
-      "priority": 80,
-      "attack": 0,
-      "origin": "doom",
-      "library": "DPRXPLOD",
-      "alias": "BAREXP"
-    },
-    "sound/player/land.wav": {
-      "export": true,
-      "voice": 0,
-      "priority": 50,
-      "attack": 0,
-      "origin": "doom",
-      "library": "DPOOF",
-      "alias": "OOF"
-    },
-    "sound/dog/ddeath.wav": {
-      "export": true,
-      "voice": 1,
-      "priority": 50,
-      "attack": 0,
-      "origin": "wolf",
-      "library": "DOGDEATH"
-    },
-    "sound/soldier/sight1.wav": {
-      "export": true,
-      "voice": 1,
-      "priority": 50,
-      "attack": 0,
-      "origin": "doom",
-      "library": "DPPOSACT"
-    },
-    "sound/soldier/death1.wav": {
-      "export": true,
-      "voice": 1,
-      "priority": 50,
-      "attack": 0,
-      "origin": "doom",
-      "library": "DPPODTH1"
-    },
-    "sound/dog/dsight.wav": {
-      "export": true,
-      "voice": 1,
-      "priority": 50,
-      "attack": 0,
-      "origin": "wolf",
-      "library": "DOGBARK"
-    },
-    "sound/ogre/ogsawatk.wav": {
-      "export": true,
-      "voice": 1,
-      "priority": 20,
-      "attack": 0,
-      "origin": "doom",
-      "library": "DPSAWFUL"
-    },
-    "sound/dog/dpain1.wav": {
-      "export": true,
-      "voice": 1,
-      "priority": 50,
-      "attack": 0,
-      "origin": "doom",
-      "library": "DPDMPAIN"
-    },
-    "sound/soldier/pain1.wav": {
-      "export": true,
-      "voice": 1,
-      "priority": 50,
-      "attack": 0,
-      "origin": "doom",
-      "library": "DPPOPAIN"
-    },
-    "sound/dog/dattack1.wav": {
-      "export": true,
-      "voice": 1,
-      "priority": 50,
-      "attack": 0,
-      "origin": "wolf",
-      "library": "DOGATTACK"
-    },
-    "sound/items/armor1.wav": {
-      "export": false,
-      "voice": 0,
-      "priority": 50,
-      "attack": 0,
-      "origin": "empty"
-    },
-    "sound/items/protect.wav": {
-      "export": false,
-      "voice": 0,
-      "priority": 50,
-      "attack": 0,
-      "origin": "empty"
-    },
-    "sound/items/r_item1.wav": {
-      "export": false,
-      "voice": 0,
-      "priority": 50,
-      "attack": 0,
-      "origin": "empty"
-    },
-    "sound/items/r_item2.wav": {
-      "export": false,
-      "voice": 0,
-      "priority": 50,
-      "attack": 0,
-      "origin": "empty"
-    },
-    "sound/items/suit.wav": {
-      "export": false,
-      "voice": 0,
-      "priority": 50,
-      "attack": 0,
-      "origin": "empty"
-    },
-    "sound/ogre/ogdth.wav": {
-      "export": true,
-      "voice": 1,
-      "priority": 50,
-      "attack": 0,
-      "origin": "wolf",
-      "library": "DEATHSCREAM3"
-    },
-    "sound/wizard/wattack.wav": {
-      "export": true,
-      "voice": 1,
-      "priority": 50,
-      "attack": 0,
-      "origin": "doom",
-      "library": "DPPLASMA"
-    },
-    "sound/wizard/wdeath.wav": {
-      "export": true,
-      "voice": 1,
-      "priority": 50,
-      "attack": 0,
-      "origin": "doom",
-      "library": "DPBGDTH1"
-    },
-    "sound/boss1/death.wav": {
-      "export": true,
-      "voice": 1,
-      "priority": 50,
-      "attack": 0,
-      "origin": "wolf",
-      "library": "TOT_HUND"
-    },
-    "sound/boss1/pain.wav": {
-      "export": false,
-      "voice": 0,
-      "priority": 50,
-      "attack": 0,
-      "origin": "empty"
-    },
-    "sound/boss1/sight1.wav": {
-      "export": false,
-      "voice": 0,
-      "priority": 50,
-      "attack": 0,
-      "origin": "empty"
-    },
-    "sound/soldier/sattck1.wav": {
-      "export": true,
-      "voice": 1,
-      "priority": 50,
-      "attack": 0,
-      "origin": "wolf",
-      "library": "ATKPISTOL"
-    },
-    "sound/wizard/wpain.wav": {
-      "export": true,
-      "voice": 1,
-      "priority": 50,
-      "attack": 0,
-      "origin": "wolf",
-      "library": "HITENEMY"
-    },
-    "sound/wizard/wsight.wav": {
-      "export": true,
-      "voice": 1,
-      "priority": 50,
-      "attack": 0,
-      "origin": "doom",
-      "library": "DPBGSIT1"
-    },
-    "sound/knight/kdeath.wav": {
-      "export": true,
-      "voice": 1,
-      "priority": 50,
-      "attack": 0,
-      "origin": "doom",
-      "library": "DPBGDTH1"
-    },
-    "sound/shambler/sdeath.wav": {
-      "export": true,
-      "voice": 1,
-      "priority": 50,
-      "attack": 0,
-      "origin": "doom",
-      "library": "DPBGDTH1"
-    },
-    "sound/ogre/ogwake.wav": {
-      "export": true,
-      "voice": 1,
-      "priority": 50,
-      "attack": 0,
-      "origin": "doom",
-      "library": "DPBRSSIT"
-    },
-    "sound/knight/ksight.wav": {
-      "export": true,
-      "voice": 1,
-      "priority": 50,
-      "attack": 0,
-      "origin": "wolf",
-      "library": "SCHUTZAD"
-    },
-    "sound/knight/sword1.wav": {
-      "export": true,
-      "voice": 1,
-      "priority": 50,
-      "attack": 0,
-      "origin": "wolf",
-      "library": "ATKKNIFE"
-    },
-    "sound/shambler/melee1.wav": {
-      "export": true,
-      "voice": 1,
-      "priority": 50,
-      "attack": 0,
-      "origin": "doom",
-      "library": "DPCLAW"
-    },
-    "sound/shambler/ssight.wav": {
-      "export": true,
-      "voice": 1,
-      "priority": 50,
-      "attack": 0,
-      "origin": "doom",
-      "library": "DPBRSSIT"
-    },
-    "sound/knight/khurt.wav": {
-      "export": true,
-      "voice": 1,
-      "priority": 50,
-      "attack": 0,
-      "origin": "wolf",
-      "library": "HITENEMY"
-    },
-    "sound/demon/sight2.wav": {
-      "export": false,
-      "voice": 1,
-      "priority": 50,
-      "attack": 0,
-      "origin": "doom",
-      "library": "DPBGACT"
-    },
-    "sound/demon/dpain1.wav": {
-      "export": false,
-      "voice": 1,
-      "priority": 50,
-      "attack": 0,
-      "origin": "doom",
-      "library": "DPPLPAIN"
-    },
-    "sound/demon/dhit2.wav": {
-      "export": false,
-      "voice": 1,
-      "priority": 50,
-      "attack": 0,
-      "origin": "doom",
-      "library": "DPCLAW"
-    },
-    "sound/demon/ddeath.wav": {
-      "export": false,
-      "voice": 1,
-      "priority": 50,
-      "attack": 0,
-      "origin": "doom",
-      "library": "DPBGDTH1"
     }
   }
 }

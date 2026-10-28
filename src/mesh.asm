@@ -1,32 +1,48 @@
 ; World object meshes — AABB / door / switch / slope / plat wireframes
 !zone mesh
 
-; Edge list: pairs of corner indices 0..7
-box_edges
-	!byte 0,1, 1,2, 2,3, 3,0
-	!byte 4,5, 5,6, 6,7, 7,4
-	!byte 0,4, 1,5, 2,6, 3,7
+; Line starts, then the matching ends. Same index is one edge.
+box_ea
+	!byte 0,1,2,3, 4,5,6,7, 0,1,2,3
+box_eb
+	!byte 1,2,3,0, 5,6,7,4, 4,5,6,7
 
 ; Ramp hypotenuses always; top/bottom caps from slope_flags bits 0/1
-ramp_e00
-	!byte 1,2, 3,0
-ramp_e01
-	!byte 1,2, 3,0, 0,1
-ramp_e10
-	!byte 1,2, 3,0, 2,3
-ramp_e11
-	!byte 1,2, 3,0, 0,1, 2,3
+ramp_a00
+	!byte 1,3
+ramp_b00
+	!byte 2,0
+ramp_a01
+	!byte 1,3,0
+ramp_b01
+	!byte 2,0,1
+ramp_a10
+	!byte 1,3,2
+ramp_b10
+	!byte 2,0,3
+ramp_a11
+	!byte 1,3,0,2
+ramp_b11
+	!byte 2,0,1,3
 ramp_ne_tab
 	!byte 2, 3, 3, 4
-ramp_ed_lo
-	!byte <ramp_e00, <ramp_e01, <ramp_e10, <ramp_e11
-ramp_ed_hi
-	!byte >ramp_e00, >ramp_e01, >ramp_e10, >ramp_e11
+ramp_a_lo
+	!byte <ramp_a00, <ramp_a01, <ramp_a10, <ramp_a11
+ramp_a_hi
+	!byte >ramp_a00, >ramp_a01, >ramp_a10, >ramp_a11
+ramp_b_lo
+	!byte <ramp_b00, <ramp_b01, <ramp_b10, <ramp_b11
+ramp_b_hi
+	!byte >ramp_b00, >ramp_b01, >ramp_b10, >ramp_b11
 ; Platform quad, switch triangle
-quad_edges
-	!byte 0,1, 1,2, 2,3, 3,0
-tri_edges
-	!byte 0,1, 1,2, 2,0
+quad_ea
+	!byte 0,1,2,3
+quad_eb
+	!byte 1,2,3,0
+tri_ea
+	!byte 0,1,2
+tri_eb
+	!byte 1,2,0
 
 ; Per-vert XZ column ids for mesh_project (verts sharing x,z share a column).
 ; box_col doubles as identity for ≤4-vert meshes with distinct columns.
@@ -78,10 +94,14 @@ draw_box
 	jsr box_fill_verts
 	lda #BOX_NVERTS
 	sta mesh_nv
-	lda #<box_vis_edges
+	lda #<box_vis_a
 	sta edge_ptr
-	lda #>box_vis_edges
+	lda #>box_vis_a
 	sta edge_ptr+1
+	lda #<box_vis_b
+	sta edge_b
+	lda #>box_vis_b
+	sta edge_b+1
 	jmp stroke_mesh
 
 stroke_mesh
@@ -265,7 +285,7 @@ cull_box_faces
 	ldy #$20
 	jmp box_apply_face
 
-; Pack edges with a visible face into box_vis_edges; mesh_ne = count
+; Pack edges with a visible face into box_vis_a/b; mesh_ne = count
 box_pack_edges
 	ldx #0
 	ldy #0
@@ -273,24 +293,16 @@ box_pack_edges
 	lda box_edge_faces,x
 	and face_bits
 	beq .pe_n
-	txa
-	sta rot0
-	asl
-	tax
-	lda box_edges,x
-	sta box_vis_edges,y
+	lda box_ea,x
+	sta box_vis_a,y
+	lda box_eb,x
+	sta box_vis_b,y
 	iny
-	lda box_edges+1,x
-	sta box_vis_edges,y
-	iny
-	ldx rot0
 .pe_n
 	inx
 	cpx #BOX_NEDGES
 	bne .pe
-	tya
-	lsr
-	sta mesh_ne
+	sty mesh_ne
 	rts
 
 ; Visible edge list → corner mask + mesh_nwork (1–8 for crates)
@@ -301,20 +313,11 @@ box_build_vert_mask
 .bvm
 	cpx mesh_ne
 	beq .bvm_pop
-	txa
-	asl
-	tay
-	lda box_vis_edges,y
-	tay
+	ldy box_vis_a,x
 	lda mesh_vmask
 	ora box_vbit,y
 	sta mesh_vmask
-	txa
-	asl
-	tay
-	iny
-	lda box_vis_edges,y
-	tay
+	ldy box_vis_b,x
 	lda mesh_vmask
 	ora box_vbit,y
 	sta mesh_vmask
@@ -581,10 +584,14 @@ stroke_tri
 	lda #3
 	sta mesh_nv
 	sta mesh_ne
-	lda #<tri_edges
+	lda #<tri_ea
 	sta edge_ptr
-	lda #>tri_edges
+	lda #>tri_ea
 	sta edge_ptr+1
+	lda #<tri_eb
+	sta edge_b
+	lda #>tri_eb
+	sta edge_b+1
 	lda #<ident_col
 	sta col_ptr
 	lda #>ident_col
@@ -609,10 +616,14 @@ draw_slope_mesh
 	tax
 	lda ramp_ne_tab,x
 	sta mesh_ne
-	lda ramp_ed_lo,x
+	lda ramp_a_lo,x
 	sta edge_ptr
-	lda ramp_ed_hi,x
+	lda ramp_a_hi,x
 	sta edge_ptr+1
+	lda ramp_b_lo,x
+	sta edge_b
+	lda ramp_b_hi,x
+	sta edge_b+1
 	jmp stroke_mesh
 
 draw_plat_mesh
@@ -622,10 +633,14 @@ draw_plat_mesh
 	sta mesh_nv
 	lda #4
 	sta mesh_ne
-	lda #<quad_edges
+	lda #<quad_ea
 	sta edge_ptr
-	lda #>quad_edges
+	lda #>quad_ea
 	sta edge_ptr+1
+	lda #<quad_eb
+	sta edge_b
+	lda #>quad_eb
+	sta edge_b+1
 	jmp stroke_mesh
 
 ; No Chthon. Callers treat C=0 as an ordinary room. X restored from obj_i.
@@ -634,7 +649,7 @@ room_has_chthon
 	ldx obj_i
 	rts
 
-; Pickup mesh: type in A (BP_*). nv=0 → backpack fallback slot BP_NTYPES.
+; Pickup mesh: type in A (BP_*). nv=0 → backpack mesh.
 draw_backpack_mesh
 	ldx obj_i
 	+lda_mx bp_type
@@ -653,7 +668,7 @@ fill_item_verts
 	tay
 	lda item_nv,y
 	bne +
-	ldy #BP_NTYPES
+	ldy #BP_BACKPACK
 +
 	lda item_nv,y
 	sta mesh_nv
@@ -710,9 +725,7 @@ fill_item_verts
 .fi_vyl
 	cpy mesh_nv
 	bcs .fi_ptr
-	clc
 	lda (src_ptr),y
-	adc box_y
 	sta VY,y
 	iny
 	bne .fi_vyl
@@ -740,14 +753,29 @@ fill_item_verts
 	adc #0
 	sta col_ptr+1
 	clc
-	lda #<item_edges
+	lda #<item_ea
 	adc item_eo,y
 	sta edge_ptr
-	lda #>item_edges
+	lda #>item_ea
 	adc #0
 	sta edge_ptr+1
-	; All pickups yaw-spin about box+ITEM_BIAS.
+	clc
+	lda #<item_eb
+	adc item_eo,y
+	sta edge_b
+	lda #>item_eb
+	adc #0
+	sta edge_b+1
+	; Props stay put. Other pickups yaw-spin about box+ITEM_BIAS.
+	ldy rot0
 	lda item_spin
+	cpy #BP_LIGHTPOST
+	beq .fi_still
+	cpy #BP_BARREL
+	bne .fi_spin
+.fi_still
+	lda #0
+.fi_spin
 	sta ent_rot
 	jmp xform_item_spin
 
@@ -864,8 +892,6 @@ fill_door_type_verts
 	bcs .fdt_ptr
 	lda (src_ptr),y
 	jsr scale_door_u
-	clc
-	adc box_y
 	sta VY,y
 	iny
 	bne .fdt_vyl
@@ -893,12 +919,19 @@ fill_door_type_verts
 	adc #0
 	sta col_ptr+1
 	clc
-	lda #<door_edges
+	lda #<door_ea
 	adc door_eo,y
 	sta edge_ptr
-	lda #>door_edges
+	lda #>door_ea
 	adc #0
 	sta edge_ptr+1
+	clc
+	lda #<door_eb
+	adc door_eo,y
+	sta edge_b
+	lda #>door_eb
+	adc #0
+	sta edge_b+1
 	jsr fill_door_origin
 	jmp xform_item_at
 
@@ -1219,7 +1252,6 @@ draw_room_mesh
 	+lda_mx room_eo
 	sta pv1
 	lda #0
-	sta pv2
 	sta pv3
 .drm_pk
 	lda pv0
@@ -1230,14 +1262,11 @@ draw_room_mesh
 	and face_bits
 	beq .drm_pkn
 .drm_keep
-	ldy pv2
+	ldy pv3
 	+lda_mx room_e0
-	sta room_pack_edges,y
-	iny
+	sta room_vis_a,y
 	+lda_mx room_e1
-	sta room_pack_edges,y
-	iny
-	sty pv2
+	sta room_vis_b,y
 	inc pv3
 .drm_pkn
 	inc pv1
@@ -1322,10 +1351,14 @@ draw_room_mesh
 	adc #0
 	sta col_ptr+1
 	jsr xform_mesh_xz
-	lda #<room_pack_edges
+	lda #<room_vis_a
 	sta edge_ptr
-	lda #>room_pack_edges
+	lda #>room_vis_a
 	sta edge_ptr+1
+	lda #<room_vis_b
+	sta edge_b
+	lda #>room_vis_b
+	sta edge_b+1
 	lda pv3
 	sta mesh_ne
 	jmp stroke_mesh

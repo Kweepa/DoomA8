@@ -24,13 +24,9 @@ JS_ORDER = [
     "js/animView.js",
     "js/weaponView.js",
     "js/itemView.js",
-    "js/pcsfx.js",
-    "js/soundView.js",
     "js/buildView.js",
-    "js/pcsrc.js",
     "js/doompic.js",
     "js/stickOrtho.js",
-    "js/pclib.js",
     "js/main.js",
 ]
 
@@ -84,7 +80,6 @@ def main() -> None:
       <button type="button" id="btn-mode-anim">Enemies</button>
       <button type="button" id="btn-mode-weapons">Weapons</button>
       <button type="button" id="btn-mode-items">Items</button>
-      <button type="button" id="btn-mode-sounds">Sounds</button>
       <button type="button" id="btn-mode-build">Build</button>
     </div>
     <div class="toolbar-actions" id="draw-mode-group" role="group" aria-label="Draw mode">
@@ -149,21 +144,24 @@ def main() -> None:
         </div>
       </section>
       <section id="items-left" hidden>
+        <table id="item-budget" class="item-budget">
+          <tbody>
+            <tr><th colspan="2">Items</th></tr>
+            <tr><td>verts</td><td id="bud-item-nv"></td></tr>
+            <tr><td>unique X</td><td id="bud-item-nx"></td></tr>
+            <tr><td>unique Z</td><td id="bud-item-nz"></td></tr>
+            <tr><td>lines</td><td id="bud-item-ne"></td></tr>
+            <tr><th colspan="2">Doors</th></tr>
+            <tr><td>verts</td><td id="bud-door-nv"></td></tr>
+            <tr><td>unique X</td><td id="bud-door-nx"></td></tr>
+            <tr><td>unique Z</td><td id="bud-door-nz"></td></tr>
+            <tr><td>lines</td><td id="bud-door-ne"></td></tr>
+          </tbody>
+        </table>
         <h2>Items</h2>
         <ul id="item-mesh-list" class="object-list"></ul>
         <h2>Doors</h2>
         <ul id="door-mesh-list" class="object-list"></ul>
-      </section>
-      <section id="sounds-left" hidden>
-        <h2>Sounds</h2>
-        <label class="field sound-unused-toggle">
-          <input type="checkbox" id="chk-hide-unused" checked title="Hide ambience, plats, hknight, and buttons" />
-          <span>Hide unused</span>
-        </label>
-        <div id="sound-list" class="sound-list"></div>
-        <div class="btn-row">
-          <button type="button" id="btn-sound-folder">Open shareware folder</button>
-        </div>
       </section>
     </aside>
 

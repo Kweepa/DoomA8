@@ -11,6 +11,7 @@ from copy import deepcopy
 from pathlib import Path
 
 from doommdl import POSE_SCALE, editor_verts, js_round, load_enemy_mdls, select_mdl_clips
+from gensounds import ENEMY_CUES
 
 ROOT = Path(__file__).resolve().parents[1]
 DOC = ROOT / "editor" / "doom64.json"
@@ -184,8 +185,6 @@ def clip_with_sound(dst: dict, src: dict) -> dict:
 
 CUE_ORDER = ["sight", "wince", "melee", "shoot", "death"]  # fixed: CUE_* indices in enemy.asm
 CUE_REQUIRED = ("sight", "wince", "death")
-# These four have no wavs yet. $FF is a silent cue.
-SILENT_CUES = {"Possessed", "Imp", "Pinky", "Baron"}
 CUE_NONE = 0xFF
 
 
@@ -199,6 +198,13 @@ def cue_ident(path) -> str:
     return re.sub(r"[^A-Za-z0-9]+", "_", rest).strip("_").upper()
 
 
+def apply_tool_cues(enemy: dict) -> None:
+    """Shipped types play the fixed Doom cues. JSON cue paths are not consulted."""
+    mapped = ENEMY_CUES.get(enemy.get("name"))
+    if mapped:
+        enemy["cues"] = dict(mapped)
+
+
 def pack_cues(enemy: dict, ids: dict[str, int]) -> bytes:
     """Five sound ids [sight, wince, melee, shoot, death]; $FF = none ($00 is a real sound)."""
     name = enemy.get("name", "?")
@@ -210,7 +216,7 @@ def pack_cues(enemy: dict, ids: dict[str, int]) -> bytes:
     for cue in CUE_ORDER:
         path = cues.get(cue)
         if not path:
-            if cue in CUE_REQUIRED and name not in SILENT_CUES:
+            if cue in CUE_REQUIRED:
                 raise SystemExit(f"{name}: required cue '{cue}' is not set")
             out.append(CUE_NONE)
             continue
@@ -681,22 +687,24 @@ def batch_cost(order: list[list[int]]) -> tuple[int, int]:
 
 
 def baked_batches(order: list[list[int]]) -> bytes:
-    """Per batch: nslot, nedge, slot→vert, slot pairs. nslot = 0 ends. Packs like batch_cost."""
+    """Per batch: nslot, nedge, slot→vert, starts, ends. nslot = 0 ends. Packs like batch_cost."""
     out = bytearray()
     i = 0
     while i < len(order):
         slots: list[int] = []
-        pairs: list[int] = []
-        while i < len(order) and len(pairs) < MESH_BATCH_EDGES * 2:
+        starts: list[int] = []
+        ends: list[int] = []
+        while i < len(order) and len(starts) < MESH_BATCH_EDGES:
             a, b = order[i]
             if len(slots) + (a not in slots) + (b not in slots) > MESH_BATCH_VERTS:
                 break
             for v in (a, b):
                 if v not in slots:
                     slots.append(v)
-                pairs.append(slots.index(v))
+            starts.append(slots.index(a))
+            ends.append(slots.index(b))
             i += 1
-        out += bytes([len(slots), len(pairs) // 2]) + bytes(slots) + bytes(pairs)
+        out += bytes([len(slots), len(starts)]) + bytes(slots) + bytes(starts) + bytes(ends)
     out.append(0)
     return bytes(out)
 
@@ -1123,6 +1131,7 @@ def main() -> None:
         if name not in by_name:
             raise SystemExit(f"missing enemy {name}")
         enemy = deepcopy(by_name[name])
+        apply_tool_cues(enemy)
         if isinstance(enemy.get("frames"), list) and enemy["frames"]:
             enemy["_authored"] = True
         else:
@@ -1137,9 +1146,6 @@ def main() -> None:
         gx, gy, gz, lines, _clips, nv, shift = export_type(enemy)
         nframes = trim_to_budget(gx, gy, gz, enemy, nv)
         dos = DOS_NAME[ti]
-        sfx_path = ENEMY_DIR / f"sfx_{dos}.bin"
-        if not sfx_path.is_file():
-            raise SystemExit(f"missing {sfx_path}; run gensounds.py first")
         custom = bool(enemy.get("customSkeleton"))
         if nv and lines:
             feet = min(range(nv), key=lambda i: ((gy[i] - 256) if gy[i] >= 128 else gy[i], i))
@@ -1167,7 +1173,6 @@ def main() -> None:
                 + bytes(pgy)
                 + bytes(pgz)
             )
-            payload += sfx_path.read_bytes()
             payload += pack_cues(enemy, sound_ids)
             payload += pack_clip_events(enemy, sound_ids)
             if len(payload) <= ENEMY_POSE_MAX:

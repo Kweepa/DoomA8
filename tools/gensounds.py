@@ -1,105 +1,66 @@
 #!/usr/bin/env python3
-"""Build src/pcsounds.asm from editor/doom64.json sounds.
+"""Build src/pcsounds.asm from a fixed Doom DP* list.
 
-Exported = locked resident alias, or named by an enemy's cues
-(sight/wince/melee/shoot/death). Cue sounds ride on that enemy's pose bank."""
+Every effect is resident. Conversion is the existing path: DP* pitch bytes
+decimated 3x, then Wolf byte to POKEY AUDF. Channel and priority are baked
+into the header by who plays the sound.
+"""
 from __future__ import annotations
 
 import json
-import re
 import sys
 from pathlib import Path
 
 from pcsrc import resolve
 
 ROOT = Path(__file__).resolve().parents[1]
-DOC = ROOT / "editor" / "doom64.json"
 OUT = ROOT / "src" / "pcsounds.asm"
 ENEMY_DIR = ROOT / "enemies"
 PAYLOAD_MAX = 4096
 MAX_TICKS = 255
 
-# Pose PRG DOS names (must match tools/genenemies.py).
-TYPES = ["Possessed", "Baron", "Pinky", "Imp"]
-DOS_NAME = ["poss", "baron", "pinky", "imp"]
-SILENT_CUES = {"Possessed", "Imp", "Pinky", "Baron"}
-# Fixed per-enemy cue set. sight/wince/death are required; melee/shoot are optional.
-CUES = ["sight", "wince", "melee", "shoot", "death"]
-CUES_REQUIRED = ["sight", "wince", "death"]
-
-# Locked aliases must exist so game lda #SOUND_* still assembles.
-LOCKED = [
-    ("HITWALL", "sound/weapons/tink1.wav"),
-    ("PLAYERDEATH", "sound/player/death1.wav"),
-    ("TAKEDAMAGE", "sound/player/pain1.wav"),
-    ("OPENDOOR", "sound/doors/hydro1.wav"),
-    ("ATKMACHINEGUN", "sound/weapons/spike2.wav"),
-    ("HITENEMY", "sound/weapons/lhit.wav"),
-    ("SHOOT", "sound/weapons/grenade.wav"),
-    ("GETKEY", "sound/items/itembk2.wav"),
-    ("GETAMMO", "sound/weapons/pkup.wav"),
-    ("HEALTH1", "sound/items/health1.wav"),
-    ("SWITCH", "sound/misc/menu2.wav"),
-    ("BONUS1", "sound/items/damage.wav"),
-    ("SHOTGN", "sound/weapons/shotgn2.wav"),
-    ("BAREXP", "sound/weapons/r_exp3.wav"),
-    ("OOF", "sound/player/land.wav"),
+# id, DP lump, voice (0 player / 1 enemy / 2 world), priority.
+# Same lump can ship twice when two callers need different channels.
+EFFECTS = [
+    ("SHOTGN", "DPSHOTGN", 0, 50),
+    ("PISTOL", "DPPISTOL", 0, 50),
+    ("RLAUNC", "DPRLAUNC", 0, 50),
+    ("PUNCH", "DPPUNCH", 0, 50),
+    ("OOF", "DPOOF", 0, 50),
+    ("PLPAIN", "DPPLPAIN", 0, 90),
+    ("PLDETH", "DPPLDETH", 0, 99),
+    ("DOROPN", "DPDOROPN", 2, 20),
+    ("SWTCHN", "DPSWTCHN", 2, 1),
+    ("ITEMUP", "DPITEMUP", 2, 85),
+    ("WPNUP", "DPWPNUP", 2, 80),
+    ("RXPLOD", "DPRXPLOD", 2, 80),
+    ("POSIT1", "DPPOSIT1", 1, 50),
+    ("POPAIN", "DPPOPAIN", 1, 90),
+    ("PISTOL_E", "DPPISTOL", 1, 50),
+    ("PODTH1", "DPPODTH1", 1, 99),
+    ("BGSIT1", "DPBGSIT1", 1, 50),
+    ("CLAW", "DPCLAW", 1, 50),
+    ("BGDTH1", "DPBGDTH1", 1, 99),
+    ("SGTSIT", "DPSGTSIT", 1, 50),
+    ("DMPAIN", "DPDMPAIN", 1, 90),
+    ("SGTATK", "DPSGTATK", 1, 50),
+    ("SGTDTH", "DPSGTDTH", 1, 99),
+    ("BRSSIT", "DPBRSSIT", 1, 50),
+    ("BRSDTH", "DPBRSDTH", 1, 99),
+    ("RLAUNC_E", "DPRLAUNC", 1, 50),
 ]
-LOCKED_PATHS = {path: alias for alias, path in LOCKED}
-EXTRA_ALIASES = {}
-LOCKED_VOICE = {
-    "HITWALL": 0,
-    "PLAYERDEATH": 0,
-    "TAKEDAMAGE": 0,
-    "OPENDOOR": 2,
-    "ATKMACHINEGUN": 0,
-    "HITENEMY": 0,
-    "SHOOT": 1,
-    "GETKEY": 0,
-    "GETAMMO": 0,
-    "HEALTH1": 0,
-    "SWITCH": 0,
-    "BONUS1": 0,
-    "SHOTGN": 0,
-    "BAREXP": 1,
-    "OOF": 0,
+
+# Cue idents for the four shipped types. melee/shoot are what a clip sound frame plays.
+ENEMY_CUES = {
+    "Possessed": {"sight": "POSIT1", "wince": "POPAIN", "shoot": "PISTOL_E", "death": "PODTH1"},
+    "Imp": {"sight": "BGSIT1", "wince": "POPAIN", "shoot": "CLAW", "death": "BGDTH1"},
+    "Pinky": {"sight": "SGTSIT", "wince": "DMPAIN", "melee": "SGTATK", "death": "SGTDTH"},
+    "Baron": {"sight": "BRSSIT", "wince": "DMPAIN", "melee": "CLAW", "death": "BRSDTH"},
 }
-LOCKED_PRI = {
-    "HITWALL": 1,
-    "PLAYERDEATH": 99,
-    "TAKEDAMAGE": 90,
-    "OPENDOOR": 20,
-    "ATKMACHINEGUN": 50,
-    "HITENEMY": 50,
-    "SHOOT": 20,
-    "GETKEY": 90,
-    "GETAMMO": 80,
-    "HEALTH1": 85,
-    "SWITCH": 1,
-    "BONUS1": 70,
-    "SHOTGN": 50,
-    "BAREXP": 80,
-    "OOF": 50,
-}
-# Locked path → (origin, library name). Used when the json entry is missing.
-LOCKED_LIB = {
-    "HITWALL": ("wolf", "HITWALL"),
-    "PLAYERDEATH": ("wolf", "PLAYERDEATH"),
-    "TAKEDAMAGE": ("wolf", "TAKEDAMAGE"),
-    "OPENDOOR": ("wolf", "OPENDOOR"),
-    "ATKMACHINEGUN": ("wolf", "ATKMACHINEGUN"),
-    "HITENEMY": ("wolf", "HITENEMY"),
-    "SHOOT": ("wolf", "SHOOT"),
-    "GETKEY": ("wolf", "GETKEY"),
-    "GETAMMO": ("wolf", "GETAMMO"),
-    "HEALTH1": ("wolf", "HEALTH1"),
-    "SWITCH": ("wolf", "MOVEGUN1"),
-    "BONUS1": ("wolf", "BONUS1"),
-    "SHOTGN": ("doom", "DPSHOTGN"),
-    "BAREXP": ("doom", "DPRXPLOD"),
-    "OOF": ("doom", "DPOOF"),
-}
-LIBRARY_ORIGINS = {"wolf", "doom", "dave", "keen"}
+
+SID_PHI2_NTSC = 1022727.0
+PC_TIMER = 1193181
+POKEY_64K_NTSC = 63921.0
 
 
 def emit_bytes(arr: list[int], per_line: int = 16) -> str:
@@ -110,26 +71,11 @@ def emit_bytes(arr: list[int], per_line: int = 16) -> str:
     return "\n".join(lines)
 
 
-def ident_from_path(path: str) -> str:
-    rest = path.replace("\\", "/")
-    if rest.lower().startswith("sound/"):
-        rest = rest[6:]
-    if rest.lower().endswith(".wav"):
-        rest = rest[:-4]
-    ident = re.sub(r"[^A-Za-z0-9]+", "_", rest).strip("_").upper()
-    return ident or "SFX"
-
-
-SID_PHI2_NTSC = 1022727.0
-PC_TIMER = 1193181
-POKEY_64K_NTSC = 63921.0
-
-
 def fn_hi(pc_byte: int) -> int:
     """Wolf PC inverse-freq byte -> SID Fn hi (Fn lo is fixed at $80 in the player).
 
     0 stays 0 (silence). Every other byte maps to a nonzero hi (>= 4), so the
-    player can write the data byte straight to $d401/$d408/$d40f.
+    player can write the data byte straight to the voice.
     """
     if pc_byte <= 0:
         return 0
@@ -163,231 +109,44 @@ def stream_freq(pc_byte: int) -> int:
     return n if n else 1
 
 
-def clamp_u8(n: int, lo: int, hi: int) -> int:
-    v = int(n)
-    if v < lo:
-        return lo
-    if v > hi:
-        return hi
-    return v
-
-
-def library_freq(path: str, raw: dict, locked_alias: str | None) -> list[int]:
-    origin = str(raw.get("origin") or "").strip().lower()
-    library = str(raw.get("library") or "").strip().upper()
-    # Placeholder export with no library yet: no samples.
-    if origin in ("", "empty"):
-        return []
-    if origin in LIBRARY_ORIGINS:
-        if not library:
-            raise SystemExit(f"{path}: exported sound has no library name")
-        freq = resolve(origin, library)
-    elif locked_alias:
-        pair = LOCKED_LIB[locked_alias]
-        freq = [] if pair is None else resolve(*pair)
-    elif raw.get("export"):
-        raise SystemExit(f"{path}: exported sound has no library name")
-    else:
-        return []
-    if len(freq) > MAX_TICKS:
-        raise SystemExit(f"{path}: {len(freq)} ticks > {MAX_TICKS}")
-    return [clamp_u8(x, 0, 255) for x in freq]
-
-
-def normalize_entry(path: str, raw: dict) -> dict:
-    locked_alias = LOCKED_PATHS.get(path)
-    freq = library_freq(path, raw, locked_alias)
-    voice = clamp_u8(raw.get("voice", 0), 0, 2)
-    priority = clamp_u8(raw.get("priority", 50), 0, 99)
-    attack = clamp_u8(raw.get("attack", 0), 0, 15)
-    alias = raw.get("alias")
-    extra = list(raw.get("extraAliases") or [])
-    if locked_alias:
-        extra = list(EXTRA_ALIASES.get(ident_from_path(path), []))
-    return {
-        "path": path,
-        "export": True if locked_alias else bool(raw.get("export")),
-        "alias": alias,
-        "extraAliases": extra,
-        "voice": voice,
-        "priority": priority,
-        "attack": attack,
-        "freq": freq,
-    }
-
-
-def cue_path(raw) -> str:
-    p = str(raw or "").strip().replace("\\", "/").lower()
-    return p if p.startswith("sound/") and p.endswith(".wav") else ""
-
-
-def load_cue_hosts(doc: dict, known: set[str]) -> dict[str, list[str]]:
-    """Validate every enemy's cues; return path -> pose DOS names that reference it."""
-    by_name = {e.get("name"): e for e in doc.get("enemies") or []}
-    hosts: dict[str, list[str]] = {}
-    for name, dos in zip(TYPES, DOS_NAME):
-        enemy = by_name.get(name)
-        if enemy is None:
-            raise SystemExit(f"missing enemy {name}")
-        cues = enemy.get("cues") or {}
-        for extra in cues:
-            if extra not in CUES:
-                raise SystemExit(f"{name}: unknown cue {extra!r} (allowed: {', '.join(CUES)})")
-        for cue in CUES:
-            raw = cues.get(cue)
-            path = cue_path(raw)
-            if not path:
-                if cue in CUES_REQUIRED and name not in SILENT_CUES:
-                    raise SystemExit(f"{name}: required cue '{cue}' is not set")
-                if raw:
-                    raise SystemExit(f"{name}: cue '{cue}' is not a sound path: {raw!r}")
-                continue
-            # The path is only a key into sounds (origin + library). No entry means
-            # the cue is unset. A missing wav file is not an error.
-            if path not in known and path not in LOCKED_PATHS:
-                if cue in CUES_REQUIRED:
-                    raise SystemExit(f"{name}: required cue '{cue}' has no sound")
-                continue
-            if dos not in hosts.setdefault(path, []):
-                hosts[path].append(dos)
-    return hosts
-
-
 def main() -> None:
-    if not DOC.is_file():
-        raise SystemExit(f"missing {DOC}")
-    doc = json.loads(DOC.read_text(encoding="utf-8"))
-    enemies = []
-    edir = ROOT / "editor" / "enemies"
-    for dos in DOS_NAME:
-        path = edir / f"{dos}.json"
-        if not path.is_file():
-            raise SystemExit(f"missing {path}")
-        enemies.append(json.loads(path.read_text(encoding="utf-8")))
-    doc["enemies"] = enemies
-    raw_sounds = doc.get("sounds") or {}
-    if not isinstance(raw_sounds, dict):
-        raise SystemExit("sounds must be an object")
-
-    # path -> pose types (DOS names) whose cue set references it.
-    cue_hosts = load_cue_hosts(doc, {str(p).replace("\\", "/").lower() for p in raw_sounds})
-
-    by_path: dict[str, dict] = {}
-    for path, src in raw_sounds.items():
-        key = str(path).replace("\\", "/").lower()
-        if not key.startswith("sound/") or not key.endswith(".wav"):
-            continue
-        if not isinstance(src, dict):
-            continue
-        # Exported = resident alias or referenced by an enemy cue. Nothing else ships.
-        src = {**src, "export": key in cue_hosts or key in LOCKED_PATHS}
-        by_path[key] = normalize_entry(key, src)
-
-    ordered: list[dict] = []
-    used_idents: set[str] = set()
-
-    for alias, path in LOCKED:
-        snd = by_path.get(path)
-        if not snd:
-            pair = LOCKED_LIB[alias]
-            fallback = {
-                "export": True,
-                "alias": alias,
-                "voice": LOCKED_VOICE[alias],
-                "priority": LOCKED_PRI[alias],
-                "attack": 0,
-                "extraAliases": EXTRA_ALIASES.get(alias, []),
-                "origin": "empty" if pair is None else pair[0],
-            }
-            if pair is not None:
-                fallback["library"] = pair[1]
-            snd = normalize_entry(path, fallback)
-            by_path[path] = snd
-        snd["export"] = True
-        ident = ident_from_path(path)
-        snd["alias"] = ident
-        ordered.append(snd)
-        used_idents.add(ident)
-        for extra in snd["extraAliases"]:
-            used_idents.add(extra)
-
-    extras = []
-    for path, snd in sorted(by_path.items()):
-        if path in LOCKED_PATHS:
-            continue
-        if not snd["export"]:
-            continue
-        ident = ident_from_path(path)
-        if ident in used_idents:
-            raise SystemExit(f"{path}: ident SOUND_{ident} already used")
-        snd["alias"] = ident
-        extras.append(snd)
-        used_idents.add(ident)
-    ordered.extend(extras)
-
+    seen: set[str] = set()
     equates: list[str] = []
     blocks: list[str] = []
     res_words: list[str] = []
-    aliases: list[str] = []
-    type_parts: dict[str, list[bytes]] = {d: [] for d in DOS_NAME}
+    ids: dict[str, int] = {}
     total = 0
-    local_i = 0
-    seen_streamed = False
 
-    for snd in ordered:
-        name = snd["alias"]
-        freq = snd["freq"]
-        n = len(freq)
-        if n > MAX_TICKS:
-            raise SystemExit(f"{name}: {n} ticks > {MAX_TICKS}")
-        # Resident aliases stay resident (game code plays them by name); every
-        # other exported sound rides on the pose banks of the enemies whose cues name it.
-        hosts = None if snd["path"] in LOCKED_PATHS else cue_hosts.get(snd["path"])
-        # N, AD|voice, priority, AUDF[N]. 0 is silence. AD's decay nibble is always 0,
-        # so the low bits carry the mixer voice (player 0 / enemy 1 / world 2).
-        body = [n, ((snd["attack"] << 4) & 0xF0) | (snd["voice"] & 3), snd["priority"], *[stream_freq(f) for f in freq]]
-        equates.append(f"SOUND_{name}\t= {local_i}")
-        for extra in snd.get("extraAliases") or []:
-            aliases.append(f"SOUND_{extra}\t= SOUND_{name}")
-        if hosts:
-            seen_streamed = True
-            packed = bytes([local_i, *body])
-            for dos in hosts:
-                if dos not in type_parts:
-                    raise SystemExit(f"SOUND_{name}: unknown stream type {dos}")
-                type_parts[dos].append(packed)
-        else:
-            if seen_streamed:
-                raise SystemExit(f"{name}: resident sound after a streamed one")
-            label = "pc_" + name.lower()
-            total += len(body)
-            blocks.append(f"{label}\n{emit_bytes(body)}")
-            res_words.append(label)
-        local_i += 1
+    for i, (name, lump, voice, priority) in enumerate(EFFECTS):
+        if name in seen:
+            raise SystemExit(f"duplicate sound id {name}")
+        seen.add(name)
+        freq = resolve(lump)
+        if len(freq) > MAX_TICKS:
+            raise SystemExit(f"{name}: {len(freq)} ticks > {MAX_TICKS}")
+        body = [len(freq), voice & 3, priority & 255, *[stream_freq(f) for f in freq]]
+        label = "pc_" + name.lower()
+        total += len(body)
+        equates.append(f"SOUND_{name}\t= {i}")
+        blocks.append(f"{label}\n{emit_bytes(body)}")
+        res_words.append(label)
+        ids[name] = i
 
     if total > PAYLOAD_MAX:
         raise SystemExit(f"resident sound payload {total} bytes > {PAYLOAD_MAX}")
 
-    ENEMY_DIR.mkdir(parents=True, exist_ok=True)
-    for dos, parts in type_parts.items():
-        if len(parts) > 255:
-            raise SystemExit(f"{dos}: {len(parts)} streamed effects > 255")
-        blob = bytes([len(parts)]) + b"".join(parts)
-        (ENEMY_DIR / f"sfx_{dos}.bin").write_bytes(blob)
+    for name, cues in ENEMY_CUES.items():
+        for cue, ident in cues.items():
+            if ident not in ids:
+                raise SystemExit(f"{name} {cue}: SOUND_{ident} is not in EFFECTS")
 
-    ids = {snd["alias"]: i for i, snd in enumerate(ordered)}
-    for i, snd in enumerate(ordered):
-        for extra in snd.get("extraAliases") or []:
-            ids[extra] = i
-    (ENEMY_DIR / "sound_ids.json").write_text(json.dumps(ids, indent=2) + "\n", encoding="utf-8")
-
+    n = len(EFFECTS)
     header = (
-        "; Autogenerated by tools/gensounds.py from editor/doom64.json.\n"
-        "; Each effect: N, AD|voice (attack<<4, decay 0, voice in bits 0-1), priority, fnhi[0..N-1].\n"
-        "; fnhi = SID Fn hi baked from the Wolf PC byte (0 = silence); Fn lo is fixed. Sustain is full;\n"
-        "; master is effects_vol. Ids below SOUND_RESIDENT_N live in this file; the rest ride on pose banks.\n"
-        "; SOUND_* = FOLDER_STEM from the WAV path (sound/dog/ddeath.wav → SOUND_DOG_DDEATH).\n"
-        "; sound_table is BSS (SOUND_TABLE): resident words copied by play_sound_init, streamed hi=0 until bind.\n"
+        "; Autogenerated by tools/gensounds.py from ref/DOOM.WAD DP* lumps.\n"
+        "; Each effect: N, AD|voice (attack<<4, decay 0, voice in bits 0-1), priority, audf[0..N-1].\n"
+        "; audf is POKEY AUDF baked from the decimated Wolf PC byte (0 = silence).\n"
+        "; Voice is player 0 / enemy 1 / world 2. All ids are resident.\n"
+        "; sound_table is BSS (SOUND_TABLE): resident words copied by play_sound_init.\n"
         "\n"
     )
     asm = (
@@ -395,25 +154,22 @@ def main() -> None:
         + "!zone pcsounds\n\n"
         + "\n".join(equates)
         + "\n"
-        + f"SOUND_COUNT\t= {local_i}\n"
-        + f"SOUND_RESIDENT_N\t= {len(res_words)}\n"
+        + f"SOUND_COUNT\t= {n}\n"
+        + f"SOUND_RESIDENT_N\t= {n}\n"
         + "!if SOUND_COUNT * 2 > SOUND_TABLE_MAX {\n\t!error \"sound_table does not fit its BSS window\"\n}\n"
-        + ("\n" + "\n".join(aliases) + "\n" if aliases else "")
         + "\n"
         + "\n".join(blocks)
         + "\n\n"
-        f"; resident sound payload {total} bytes\n"
-        "; copied into sound_table[0..SOUND_RESIDENT_N-1] by play_sound_init\n"
-        "sound_res_words\n"
+        + f"; resident sound payload {total} bytes\n"
+        + "; copied into sound_table[0..SOUND_RESIDENT_N-1] by play_sound_init\n"
+        + "sound_res_words\n"
         + "\n".join(f"\t!word {w}" for w in res_words)
         + "\n"
     )
     OUT.write_text(asm, encoding="utf-8", newline="\n")
-    streamed_n = local_i - len(res_words)
-    print(
-        f"wrote {OUT.relative_to(ROOT)} ({local_i} effects, {total} resident bytes, "
-        f"{streamed_n} streamed, wrote enemies/sound_ids.json)"
-    )
+    ENEMY_DIR.mkdir(parents=True, exist_ok=True)
+    (ENEMY_DIR / "sound_ids.json").write_text(json.dumps(ids, indent=2) + "\n", encoding="utf-8")
+    print(f"wrote {OUT.relative_to(ROOT)} ({n} effects, {total} resident bytes, wrote enemies/sound_ids.json)")
 
 
 if __name__ == "__main__":

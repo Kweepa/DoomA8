@@ -675,6 +675,30 @@ button:disabled {
   gap: 2px;
 }
 
+.item-budget {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+}
+
+.item-budget th {
+  text-align: left;
+  padding-top: 0.35rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.item-budget td:last-child {
+  text-align: right;
+}
+
+.item-budget .error {
+  color: #f88;
+}
+
 .object-list button {
   width: 100%;
   text-align: left;
@@ -1034,106 +1058,6 @@ button:disabled {
   margin: 0.15rem 0;
   font-size: 0.8rem;
   font-variant-numeric: tabular-nums;
-}
-
-.sound-unused-toggle {
-  gap: 0.4rem;
-  margin-bottom: 0.5rem;
-}
-
-.sound-unused-toggle span {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.sound-unused-toggle input {
-  flex: 0 0 auto;
-  width: auto;
-}
-
-.sound-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  margin-bottom: 0.75rem;
-}
-
-.sound-folder h3 {
-  display: flex;
-  align-items: center;
-  gap: 0.15rem;
-  margin: 0.45rem 0 0.2rem;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted);
-  font-weight: 600;
-}
-
-.sound-folder .sound-twist {
-  flex: 0 0 1rem;
-  width: 1rem;
-  padding: 0;
-  font-size: 0.65rem;
-  line-height: 1;
-  color: inherit;
-}
-
-.sound-row {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.sound-row input[type="checkbox"] {
-  flex: 0 0 auto;
-}
-
-.sound-row button {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  justify-content: space-between;
-  gap: 0.35rem;
-}
-
-.sound-row .sound-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.sound-row .sound-meta {
-  color: var(--muted);
-  font-size: 0.68rem;
-  flex: 0 0 auto;
-}
-
-.sound-lib {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.12rem;
-  margin: 0.35rem 0 0.5rem;
-}
-
-.sound-lib button {
-  text-align: left;
-  font-size: 0.65rem;
-  line-height: 1.1;
-  padding: 0.12rem 0.22rem;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.sound-lib button.dup {
-  color: var(--muted);
-}
-
-.sound-lib button.dup.active {
-  color: var(--muted);
-  border-color: var(--accent);
 }
 
 .layout.layout-build {

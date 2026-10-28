@@ -116,13 +116,6 @@ eu_idle
 	lda #0
 	sta en_timer,x
 	sta en_timer_h,x
-	lda gunshot_wake
-	bne .eu_id_retry_see
-	lda pu_kind
-	cmp #BP_RING
-	bne .eu_id_retry_see
-	jmp eu_next
-.eu_id_retry_see
 	jsr enemy_in_wake
 	bcc .eu_id_goap
 	jmp eu_next
@@ -132,11 +125,6 @@ eu_idle
 .eu_id_sight
 	lda gunshot_wake
 	bne .eu_wake
-	lda pu_kind
-	cmp #BP_RING
-	bne .eu_id_sight2
-	jmp eu_next
-.eu_id_sight2
 	jsr enemy_in_wake
 	bcc .eu_id_see
 	jmp eu_next
@@ -1073,7 +1061,7 @@ enemy_same_floor
 
 ; A = damage — skill scale, then subtract from player_hp (and armour if any);
 ; hurt/death SFX; red border flash. god_mode returns before any of that.
-; difficulty 0 = x1/2 (min 1), 1 = x1, 2 = x3/2 (cap 255). Before pent/armour.
+; difficulty 0 = x1/2 (min 1), 1 = x1, 2 = x3/2 (cap 255). Before armour.
 take_damage
 	sta rot0
 	lda god_mode
@@ -1101,9 +1089,6 @@ take_damage
 +
 	sta rot0
 .td_live
-	lda pu_kind
-	cmp #BP_PENT
-	beq .td_flash
 	lda player_armour
 	beq .td_hp
 	lda rot0
@@ -1134,10 +1119,10 @@ take_damage
 	jsr hud_ammo
 	lda player_hp
 	beq .td_death
-	lda #SOUND_PLAYER_PAIN1
+	lda #SOUND_PLPAIN
 	jmp play_sound
 .td_death
-	lda #SOUND_PLAYER_DEATH1
+	lda #SOUND_PLDETH
 	jsr play_sound
 	jmp death_restart
 .td_rts
@@ -1726,16 +1711,10 @@ pick_attack_var
 
 ; ------------------------------------------------------------------
 ; X = enemy. A = damage. Pain chance if survives.
-; Quad x4 first. Flesh and Bone (difficulty 0) then x3/2, cap 255.
+; Flesh and Bone (difficulty 0) then x3/2, cap 255.
 damage_enemy
 	stx enemy_idx
 	sta hit_dmg
-	lda pu_kind
-	cmp #BP_QUAD
-	bne .de_skill
-	asl hit_dmg
-	asl hit_dmg
-.de_skill
 	lda difficulty
 	bne .de_sub
 	lda hit_dmg

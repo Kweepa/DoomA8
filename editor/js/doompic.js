@@ -1,4 +1,4 @@
-/** DOOM picture and sprite-rotation index. loadDoom() only keeps DP* sounds. */
+/** DOOM picture and sprite-rotation index. */
 
 const PREFIXES = ["POSS", "TROO", "SARG", "BOSS"];
 

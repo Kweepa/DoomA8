@@ -277,7 +277,7 @@ LoadLevel
 ;
 ; Bank: QAI1 header, reloc records, optional code, then pose payload.
 ; Pose: [n_stored][n_logical][pose_map…][gx…][gy…][gz…]
-;       [sfx_count] {id,N,AD,freq}* [cue x CUE_N: sight,wince,melee,shoot,death; $FF none]
+;       [cue x CUE_N: sight,wince,melee,shoot,death; $FF none]
 ;       [evt_count] {logical_frame,id}*
 
 ; Distinct types in room_idx → need0/need1 ($FF = empty). Cap 2 by tooling.
@@ -902,7 +902,7 @@ copy_meta_row
 	rts
 
 ; dest in load_dest; type in load_type. Meta row already consumed.
-; Pose: [n_stored][n_logical][pose_map…][gx…][gy…][gz…] [sfx blob]
+; Pose: [n_stored][n_logical][pose_map…][gx…][gy…][gz…][cues][clip events]
 patch_enemy_gx
 	lda load_dest
 	sta src_ptr
@@ -966,8 +966,7 @@ rebind_streamed_sfx
 	bcc .rsx_lp
 	rts
 
-; A = type. Walk trailing sfx blob; sound_table[id] → N,AD,freq.
-; src_ptr then at the cue block (CUE_N ids, then the evt table) → enemy_sfx_evt_*[type].
+; A = type. Cue block follows gz. Point enemy_sfx_evt_*[type] at it.
 bind_type_sfx
 	sta map_sv_y
 	tay
@@ -984,54 +983,11 @@ bind_type_sfx
 	clc
 	lda enemy_gz_lo,y
 	adc nlo
-	sta src_ptr
+	sta enemy_sfx_evt_lo,y
 	lda enemy_gz_hi,y
 	adc nhi
-	sta src_ptr+1
-	ldy #0
-	lda (src_ptr),y
-	sta bind_n
-	inc src_ptr
-	bne .bts_lp
-	inc src_ptr+1
-.bts_lp
-	lda bind_n
-	bne .bts_one
-	ldx map_sv_y
-	lda src_ptr
-	sta enemy_sfx_evt_lo,x
-	lda src_ptr+1
-	sta enemy_sfx_evt_hi,x
+	sta enemy_sfx_evt_hi,y
 	rts
-.bts_one
-	ldy #0
-	lda (src_ptr),y
-	asl
-	tax
-	clc
-	lda src_ptr
-	adc #1
-	sta sound_table,x
-	lda src_ptr+1
-	adc #0
-	sta sound_table+1,x
-	ldy #1
-	lda (src_ptr),y			; N
-	clc
-	adc #4				; id, N, AD|voice, priority, fnhi[N]
-	tax
-	lda #0
-	adc #0
-	tay
-	txa
-	clc
-	adc src_ptr
-	sta src_ptr
-	tya
-	adc src_ptr+1
-	sta src_ptr+1
-	dec bind_n
-	jmp .bts_lp
 
 ; Walk packed SoA at map_base; fill counts, spawn bytes, and field pointers.
 ; Overlay at load_dest+OVERLAY_OFF binds columns then patches SMC operands.
@@ -1110,6 +1066,10 @@ game_zp_init
 	sta edge_ptr
 	lda #>ident_col
 	sta edge_ptr+1
+	lda #<ident_col
+	sta edge_b
+	lda #>ident_col
+	sta edge_b+1
 	rts
 
 ; Player died: freeze, wait for scream + 1s, starting loadout, reload this map.

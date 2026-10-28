@@ -1,7 +1,4 @@
 #!/usr/bin/env python3
-"""Name lists in editor/js/pclib.js are hand-kept.
+"""The editor sound library is gone. Effects are the fixed list in gensounds.py."""
 
-Sample bytes are not written here. tools/pcsrc.py reads ref/ when the ROM is built.
-"""
-
-raise SystemExit("pclib.js name lists are hand-kept; tools/pcsrc.py resolves sample bytes")
+raise SystemExit("sound names live in tools/gensounds.py; there is no editor library to generate")

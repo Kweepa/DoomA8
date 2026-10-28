@@ -64,7 +64,7 @@ ai_chthon_entry
 	rts
 
 ; en_pat_n = 0 until the rise has been started.
-; Rise waits on the rune of earth magic so the pickup and the boss are not drawn together.
+; Rise waits on the red keycard so the pickup and the boss are not drawn together.
 .ch_idle
 	jsr .ch_service
 	ldx enemy_idx
@@ -113,7 +113,7 @@ ai_chthon_entry
 	sta en_timer_h,x
 	rts
 
-; C=1 once the rune of earth magic has been picked up.
+; C=1 once the red keycard has been picked up.
 ; bp_type's field id is $80; the AI map patch drops that high bit, so this is a fixed byte.
 .ch_rune_taken
 	lda rune_taken

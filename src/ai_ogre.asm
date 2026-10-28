@@ -157,10 +157,10 @@ ogre_grenade_live
 	lda level_num
 	cmp #3
 	bcc .drop_gren
-	lda #BP_GRENLAUNCHER
+	lda #BP_ROCKETLAUNCHER
 	jmp spawn_death_drop
 .drop_gren
-	lda #BP_GRENADES
+	lda #BP_ROCKETS
 	jmp spawn_death_drop
 
 ; Shoot keeps A = AI_CMD_ANIM_FIRE so the resident table supplies the frame.

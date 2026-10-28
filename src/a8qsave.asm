@@ -531,6 +531,7 @@ qso_tab
 	+qf have_wpn, 0
 	+qf cur_weapon, 0
 	+qf have_keys, 0
+	+qf have_pack, 0
 	+qf pu_kind, 0
 	+qf pu_ms_l, 0
 	+qf pu_ms_h, 0

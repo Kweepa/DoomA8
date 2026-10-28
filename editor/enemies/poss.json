@@ -2917,7 +2917,9 @@
         "E",
         "F",
         "E"
-      ]
+      ],
+      "sound": "shoot",
+      "soundFrame": 4
     },
     {
       "name": "pain",
@@ -2976,8 +2978,8 @@
       []
     ]
   },
-  "lodZ": 4,
-  "hp": 4,
+  "lodZ": 10,
+  "hp": 20,
   "painChance": 128,
   "customSkeleton": true,
   "stockGraph": null,

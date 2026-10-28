@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -12,29 +13,34 @@ OUT = ROOT / "src" / "item_mesh.asm"
 
 ITEM_COORD_MIN = -128
 ITEM_COORD_MAX = 127
+ITEM_POS_Q = 4
 ITEM_ORIGIN = 0
 ITEM_BIAS = 1
 ITEM_MAX_VERTS = 16
 ITEM_MAX_LINES = 16
 ITEM_MAX_UNIQUE = 6
 
-# Index = BP_* (shells5=7 has no editor mesh → backpack fallback)
+# Index = BP_*
 BP_MESH_KEY = [
+    "small health",
+    "large health",
+    "green armor",
+    "blue armor",
+    "ammo box",
     "shells",
-    "nailgun",
-    "nails",
-    "grenade launcher",
-    "grenades",
-    "health 25%",
-    "health 50%",
-    None,
-    "armour",
-    "quad damage",
-    "pentagram of protection",
-    "ring of shadows",
-    "silver key",
-    "gold key",
-    "rune of earth magic",
+    "box of rockets",
+    "shotgun",
+    "chaingun",
+    "chainsaw",
+    "rocket launcher",
+    "backpack",
+    "red keycard",
+    "yellow keycard",
+    "blue keycard",
+    "soulsphere",
+    "radsuit",
+    "lightpost",
+    "barrel",
 ]
 DOOR_MESH_KEY = ["Tech", "Arch", "Tri", "Crack"]
 DOOR_ALIAS = {"tech": "Tech", "arch": "Arch", "tri": "Tri", "crack": "Crack"}
@@ -49,7 +55,7 @@ DEFAULT_MESHES = {
         "verts": [v(-1, 0, -1), v(1, 0, -1), v(0, 0, 1), v(0, 2, 0)],
         "lines": [[0, 1], [1, 2], [2, 0], [3, 0], [3, 1], [3, 2]],
     },
-    "health 25%": {
+    "small health": {
         "verts": [
             v(0, 2, 0),
             v(-1, 1, 0),
@@ -73,7 +79,7 @@ DEFAULT_MESHES = {
             [0, 3],
         ],
     },
-    "health 50%": {
+    "large health": {
         "verts": [
             v(0, 4, 0),
             v(-2, 2, 0),
@@ -97,23 +103,23 @@ DEFAULT_MESHES = {
             [0, 3],
         ],
     },
-    "quad damage": {
+    "green armor": {
         "verts": [v(-1, 0, -1), v(1, 0, -1), v(1, 0, 1), v(-1, 0, 1), v(0, 3, 0)],
         "lines": [[0, 1], [1, 2], [2, 3], [3, 0], [4, 0], [4, 1], [4, 2], [4, 3]],
     },
-    "pentagram of protection": {
+    "soulsphere": {
         "verts": [v(0, 0, -2), v(2, 0, 0), v(0, 0, 2), v(-2, 0, 0), v(0, 4, 0)],
         "lines": [[0, 1], [1, 2], [2, 3], [3, 0], [4, 0], [4, 1], [4, 2], [4, 3]],
     },
-    "ring of shadows": {
+    "radsuit": {
         "verts": [v(-2, 2, 0), v(-1, 1, 0), v(1, 1, 0), v(2, 2, 0), v(1, 4, 0), v(-1, 4, 0)],
         "lines": [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 0]],
     },
-    "silver key": {
+    "yellow keycard": {
         "verts": [v(-2, 1, 0), v(-2, 2, 0), v(-1, 2, 0), v(-1, 1, 0), v(2, 1, 0), v(2, 0, 0)],
         "lines": [[0, 1], [1, 2], [2, 3], [3, 0], [3, 4], [4, 5]],
     },
-    "gold key": {
+    "blue keycard": {
         "verts": [
             v(-2, 1, 0),
             v(-2, 3, 0),
@@ -125,7 +131,7 @@ DEFAULT_MESHES = {
         ],
         "lines": [[0, 1], [1, 2], [2, 3], [3, 0], [3, 4], [4, 5], [4, 6]],
     },
-    "rune of earth magic": {
+    "red keycard": {
         "verts": [
             v(0, 0, 0),
             v(-2, 1, 0),
@@ -149,6 +155,18 @@ DEFAULT_MESHES = {
             [6, 7],
             [6, 8],
         ],
+    },
+    "chainsaw": {
+        "verts": [v(0, 0, 0), v(0, 3, 0), v(-1, 3, 0), v(1, 3, 0)],
+        "lines": [[0, 1], [1, 2], [1, 3]],
+    },
+    "lightpost": {
+        "verts": [v(0, 0, 0), v(0, 4, 0), v(-1, 4, 0), v(1, 4, 0), v(0, 4, -1), v(0, 4, 1)],
+        "lines": [[0, 1], [2, 3], [4, 5]],
+    },
+    "barrel": {
+        "verts": [v(-1, 0, 0), v(1, 0, 0), v(1, 2, 0), v(-1, 2, 0), v(0, 0, 1), v(0, 2, 1)],
+        "lines": [[0, 1], [1, 2], [2, 3], [3, 0], [0, 4], [1, 4], [3, 5], [2, 5], [4, 5]],
     },
     "Tech": {
         "verts": [v(-2, 0, 0), v(2, 0, 0), v(2, 5, 0), v(-2, 5, 0), v(-2, 2, 0), v(2, 2, 0)],
@@ -177,13 +195,28 @@ DEFAULT_MESHES = {
 }
 
 
-def clamp_grid(n: int) -> int:
-    n = int(n)
-    if n < ITEM_COORD_MIN:
+def js_round(v: float) -> int:
+    return int(math.floor(float(v) + 0.5))
+
+
+def clamp_grid(n: float) -> float:
+    q = js_round(float(n) * ITEM_POS_Q) / ITEM_POS_Q
+    lo = ITEM_COORD_MIN / ITEM_POS_Q
+    hi = ITEM_COORD_MAX / ITEM_POS_Q
+    if q < lo:
+        return lo
+    if q > hi:
+        return hi
+    return q
+
+
+def pack_u(n: float) -> int:
+    q = js_round(float(n) * ITEM_POS_Q)
+    if q < ITEM_COORD_MIN:
         return ITEM_COORD_MIN
-    if n > ITEM_COORD_MAX:
+    if q > ITEM_COORD_MAX:
         return ITEM_COORD_MAX
-    return n
+    return q
 
 
 def shift_legacy_vert(raw) -> dict | None:
@@ -277,8 +310,8 @@ def cook(mesh: dict, name: str) -> dict:
     lines = mesh["lines"]
     if not verts or not lines:
         raise SystemExit(f"item {name!r} has no geometry")
-    ux, xid = unique_u8([v["x"] for v in verts], ITEM_MAX_UNIQUE, "X", name)
-    uz, zid = unique_u8([v["z"] for v in verts], ITEM_MAX_UNIQUE, "Z", name)
+    ux, xid = unique_u8([pack_u(v["x"]) for v in verts], ITEM_MAX_UNIQUE, "X", name)
+    uz, zid = unique_u8([pack_u(v["z"]) for v in verts], ITEM_MAX_UNIQUE, "Z", name)
     pairs: list[tuple[int, int]] = []
     col: list[int] = []
     for xi, zi in zip(xid, zid):
@@ -288,9 +321,11 @@ def cook(mesh: dict, name: str) -> dict:
                 raise SystemExit(f"item {name!r} has >16 unique XZ columns")
             pairs.append(p)
         col.append(pairs.index(p))
-    edges: list[int] = []
+    ea: list[int] = []
+    eb: list[int] = []
     for a, b in lines:
-        edges.extend([a, b])
+        ea.append(a)
+        eb.append(b)
     return {
         "nv": len(verts),
         "ne": len(lines),
@@ -298,11 +333,12 @@ def cook(mesh: dict, name: str) -> dict:
         "nz": len(uz),
         "ux": ux,
         "uz": uz,
-        "vy": [v["y"] & 0xFF for v in verts],
+        "vy": [pack_u(v["y"]) & 0xFF for v in verts],
         "xid": xid,
         "zid": zid,
         "col": col,
-        "edges": edges,
+        "ea": ea,
+        "eb": eb,
     }
 
 
@@ -332,23 +368,22 @@ def main() -> None:
                     continue
                 items[key] = mesh if mesh["verts"] else items.get(key, {"verts": [], "lines": []})
 
-    bp = cook(items["backpack"], "backpack")
     ux_blob, uz_blob, vy_blob = [], [], []
     xid_blob, zid_blob, col_blob = [], [], []
-    edge_blob: list[int] = []
+    ea_blob: list[int] = []
+    eb_blob: list[int] = []
 
     def append_mesh(c: dict) -> tuple[int, int, int, int]:
-        vo, eo, uo, zo = len(vy_blob), len(edge_blob), len(ux_blob), len(uz_blob)
+        vo, eo, uo, zo = len(vy_blob), len(ea_blob), len(ux_blob), len(uz_blob)
         ux_blob.extend(c["ux"])
         uz_blob.extend(c["uz"])
         vy_blob.extend(c["vy"])
         xid_blob.extend(c["xid"])
         zid_blob.extend(c["zid"])
         col_blob.extend(c["col"])
-        edge_blob.extend(c["edges"])
+        ea_blob.extend(c["ea"])
+        eb_blob.extend(c["eb"])
         return vo, eo, uo, zo
-
-    bp_vo, bp_eo, bp_uo, bp_zo = append_mesh(bp)
 
     nv = [0] * ntypes
     ne = [0] * ntypes
@@ -368,29 +403,21 @@ def main() -> None:
         nv[i], ne[i], nx[i], nz[i] = c["nv"], c["ne"], c["nx"], c["nz"]
         vo[i], eo[i], uo[i], zo[i] = append_mesh(c)
 
-    # Trailing slot = backpack fallback (index BP_NTYPES)
-    nv.append(bp["nv"])
-    ne.append(bp["ne"])
-    nx.append(bp["nx"])
-    nz.append(bp["nz"])
-    vo.append(bp_vo)
-    eo.append(bp_eo)
-    uo.append(bp_uo)
-    zo.append(bp_zo)
-
     d_ux, d_uz, d_vy = [], [], []
     d_xid, d_zid, d_col = [], [], []
-    d_edge: list[int] = []
+    d_ea: list[int] = []
+    d_eb: list[int] = []
 
     def append_door(c: dict) -> tuple[int, int, int, int]:
-        dvo, deo, duo, dzo = len(d_vy), len(d_edge), len(d_ux), len(d_uz)
+        dvo, deo, duo, dzo = len(d_vy), len(d_ea), len(d_ux), len(d_uz)
         d_ux.extend(c["ux"])
         d_uz.extend(c["uz"])
         d_vy.extend(c["vy"])
         d_xid.extend(c["xid"])
         d_zid.extend(c["zid"])
         d_col.extend(c["col"])
-        d_edge.extend(c["edges"])
+        d_ea.extend(c["ea"])
+        d_eb.extend(c["eb"])
         return dvo, deo, duo, dzo
 
     d_nv, d_ne, d_nx, d_nz = [], [], [], []
@@ -430,7 +457,8 @@ def main() -> None:
         btable("item_xid", xid_blob or [0]).rstrip(),
         btable("item_zid", zid_blob or [0]).rstrip(),
         btable("item_col", col_blob or [0]).rstrip(),
-        btable("item_edges", edge_blob or [0]).rstrip(),
+        btable("item_ea", ea_blob or [0]).rstrip(),
+        btable("item_eb", eb_blob or [0]).rstrip(),
         "",
         btable("door_nv", d_nv).rstrip(),
         btable("door_ne", d_ne).rstrip(),
@@ -447,12 +475,13 @@ def main() -> None:
         btable("door_xid", d_xid or [0]).rstrip(),
         btable("door_zid", d_zid or [0]).rstrip(),
         btable("door_col", d_col or [0]).rstrip(),
-        btable("door_edges", d_edge or [0]).rstrip(),
+        btable("door_ea", d_ea or [0]).rstrip(),
+        btable("door_eb", d_eb or [0]).rstrip(),
         "",
     ]
     OUT.write_text("\n".join(parts), encoding="utf-8")
     n_custom = sum(1 for n in nv if n)
-    print(f"Wrote {OUT.relative_to(ROOT)}: backpack + {n_custom} custom type meshes + {len(DOOR_MESH_KEY)} door meshes")
+    print(f"Wrote {OUT.relative_to(ROOT)}: {n_custom} item meshes + {len(DOOR_MESH_KEY)} door meshes")
 
 
 if __name__ == "__main__":

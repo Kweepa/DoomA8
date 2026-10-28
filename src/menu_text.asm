@@ -16,7 +16,6 @@ control_text
 	!scr "Walk into doors to open them.",0
 	!scr "Walk over items to pick them up.",0
 	!scr "Walk into switches to activate them.",0
-	!scr "Some switches must be shot.",0
 	!byte 0
 
 order_text
@@ -62,7 +61,7 @@ credits3_text
 	!scr " ",0
 	!scr "Thanks y'all!",0
 	!scr " ",0
-	!scr "DoomA8 v1.01.0, built 27 Oct 2026",0
+	!scr "DoomA8 v1.01.0, built 28 Oct 2026",0
 	!byte 0
 
 credits_lo

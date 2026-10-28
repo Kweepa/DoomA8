@@ -44,15 +44,22 @@ door_unlocked
 	beq .du_yes
 	cmp #DOOR_KEY_REMOTE
 	beq .du_no
-	cmp #DOOR_KEY_GOLD
-	beq .du_gold
+	cmp #DOOR_KEY_BLUE
+	beq .du_blue
+	cmp #DOOR_KEY_RED
+	beq .du_red
 	lda have_keys
-	and #HAVE_SILVER
+	and #HAVE_YELLOW
 	beq .du_no
 	bne .du_yes
-.du_gold
+.du_blue
 	lda have_keys
-	and #HAVE_GOLD
+	and #HAVE_BLUE
+	beq .du_no
+	bne .du_yes
+.du_red
+	lda have_keys
+	and #HAVE_RED
 	beq .du_no
 .du_yes
 	sec

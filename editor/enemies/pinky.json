@@ -1435,8 +1435,8 @@
       []
     ]
   },
-  "lodZ": 4,
-  "hp": 30,
+  "lodZ": 10,
+  "hp": 60,
   "painChance": 255,
   "customSkeleton": true,
   "stockGraph": null,

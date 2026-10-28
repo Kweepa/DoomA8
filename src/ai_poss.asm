@@ -71,7 +71,7 @@ ai_poss_entry
 	jmp enemy_enter_approach
 
 .death
-	lda #BP_SHELLS5
+	lda #BP_SHELLS
 	jmp spawn_death_drop
 
 .step

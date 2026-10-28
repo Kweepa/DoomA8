@@ -26,7 +26,7 @@ wpn_fire_ms_hi
 	!byte >0, >600, >100, >1000, >PISTOL_FIRE_MS
 
 wpn_sound
-	!byte 0, SOUND_WEAPONS_SHOTGN2, SOUND_WEAPONS_SPIKE2, SOUND_WEAPONS_GRENADE, SOUND_WEAPONS_SPIKE2
+	!byte 0, SOUND_SHOTGN, SOUND_PISTOL, SOUND_RLAUNC, SOUND_PISTOL
 
 wpn_idle_x
 	!byte WPN_X0, WPN_X0, WPN_X0, WPN_X0, WPN_X0
@@ -79,7 +79,7 @@ ws_xmsb_lo
 ws_xmsb_hi
 	!byte >emuz_xmsb, >splat_xmsb
 ws_snd
-	!byte SOUND_WEAPONS_GRENADE, 0
+	!byte SOUND_RLAUNC_E, 0
 ws_colsrc
 	!byte 0, 1			; 0 = set COL_FX, 1 = leave splat_col
 
@@ -204,6 +204,7 @@ reset_loadout
 	sta player_armour
 	lda #0
 	sta have_keys
+	sta have_pack
 	sta pu_kind
 	sta pu_ms_l
 	sta pu_ms_h
@@ -519,7 +520,7 @@ axe_apply_step
 	lda wpn_tmp0
 	and #AXE_F_OOF
 	beq .aas_hit
-	lda #SOUND_PLAYER_LAND
+	lda #SOUND_OOF
 	jsr play_sound
 .aas_hit
 	lda wpn_tmp0
@@ -527,7 +528,7 @@ axe_apply_step
 	beq .aas_rts
 	jsr axe_try_kill
 	bcc .aas_rts
-	lda #SOUND_WEAPONS_LHIT
+	lda #SOUND_PUNCH
 	jsr play_sound
 	lda wpn_tmp0
 	and #AXE_F_SPARK

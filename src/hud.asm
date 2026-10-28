@@ -662,12 +662,8 @@ hud_msg_center
 ; Name at HUD_OFF_GREN + HUD_PU_LABEL (row below 2×2 icon on SHELL/NAIL).
 hud_powerup
 	lda pu_kind
-	cmp #BP_QUAD
-	beq .hpu_quad
-	cmp #BP_PENT
+	cmp #BP_RADSUIT
 	beq .hpu_pent
-	cmp #BP_RING
-	beq .hpu_ring
 	lda #HUD_CH_SP
 	ldx #5
 
@@ -727,7 +723,6 @@ hud_powerup
 	rts
 
 ; A = BP_* type. "Got the <name>" for 5s on HUD_ROW4.
-; Quad/pent/ring: name only (no prefix).
 hud_got
 	cmp #BP_NTYPES
 	bcc .hg_ok
@@ -740,12 +735,6 @@ hud_got
 	lda bp_name_hi,y
 	sta src_ptr+1
 	jsr hud_msg_blank
-	lda rot2
-	cmp #BP_QUAD
-	bcc .hg_got
-	cmp #BP_SILVER
-	bcc .hg_nameonly
-.hg_got
 	ldy #0
 .hg_nl
 	lda (src_ptr),y
@@ -786,25 +775,30 @@ hud_got
 	lda #>STATUS_MS
 	sta status_ms_h
 	rts
-.hg_nameonly
-	jsr hud_msg_center
-	jmp .hg_arm
 
-; A = DOOR_KEY_SILVER / DOOR_KEY_GOLD / DOOR_KEY_REMOTE. HUD_ROW4, STATUS_MS.
+; A = DOOR_KEY_YELLOW / DOOR_KEY_BLUE / DOOR_KEY_RED / DOOR_KEY_REMOTE.
 hud_key_req
 	cmp #DOOR_KEY_REMOTE
 	beq .hkr_remote
-	cmp #DOOR_KEY_GOLD
-	beq .hkr_gold
-	lda #<hud_str_silver_req
+	cmp #DOOR_KEY_BLUE
+	beq .hkr_blue
+	cmp #DOOR_KEY_RED
+	beq .hkr_red
+	lda #<hud_str_yellow_req
 	sta src_ptr
-	lda #>hud_str_silver_req
+	lda #>hud_str_yellow_req
 	sta src_ptr+1
 	jmp .hkr_show
-.hkr_gold
-	lda #<hud_str_gold_req
+.hkr_blue
+	lda #<hud_str_blue_req
 	sta src_ptr
-	lda #>hud_str_gold_req
+	lda #>hud_str_blue_req
+	sta src_ptr+1
+	jmp .hkr_show
+.hkr_red
+	lda #<hud_str_red_req
+	sta src_ptr
+	lda #>hud_str_red_req
 	sta src_ptr+1
 	jmp .hkr_show
 .hkr_remote
@@ -844,30 +838,39 @@ update_status
 
 HUD_GOT_LEN	= 8			; "Got the "
 hud_str_got	!text "Got the ",0
-hud_str_silver_req	!text "Silver key required",0
-hud_str_gold_req	!text "Gold key required",0
+hud_str_yellow_req	!text "Yellow keycard required",0
+hud_str_blue_req	!text "Blue keycard required",0
+hud_str_red_req	!text "Red keycard required",0
 hud_str_remote_req	!text "This door is opened elsewhere",0
+bpn_hsm	!text "small health",0
+bpn_hlg	!text "large health",0
+bpn_ag	!text "green armor",0
+bpn_ab	!text "blue armor",0
+bpn_bullets	!text "ammo box",0
 bpn_shells	!text "shells",0
-bpn_nailgun	!text "nailgun",0
-bpn_nails	!text "nails",0
-bpn_gl		!text "grenade launcher",0
-bpn_grenades	!text "grenades",0
-bpn_health	!text "health",0
-bpn_armour	!text "armour",0
-bpn_quad	!text "quad damage",0
-bpn_pent	!text "pentagram of protection",0
-bpn_ring	!text "ring of shadows",0
-bpn_silver	!text "silver key",0
-bpn_gold	!text "gold key",0
-bpn_rune	!text "rune of earth magic",0
+bpn_rockets	!text "box of rockets",0
+bpn_shot	!text "shotgun",0
+bpn_chain	!text "chaingun",0
+bpn_saw	!text "chainsaw",0
+bpn_rl	!text "rocket launcher",0
+bpn_pack	!text "backpack",0
+bpn_red	!text "red keycard",0
+bpn_yellow	!text "yellow keycard",0
+bpn_blue	!text "blue keycard",0
+bpn_soul	!text "soulsphere",0
+bpn_suit	!text "radsuit",0
+bpn_lamp	!text "lightpost",0
+bpn_barrel	!text "barrel",0
 bp_name_lo
-	!byte <bpn_shells, <bpn_nailgun, <bpn_nails, <bpn_gl
-	!byte <bpn_grenades, <bpn_health, <bpn_health, <bpn_shells, <bpn_armour
-	!byte <bpn_quad, <bpn_pent, <bpn_ring, <bpn_silver, <bpn_gold, <bpn_rune
+	!byte <bpn_hsm, <bpn_hlg, <bpn_ag, <bpn_ab, <bpn_bullets
+	!byte <bpn_shells, <bpn_rockets, <bpn_shot, <bpn_chain, <bpn_saw
+	!byte <bpn_rl, <bpn_pack, <bpn_red, <bpn_yellow, <bpn_blue
+	!byte <bpn_soul, <bpn_suit, <bpn_lamp, <bpn_barrel
 bp_name_hi
-	!byte >bpn_shells, >bpn_nailgun, >bpn_nails, >bpn_gl
-	!byte >bpn_grenades, >bpn_health, >bpn_health, >bpn_shells, >bpn_armour
-	!byte >bpn_quad, >bpn_pent, >bpn_ring, >bpn_silver, >bpn_gold, >bpn_rune
+	!byte >bpn_hsm, >bpn_hlg, >bpn_ag, >bpn_ab, >bpn_bullets
+	!byte >bpn_shells, >bpn_rockets, >bpn_shot, >bpn_chain, >bpn_saw
+	!byte >bpn_rl, >bpn_pack, >bpn_red, >bpn_yellow, >bpn_blue
+	!byte >bpn_soul, >bpn_suit, >bpn_lamp, >bpn_barrel
 
 ; ASCII (UI charset), not PETSCII
 hud_str_title	!text "DoomA8",0

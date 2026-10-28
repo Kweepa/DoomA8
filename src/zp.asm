@@ -148,15 +148,16 @@ gz_ptr		= $85			; + $86
 fx_ptr		= $87			; + $88 timed-FX header (tick_fx / start_world_spr)
 sfx_zp_l	= $8a			; (ptr),y while arming / stepping
 sfx_zp_h	= $8b
-edge_ptr	= $8c			; + $8d → edge table
+edge_ptr	= $8c			; + $8d → line starts
 gx_ptr		= $8e			; + $8f
 ; $90–$bf: no game labels (KERNAL)
 
 ; div24u8 dividend in, 16-bit quotient back in div_n0:div_n1. Not rot*.
-; $c5/$c6 are KERNAL LSTX/NDX (menu clears $c6). $c3/$c4 unused.
+; $c5/$c6 are KERNAL LSTX/NDX (menu clears $c6).
 div_n0		= $c0
 div_n1		= $c1
 div_n2		= $c2
+edge_b		= $c3			; + $c4 → line ends (parallel to edge_ptr)
 
 ; Unique X/Z mesh rotate (xform_mesh_xz)
 mesh_nx		= $c7			; unique X count

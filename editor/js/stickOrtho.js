@@ -112,6 +112,7 @@ export class StickOrtho {
       return;
     }
     if (e.button !== 0) return;
+    if (this.opts.showWire?.() === false) return;
     const hit = this.#hitVert(p.x, p.y);
     if (hit < 0) return;
     const selected = this.opts.getSelected?.() || [];
@@ -208,6 +209,7 @@ export class StickOrtho {
       const dx = o.x - left * k;
       const dy = o.y - sprite.top * k;
       ctx.save();
+      ctx.imageSmoothingEnabled = false;
       ctx.globalAlpha = 0.85;
       if (sprite.flip) {
         ctx.translate(dx + dw, dy);
@@ -218,7 +220,7 @@ export class StickOrtho {
       }
       ctx.restore();
     }
-    if (!verts) return;
+    if (!verts || this.opts.showWire?.() === false) return;
     const selected = new Set(this.opts.getSelected?.() || []);
     ctx.lineWidth = 1.5;
     for (const [a, b] of e.lines || []) {

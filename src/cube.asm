@@ -22,6 +22,24 @@ scale_s8_88
 	sta nlo
 	rts
 
+; A = signed quarter-units → nlo:nhi = A/4 as 8.8 (hi = A>>2 arithmetic, lo = A<<6)
+scale_q4_88
+	sta nlo
+	cmp #$80
+	ror
+	cmp #$80
+	ror
+	sta nhi
+	lda nlo
+	asl
+	asl
+	asl
+	asl
+	asl
+	asl
+	sta nlo
+	rts
+
 ; Local vert gidx (gx/gz_ptr, signed editor bytes) rotated by the facing in
 ; sg_a/pa_* (cos) and sg_b/pb_* (sin) → e0x:e0xh = x', e1z:e1zh = z' (8.8).
 ; x' = (lx*cc - lz*ss) >> 2, z' = (lx*ss + lz*cc) >> 2: four unsigned 8x8
@@ -927,13 +945,12 @@ cube_clip
 	jsr prof_add_nv
 }
 	lda #0
-	sta vindex			; edge byte offset
+	sta vindex			; line index
 .cel
 	ldy vindex
 	lda (edge_ptr),y
 	tax
-	iny
-	lda (edge_ptr),y
+	lda (edge_b),y
 	iny
 	sty vindex
 	tay
@@ -1765,11 +1782,11 @@ xform_item_at
 .xi_x
 	cpx mesh_nx
 	beq .xi_z
-	lda #0
-	sta nlo
-	sta e0x
 	lda UX,x
-	sta nhi
+	jsr scale_q4_88
+	lda nlo
+	sta e0x
+	lda nhi
 	sta e0xh
 	stx vindex
 	jsr smul16_a
@@ -1795,11 +1812,11 @@ xform_item_at
 .xi_zl
 	cpx mesh_nz
 	beq .xi_v
-	lda #0
-	sta nlo
-	sta e0x
 	lda UZ,x
-	sta nhi
+	jsr scale_q4_88
+	lda nlo
+	sta e0x
+	lda nhi
 	sta e0xh
 	stx vindex
 	jsr smul16_a
@@ -1859,11 +1876,17 @@ xform_item_at
 	lda org_zh
 	adc e0yh
 	sta CAM_ZH,x
-	lda #0
+	lda VY,x
+	jsr scale_q4_88
+	clc
+	lda nhi
+	adc box_y
+	sta nhi
 	sec
+	lda nlo
 	sbc cam_yl
 	sta CAM_Y,x
-	lda VY,x
+	lda nhi
 	sbc cam_yh
 	sta CAM_YH,x
 .xi_skip
@@ -2254,6 +2277,13 @@ draw_one_batch
 	lda src_ptr+1
 	adc #0
 	sta edge_ptr+1
+	clc
+	lda mesh_ne
+	adc edge_ptr
+	sta edge_b
+	lda edge_ptr+1
+	adc #0
+	sta edge_b+1
 !if PROFILE = 1 {
 	ldy #PROF_ROT
 	jsr prof_add_bucket

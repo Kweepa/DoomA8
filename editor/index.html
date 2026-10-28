@@ -683,6 +683,30 @@ button:disabled {
   gap: 2px;
 }
 
+.item-budget {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+}
+
+.item-budget th {
+  text-align: left;
+  padding-top: 0.35rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.item-budget td:last-child {
+  text-align: right;
+}
+
+.item-budget .error {
+  color: #f88;
+}
+
 .object-list button {
   width: 100%;
   text-align: left;
@@ -1044,106 +1068,6 @@ button:disabled {
   font-variant-numeric: tabular-nums;
 }
 
-.sound-unused-toggle {
-  gap: 0.4rem;
-  margin-bottom: 0.5rem;
-}
-
-.sound-unused-toggle span {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.sound-unused-toggle input {
-  flex: 0 0 auto;
-  width: auto;
-}
-
-.sound-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  margin-bottom: 0.75rem;
-}
-
-.sound-folder h3 {
-  display: flex;
-  align-items: center;
-  gap: 0.15rem;
-  margin: 0.45rem 0 0.2rem;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted);
-  font-weight: 600;
-}
-
-.sound-folder .sound-twist {
-  flex: 0 0 1rem;
-  width: 1rem;
-  padding: 0;
-  font-size: 0.65rem;
-  line-height: 1;
-  color: inherit;
-}
-
-.sound-row {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.sound-row input[type="checkbox"] {
-  flex: 0 0 auto;
-}
-
-.sound-row button {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  justify-content: space-between;
-  gap: 0.35rem;
-}
-
-.sound-row .sound-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.sound-row .sound-meta {
-  color: var(--muted);
-  font-size: 0.68rem;
-  flex: 0 0 auto;
-}
-
-.sound-lib {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.12rem;
-  margin: 0.35rem 0 0.5rem;
-}
-
-.sound-lib button {
-  text-align: left;
-  font-size: 0.65rem;
-  line-height: 1.1;
-  padding: 0.12rem 0.22rem;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.sound-lib button.dup {
-  color: var(--muted);
-}
-
-.sound-lib button.dup.active {
-  color: var(--muted);
-  border-color: var(--accent);
-}
-
 .layout.layout-build {
   grid-template-columns: 1fr;
 }
@@ -1459,7 +1383,6 @@ button:disabled {
       <button type="button" id="btn-mode-anim">Enemies</button>
       <button type="button" id="btn-mode-weapons">Weapons</button>
       <button type="button" id="btn-mode-items">Items</button>
-      <button type="button" id="btn-mode-sounds">Sounds</button>
       <button type="button" id="btn-mode-build">Build</button>
     </div>
     <div class="toolbar-actions" id="draw-mode-group" role="group" aria-label="Draw mode">
@@ -1524,21 +1447,24 @@ button:disabled {
         </div>
       </section>
       <section id="items-left" hidden>
+        <table id="item-budget" class="item-budget">
+          <tbody>
+            <tr><th colspan="2">Items</th></tr>
+            <tr><td>verts</td><td id="bud-item-nv"></td></tr>
+            <tr><td>unique X</td><td id="bud-item-nx"></td></tr>
+            <tr><td>unique Z</td><td id="bud-item-nz"></td></tr>
+            <tr><td>lines</td><td id="bud-item-ne"></td></tr>
+            <tr><th colspan="2">Doors</th></tr>
+            <tr><td>verts</td><td id="bud-door-nv"></td></tr>
+            <tr><td>unique X</td><td id="bud-door-nx"></td></tr>
+            <tr><td>unique Z</td><td id="bud-door-nz"></td></tr>
+            <tr><td>lines</td><td id="bud-door-ne"></td></tr>
+          </tbody>
+        </table>
         <h2>Items</h2>
         <ul id="item-mesh-list" class="object-list"></ul>
         <h2>Doors</h2>
         <ul id="door-mesh-list" class="object-list"></ul>
-      </section>
-      <section id="sounds-left" hidden>
-        <h2>Sounds</h2>
-        <label class="field sound-unused-toggle">
-          <input type="checkbox" id="chk-hide-unused" checked title="Hide ambience, plats, hknight, and buttons" />
-          <span>Hide unused</span>
-        </label>
-        <div id="sound-list" class="sound-list"></div>
-        <div class="btn-row">
-          <button type="button" id="btn-sound-folder">Open shareware folder</button>
-        </div>
       </section>
     </aside>
 
@@ -3193,14 +3119,6 @@ const WEAPON_LABELS = {
   rock: "Grenade launcher",
 };
 
-const SOUND_TICK_HZ = 50;
-const SOUND_MAX_TICKS = 255;
-const SOUND_PAYLOAD_MAX = 4096;
-const PC_TIMER = 1193181;
-const SOUND_HZ_MIN = 80;
-const SOUND_HZ_MAX = 4000;
-const SOUND_VOICE_LABELS = ["Player", "Enemy", "World"];
-
 /** Fixed enemy cue set. sight/wince/death play generically; melee/shoot bind to clips. */
 const ENEMY_CUES = ["sight", "wince", "melee", "shoot", "death"];
 const ENEMY_CUE_LABELS = {
@@ -3213,215 +3131,6 @@ const ENEMY_CUE_LABELS = {
 const ENEMY_CUES_REQUIRED = ["sight", "wince", "death"];
 /** Cues that a clip may carry (timed to an animation frame). */
 const ENEMY_ATTACK_CUES = ["melee", "shoot"];
-
-/** Locked in-game aliases (resident, always exported). extraAliases share the same ID. */
-const SOUND_LOCKED = [
-  { alias: "HITWALL", path: "sound/weapons/tink1.wav", voice: 0, priority: 1, origin: "wolf", library: "HITWALL" },
-  {
-    alias: "PLAYERDEATH",
-    path: "sound/player/death1.wav",
-    voice: 0,
-    priority: 99,
-    origin: "wolf",
-    library: "PLAYERDEATH",
-  },
-  {
-    alias: "TAKEDAMAGE",
-    path: "sound/player/pain1.wav",
-    voice: 0,
-    priority: 90,
-    origin: "wolf",
-    library: "TAKEDAMAGE",
-  },
-  {
-    alias: "OPENDOOR",
-    path: "sound/doors/hydro1.wav",
-    voice: 2,
-    priority: 20,
-    origin: "wolf",
-    library: "OPENDOOR",
-  },
-  { alias: "ATKMACHINEGUN", path: "sound/weapons/spike2.wav", voice: 0, priority: 50, origin: "wolf", library: "ATKMACHINEGUN" },
-  { alias: "HITENEMY", path: "sound/weapons/lhit.wav", voice: 0, priority: 50, origin: "wolf", library: "HITENEMY" },
-  { alias: "SHOOT", path: "sound/weapons/grenade.wav", voice: 1, priority: 20, origin: "wolf", library: "SHOOT" },
-  {
-    alias: "GETKEY",
-    path: "sound/items/itembk2.wav",
-    voice: 0,
-    priority: 90,
-    origin: "wolf",
-    library: "GETKEY",
-  },
-  {
-    alias: "GETAMMO",
-    path: "sound/weapons/pkup.wav",
-    voice: 0,
-    priority: 80,
-    origin: "wolf",
-    library: "GETAMMO",
-  },
-  {
-    alias: "HEALTH1",
-    extraAliases: ["HEALTH2"],
-    path: "sound/items/health1.wav",
-    voice: 0,
-    priority: 85,
-    origin: "wolf",
-    library: "HEALTH1",
-  },
-  { alias: "SWITCH", path: "sound/misc/menu2.wav", voice: 0, priority: 1, origin: "wolf", library: "MOVEGUN1" },
-  {
-    alias: "BONUS1",
-    path: "sound/items/damage.wav",
-    voice: 0,
-    priority: 70,
-    origin: "wolf",
-    library: "BONUS1",
-  },
-  {
-    alias: "SHOTGN",
-    path: "sound/weapons/shotgn2.wav",
-    voice: 0,
-    priority: 50,
-    origin: "doom",
-    library: "DPSHOTGN",
-  },
-  {
-    alias: "BAREXP",
-    path: "sound/weapons/r_exp3.wav",
-    voice: 1,
-    priority: 80,
-    origin: "doom",
-    library: "DPRXPLOD",
-  },
-  { alias: "OOF", path: "sound/player/land.wav", voice: 0, priority: 50, origin: "doom", library: "DPOOF" },
-];
-
-const SOUND_LOCKED_BY_PATH = Object.fromEntries(SOUND_LOCKED.map((s) => [s.path, s]));
-const SOUND_LOCKED_ALIASES = new Set(
-  SOUND_LOCKED.flatMap((s) => [s.alias, ...(s.extraAliases || [])])
-);
-
-function wolfByteToHz(b) {
-  const n = b | 0;
-  if (n <= 0) return 0;
-  return PC_TIMER / (n * 60);
-}
-
-function hzToWolfByte(hz) {
-  const v = Number(hz);
-  if (!Number.isFinite(v) || v <= 0) return 0;
-  return Math.max(1, Math.min(255, Math.round(PC_TIMER / (v * 60))));
-}
-
-function clampSoundVoice(n) {
-  const v = n | 0;
-  if (v < 0) return 0;
-  if (v > 2) return 2;
-  return v;
-}
-
-function clampSoundPriority(n) {
-  const v = n | 0;
-  if (v < 0) return 0;
-  if (v > 99) return 99;
-  return v;
-}
-
-function clampSoundVol(n) {
-  const v = n | 0;
-  if (v < 0) return 0;
-  if (v > 15) return 15;
-  return v;
-}
-
-function clampSoundAttack(n) {
-  const v = n | 0;
-  if (v < 0) return 0;
-  if (v > 15) return 15;
-  return v;
-}
-
-function clampSoundFreqByte(n) {
-  const v = n | 0;
-  if (v < 0) return 0;
-  if (v > 255) return 255;
-  return v;
-}
-
-const LIBRARY_ORIGINS = new Set(["wolf", "doom", "dave", "keen"]);
-
-function defaultSoundEntry(locked) {
-  const origin = LIBRARY_ORIGINS.has(locked.origin) || locked.origin === "empty" ? locked.origin : "empty";
-  const entry = {
-    export: true,
-    alias: locked.alias,
-    extraAliases: locked.extraAliases ? [...locked.extraAliases] : undefined,
-    voice: clampSoundVoice(locked.voice),
-    priority: clampSoundPriority(locked.priority),
-    attack: 0,
-    origin,
-  };
-  if (typeof locked.library === "string" && locked.library.trim()) {
-    entry.library = locked.library.trim().toUpperCase();
-  }
-  return entry;
-}
-
-function defaultSounds() {
-  const sounds = {};
-  for (const locked of SOUND_LOCKED) sounds[locked.path] = defaultSoundEntry(locked);
-  return sounds;
-}
-
-function emptySoundEntry() {
-  return { export: false, voice: 0, priority: 50, attack: 0, origin: "empty" };
-}
-
-function isSoundLocked(path) {
-  return !!SOUND_LOCKED_BY_PATH[path];
-}
-
-function soundFolder(path) {
-  const rest = String(path || "").replace(/^sound\//i, "");
-  const i = rest.lastIndexOf("/");
-  return i >= 0 ? rest.slice(0, i) : "";
-}
-
-function soundShortName(path) {
-  const rest = String(path || "").replace(/^sound\//i, "");
-  return rest.replace(/\.wav$/i, "") || rest;
-}
-
-function soundIdent(path) {
-  return soundShortName(path)
-    .replace(/[^a-zA-Z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "")
-    .toUpperCase() || "SFX";
-}
-
-/** Suffix of SOUND_FOLDER_STEM. The list already groups by folder. */
-function soundLeafIdent(path) {
-  const ident = soundIdent(path);
-  const folder = soundFolder(path)
-    .replace(/[^a-zA-Z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "")
-    .toUpperCase();
-  const prefix = folder ? `${folder}_` : "";
-  return prefix && ident.startsWith(prefix) ? ident.slice(prefix.length) : ident;
-}
-
-function alignSoundArrays(snd) {
-  if (Array.isArray(snd.freq)) {
-    let freq = snd.freq.map(clampSoundFreqByte);
-    if (freq.length > SOUND_MAX_TICKS) freq = freq.slice(0, SOUND_MAX_TICKS);
-    snd.freq = freq;
-  }
-  delete snd.vol;
-  delete snd.wave;
-  snd.attack = clampSoundAttack(snd.attack);
-  return snd.freq?.length || 0;
-}
 
 /** Normalize a cue value to a sound path, or "" when it is not one. */
 function normalizeCuePath(raw) {
@@ -3440,107 +3149,6 @@ function parseEnemyCues(raw) {
     if (p) out[cue] = p;
   }
   return out;
-}
-
-/** Paths referenced by any enemy cue. Those are exported; locked paths are resident. */
-function cueReferencedPaths(doc) {
-  const out = new Set();
-  for (const e of doc?.enemies || []) {
-    for (const cue of ENEMY_CUES) {
-      const p = e.cues?.[cue];
-      if (p) out.add(p);
-    }
-  }
-  return out;
-}
-
-/** True when the path rides on enemy pose banks (cue-referenced, not a resident alias). */
-function soundIsStreamed(doc, path) {
-  return !SOUND_LOCKED_BY_PATH[path] && cueReferencedPaths(doc).has(path);
-}
-
-/** Exported = resident alias or referenced by an enemy cue. */
-function soundIsExported(doc, path) {
-  return !!SOUND_LOCKED_BY_PATH[path] || cueReferencedPaths(doc).has(path);
-}
-
-/** Resident payload only (locked aliases). Enemy cues stream with the poses. */
-function soundPayloadBytes(sounds, resolveFreq) {
-  let total = 0;
-  const seen = new Set();
-  for (const [path, snd] of Object.entries(sounds || {})) {
-    if (!SOUND_LOCKED_BY_PATH[path]) continue;
-    if (seen.has(path)) continue;
-    seen.add(path);
-    let freq = null;
-    if (typeof resolveFreq === "function") {
-      const got = resolveFreq(snd);
-      if (!got) continue;
-      freq = got;
-    } else if (Array.isArray(snd.freq)) {
-      freq = snd.freq;
-    } else {
-      continue;
-    }
-    const n = Math.min(SOUND_MAX_TICKS, freq.length || 0);
-    total += 2 + n;
-  }
-  return total;
-}
-
-function getSound(doc, path) {
-  const cur = doc?.sounds?.[path];
-  if (cur) return cur;
-  const locked = SOUND_LOCKED_BY_PATH[path];
-  if (locked) return defaultSoundEntry(locked);
-  return emptySoundEntry();
-}
-
-function ensureSound(doc, path) {
-  if (!doc.sounds) doc.sounds = {};
-  if (!doc.sounds[path]) {
-    const locked = SOUND_LOCKED_BY_PATH[path];
-    doc.sounds[path] = locked ? defaultSoundEntry(locked) : emptySoundEntry();
-  }
-  return doc.sounds[path];
-}
-
-function parseSoundEntry(path, raw, fallback) {
-  const locked = SOUND_LOCKED_BY_PATH[path];
-  const base = fallback || (locked ? defaultSoundEntry(locked) : emptySoundEntry());
-  const src = raw && typeof raw === "object" ? raw : {};
-  const origin = LIBRARY_ORIGINS.has(src.origin) || src.origin === "empty" ? src.origin : base.origin;
-  const snd = {
-    export: locked ? true : !!src.export,
-    voice: clampSoundVoice(src.voice != null ? src.voice : base.voice),
-    priority: clampSoundPriority(src.priority != null ? src.priority : base.priority),
-    attack: clampSoundAttack(src.attack != null ? src.attack : base.attack),
-    origin,
-  };
-  if (LIBRARY_ORIGINS.has(snd.origin)) {
-    const fromSrc = LIBRARY_ORIGINS.has(src.origin) && typeof src.library === "string" && src.library.trim();
-    const lib = fromSrc ? src.library : base.library;
-    if (typeof lib === "string" && lib.trim()) snd.library = lib.trim().toUpperCase();
-  }
-  if (locked) {
-    snd.alias = locked.alias;
-    if (locked.extraAliases) snd.extraAliases = [...locked.extraAliases];
-  } else if (typeof src.alias === "string" && src.alias.trim() && !SOUND_LOCKED_ALIASES.has(src.alias.trim().toUpperCase())) {
-    snd.alias = src.alias.trim().toUpperCase();
-  }
-  alignSoundArrays(snd);
-  return snd;
-}
-
-function parseSounds(raw) {
-  const sounds = defaultSounds();
-  if (!raw || typeof raw !== "object") return sounds;
-  for (const [path, src] of Object.entries(raw)) {
-    const key = String(path || "").replace(/\\/g, "/").toLowerCase();
-    if (!key.startsWith("sound/") || !key.endsWith(".wav")) continue;
-    sounds[key] = parseSoundEntry(key, src, sounds[key]);
-  }
-  return sounds;
 }
 
 function clampMdlScale(n) {
@@ -3798,7 +3406,7 @@ function doorUsesTag(lockKey) {
 }
 
 /** Layout placements draw the first stick frame at this fraction of anim units (Possessed ~4 world high). */
-const LAYOUT_ENEMY_SCALE = 1 / 8;
+const LAYOUT_ENEMY_SCALE = 1 / 4;
 
 /** Yaw octants, 0 = +Z (N / game forward). */
 const ENEMY_FACINGS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
@@ -3949,36 +3557,42 @@ function elevStopBottoms(doc, elev) {
   return { dest, home };
 }
 
-/** Placeable pickup contents (not including death-drop shells5). */
+/** Placeable pickup contents. Lightpost and barrel are drawn props. */
 const PICKUP_TYPES = [
+  "small health",
+  "large health",
+  "green armor",
+  "blue armor",
+  "ammo box",
   "shells",
-  "nailgun",
-  "nails",
-  "grenade launcher",
-  "grenades",
-  "health 25%",
-  "health 50%",
-  "armour",
-  "quad damage",
-  "pentagram of protection",
-  "ring of shadows",
-  "silver key",
-  "gold key",
-  "rune of earth magic",
+  "box of rockets",
+  "shotgun",
+  "chaingun",
+  "chainsaw",
+  "rocket launcher",
+  "backpack",
+  "red keycard",
+  "yellow keycard",
+  "blue keycard",
+  "soulsphere",
+  "radsuit",
+  "lightpost",
+  "barrel",
 ];
 /** @deprecated Use PICKUP_TYPES */
 const BACKPACK_TYPES = PICKUP_TYPES;
 
-const ITEM_MESH_KEYS = ["backpack", ...PICKUP_TYPES];
+const ITEM_MESH_KEYS = PICKUP_TYPES;
 const DOOR_TYPES = ["Tech", "Arch", "Tri", "Crack"];
 const DOOR_MESH_KEYS = DOOR_TYPES;
 const ALL_MESH_KEYS = [...ITEM_MESH_KEYS, ...DOOR_MESH_KEYS];
 /** Items-tab floor/cube and paste-nudge window. Not a coord cap. */
 const ITEM_MIN = -4;
 const ITEM_MAX = 4;
-/** Signed 8-bit local X/Y/Z. $80 is −128. */
-const ITEM_COORD_MIN = -128;
-const ITEM_COORD_MAX = 127;
+/** Quarter-unit locals. Packed byte is round(v*4), still −128..127. */
+const ITEM_POS_Q = 4;
+const ITEM_COORD_MIN = -128 / ITEM_POS_Q;
+const ITEM_COORD_MAX = 127 / ITEM_POS_Q;
 const ITEM_ORIGIN = 0;
 /** Editor 0 sits at the centre of the 2×2 pickup footprint. */
 const ITEM_WORLD_BIAS = 1;
@@ -3986,11 +3600,12 @@ const ITEM_MAX_VERTS = 16;
 const ITEM_MAX_LINES = 16;
 const ITEM_MAX_UNIQUE = 6;
 
-const DOOR_LOCKS = ["unlocked", "silver", "gold", "remote"];
+const DOOR_LOCKS = ["unlocked", "yellow", "blue", "red", "remote"];
 const DOOR_LOCK_LABELS = {
   unlocked: "Unlocked",
-  silver: "Silver key",
-  gold: "Gold key",
+  yellow: "Yellow keycard",
+  blue: "Blue keycard",
+  red: "Red keycard",
   remote: "Remote",
 };
 /** Discrete AABB scales of the 4×5×1 doorway. Thickness stays 1. */
@@ -4003,8 +3618,26 @@ const BACKPACK_HEIGHT = 1.5;
 const BACKPACK_SIDE = BACKPACK_HEIGHT / GOLDEN_RATIO;
 const BACKPACK_DEPTH = (BACKPACK_SIDE * Math.sqrt(3)) / 2;
 
+const PICKUP_ALIAS = {
+  nailgun: "chaingun",
+  nails: "ammo box",
+  "grenade launcher": "rocket launcher",
+  grenades: "box of rockets",
+  "health 25%": "small health",
+  "health 50%": "large health",
+  armour: "green armor",
+  armor: "green armor",
+  "quad damage": "radsuit",
+  "pentagram of protection": "soulsphere",
+  "ring of shadows": "radsuit",
+  "silver key": "yellow keycard",
+  "gold key": "blue keycard",
+  "rune of earth magic": "red keycard",
+};
+
 function clampPickupType(s) {
-  return PICKUP_TYPES.includes(s) ? s : "shells";
+  const n = PICKUP_ALIAS[s] || s;
+  return PICKUP_TYPES.includes(n) ? n : "shells";
 }
 
 /** @deprecated Use clampPickupType */
@@ -4013,7 +3646,11 @@ function clampBackpackType(s) {
 }
 
 function clampDoorLock(s) {
-  return s === "silver" || s === "gold" || s === "remote" ? s : "unlocked";
+  if (s === "silver" || s === "yellow") return "yellow";
+  if (s === "gold" || s === "blue") return "blue";
+  if (s === "red") return "red";
+  if (s === "remote") return "remote";
+  return "unlocked";
 }
 
 function clampDoorType(s) {
@@ -4048,10 +3685,10 @@ function isDoorMeshKey(key) {
 }
 
 function clampItemCoord(n) {
-  const v = n | 0;
-  if (v < ITEM_COORD_MIN) return ITEM_COORD_MIN;
-  if (v > ITEM_COORD_MAX) return ITEM_COORD_MAX;
-  return v;
+  const q = Math.round(Number(n) * ITEM_POS_Q) / ITEM_POS_Q;
+  if (q < ITEM_COORD_MIN) return ITEM_COORD_MIN;
+  if (q > ITEM_COORD_MAX) return ITEM_COORD_MAX;
+  return q;
 }
 
 function emptyItemMesh() {
@@ -4085,7 +3722,7 @@ function defaultItemMeshes() {
         [3, 2],
       ]
     ),
-    "health 25%": meshOf(
+    "small health": meshOf(
       [
         [0, 2, 0],
         [-1, 1, 0],
@@ -4109,7 +3746,7 @@ function defaultItemMeshes() {
         [0, 3],
       ]
     ),
-    "health 50%": meshOf(
+    "large health": meshOf(
       [
         [0, 4, 0],
         [-2, 2, 0],
@@ -4133,7 +3770,7 @@ function defaultItemMeshes() {
         [0, 3],
       ]
     ),
-    "quad damage": meshOf(
+    "green armor": meshOf(
       [
         [-1, 0, -1],
         [1, 0, -1],
@@ -4152,7 +3789,7 @@ function defaultItemMeshes() {
         [4, 3],
       ]
     ),
-    "pentagram of protection": meshOf(
+    "soulsphere": meshOf(
       [
         [0, 0, -2],
         [2, 0, 0],
@@ -4171,7 +3808,7 @@ function defaultItemMeshes() {
         [4, 3],
       ]
     ),
-    "ring of shadows": meshOf(
+    "radsuit": meshOf(
       [
         [-2, 2, 0],
         [-1, 1, 0],
@@ -4189,7 +3826,7 @@ function defaultItemMeshes() {
         [5, 0],
       ]
     ),
-    "silver key": meshOf(
+    "yellow keycard": meshOf(
       [
         [-2, 1, 0],
         [-2, 2, 0],
@@ -4207,7 +3844,7 @@ function defaultItemMeshes() {
         [4, 5],
       ]
     ),
-    "gold key": meshOf(
+    "blue keycard": meshOf(
       [
         [-2, 1, 0],
         [-2, 3, 0],
@@ -4227,7 +3864,7 @@ function defaultItemMeshes() {
         [4, 6],
       ]
     ),
-    "rune of earth magic": meshOf(
+    "red keycard": meshOf(
       [
         [0, 0, 0],
         [-2, 1, 0],
@@ -4250,6 +3887,172 @@ function defaultItemMeshes() {
         [6, 0],
         [6, 7],
         [6, 8],
+      ]
+    ),
+    "blue armor": meshOf(
+      [
+        [-1, 0, -1],
+        [1, 0, -1],
+        [1, 0, 1],
+        [-1, 0, 1],
+        [0, 4, 0],
+      ],
+      [
+        [0, 1],
+        [1, 2],
+        [2, 3],
+        [3, 0],
+        [4, 0],
+        [4, 1],
+        [4, 2],
+        [4, 3],
+      ]
+    ),
+    "ammo box": meshOf(
+      [
+        [-1, 0, -1],
+        [1, 0, -1],
+        [1, 1, -1],
+        [-1, 1, -1],
+        [0, 0, 1],
+        [0, 1, 1],
+      ],
+      [
+        [0, 1],
+        [1, 2],
+        [2, 3],
+        [3, 0],
+        [0, 4],
+        [1, 4],
+        [3, 5],
+        [2, 5],
+        [4, 5],
+      ]
+    ),
+    shells: meshOf(
+      [
+        [-1, 0, 0],
+        [1, 0, 0],
+        [1, 1, 0],
+        [-1, 1, 0],
+      ],
+      [
+        [0, 1],
+        [1, 2],
+        [2, 3],
+        [3, 0],
+      ]
+    ),
+    "box of rockets": meshOf(
+      [
+        [-1, 0, 0],
+        [1, 0, 0],
+        [0, 2, 0],
+        [0, 1, 1],
+      ],
+      [
+        [0, 1],
+        [1, 2],
+        [2, 0],
+        [0, 3],
+        [1, 3],
+        [2, 3],
+      ]
+    ),
+    shotgun: meshOf(
+      [
+        [-2, 1, 0],
+        [2, 1, 0],
+        [1, 0, 0],
+        [0, 2, 0],
+      ],
+      [
+        [0, 1],
+        [1, 2],
+        [2, 0],
+        [0, 3],
+        [1, 3],
+      ]
+    ),
+    chaingun: meshOf(
+      [
+        [-2, 1, 0],
+        [2, 1, 0],
+        [1, 0, 0],
+        [0, 2, 0],
+      ],
+      [
+        [0, 1],
+        [1, 2],
+        [2, 0],
+        [0, 3],
+        [1, 3],
+      ]
+    ),
+    chainsaw: meshOf(
+      [
+        [0, 0, 0],
+        [0, 3, 0],
+        [-1, 3, 0],
+        [1, 3, 0],
+      ],
+      [
+        [0, 1],
+        [1, 2],
+        [1, 3],
+      ]
+    ),
+    "rocket launcher": meshOf(
+      [
+        [-1, 0, 0],
+        [1, 0, 0],
+        [1, 2, 0],
+        [-1, 2, 0],
+        [0, 3, 0],
+      ],
+      [
+        [0, 1],
+        [1, 2],
+        [2, 3],
+        [3, 0],
+        [2, 4],
+        [3, 4],
+      ]
+    ),
+    lightpost: meshOf(
+      [
+        [0, 0, 0],
+        [0, 4, 0],
+        [-1, 4, 0],
+        [1, 4, 0],
+        [0, 4, -1],
+        [0, 4, 1],
+      ],
+      [
+        [0, 1],
+        [2, 3],
+        [4, 5],
+      ]
+    ),
+    barrel: meshOf(
+      [
+        [-1, 0, 0],
+        [1, 0, 0],
+        [1, 2, 0],
+        [-1, 2, 0],
+        [0, 0, 1],
+        [0, 2, 1],
+      ],
+      [
+        [0, 1],
+        [1, 2],
+        [2, 3],
+        [3, 0],
+        [0, 4],
+        [1, 4],
+        [3, 5],
+        [2, 5],
+        [4, 5],
       ]
     ),
     Tech: meshOf(
@@ -4357,6 +4160,25 @@ function parseItemMeshes(raw) {
   const d = defaultItemMeshes();
   if (!raw || typeof raw !== "object") return d;
   const src = { ...raw };
+  const meshAlias = {
+    "health 25%": "small health",
+    "health 50%": "large health",
+    armour: "green armor",
+    nails: "ammo box",
+    grenades: "box of rockets",
+    nailgun: "chaingun",
+    "grenade launcher": "rocket launcher",
+    "silver key": "yellow keycard",
+    "gold key": "blue keycard",
+    "rune of earth magic": "red keycard",
+    "pentagram of protection": "soulsphere",
+    "ring of shadows": "radsuit",
+  };
+  for (const [oldKey, newKey] of Object.entries(meshAlias)) {
+    if (src[oldKey] != null && src[newKey] == null) src[newKey] = src[oldKey];
+  }
+  if (src.chaingun != null && src.shotgun == null) src.shotgun = src.chaingun;
+  if (src["green armor"] != null && src["blue armor"] == null) src["blue armor"] = src["green armor"];
   if (src.tech != null && src.Tech == null) src.Tech = src.tech;
   if (src.arch != null && src.Arch == null) src.Arch = src.arch;
   if (src.tri != null && src.Tri == null) src.Tri = src.tri;
@@ -4438,8 +4260,8 @@ function itemUniqueXZ(verts) {
   const xs = new Set();
   const zs = new Set();
   for (const v of verts || []) {
-    xs.add(v.x | 0);
-    zs.add(v.z | 0);
+    xs.add(Math.round(v.x * ITEM_POS_Q));
+    zs.add(Math.round(v.z * ITEM_POS_Q));
   }
   return { nx: xs.size, nz: zs.size, xs, zs };
 }
@@ -4460,12 +4282,39 @@ function itemMeshStats(mesh) {
   };
 }
 
+const ITEM_TABLE_MAX = 256;
+
+function addMeshBudget(sum, mesh) {
+  const stats = itemMeshStats(mesh);
+  sum.nv += stats.nv;
+  sum.nx += stats.nx;
+  sum.nz += stats.nz;
+  sum.ne += stats.ne;
+}
+
+function itemGlobalBudgets(doc) {
+  const items = doc?.items || {};
+  const pickups = { nv: 0, nx: 0, nz: 0, ne: 0 };
+  for (const key of ITEM_MESH_KEYS) {
+    const mesh = items[key];
+    if (!itemMeshHasGeom(mesh)) continue;
+    addMeshBudget(pickups, mesh);
+  }
+  const doors = { nv: 0, nx: 0, nz: 0, ne: 0 };
+  const defaults = defaultItemMeshes();
+  for (const key of DOOR_MESH_KEYS) {
+    const mesh = itemMeshHasGeom(items[key]) ? items[key] : defaults[key];
+    addMeshBudget(doors, mesh);
+  }
+  return { pickups, doors };
+}
+
 function itemMeshWorldSegs(obj, mesh) {
   const m = mesh && itemMeshHasGeom(mesh) ? mesh : defaultItemMeshes().backpack;
   const verts = m.verts.map((v) => ({
-    x: obj.x + (v.x | 0) + ITEM_WORLD_BIAS,
-    y: obj.y + (v.y | 0),
-    z: obj.z + (v.z | 0) + ITEM_WORLD_BIAS,
+    x: obj.x + Number(v.x) + ITEM_WORLD_BIAS,
+    y: obj.y + Number(v.y),
+    z: obj.z + Number(v.z) + ITEM_WORLD_BIAS,
   }));
   const segs = [];
   for (const [a, b] of m.lines) {
@@ -5129,7 +4978,7 @@ function createObject(kind, x, y, z, extra = {}) {
   }
   if (kind === "pickup") obj.pickup = clampPickupType(extra.pickup);
   if (kind === "doorway") {
-    obj.lockKey = clampDoorLock(extra.lockKey ?? (extra.locked ? "silver" : "unlocked"));
+    obj.lockKey = clampDoorLock(extra.lockKey ?? (extra.locked ? "yellow" : "unlocked"));
     obj.doorType = clampDoorType(extra.doorType);
     obj.doorScale = clampDoorScale(extra.doorScale);
     obj.tag = clampTag(extra.tag);
@@ -5237,7 +5086,7 @@ function figureTemplateName(obj) {
   return obj.kind === "spawn" ? "Possessed" : obj.enemy || "Possessed";
 }
 
-/** World-space first-frame stick verts for a placed enemy (1/8 scale, feet on floor center). */
+/** World-space first-frame stick verts for a placed enemy (1/4 scale, feet on floor center). */
 function enemyPreviewFrame(template) {
   const frames = template?.frames;
   if (!frames?.length) return null;
@@ -6176,13 +6025,21 @@ function parseClipSound(raw) {
 }
 
 /** Map a legacy stem onto the attack cue whose path ident matches. Drop anything else. */
+function cuePathIdent(path) {
+  let rest = String(path || "").replace(/\\/g, "/");
+  if (rest.toLowerCase().startsWith("sound/")) rest = rest.slice(6);
+  if (rest.toLowerCase().endsWith(".wav")) rest = rest.slice(0, -4);
+  const ident = rest.replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toUpperCase();
+  return ident || "SFX";
+}
+
 function migrateClipSounds(clips, cues) {
   if (!Array.isArray(clips)) return;
   const byIdent = new Map();
   for (const cue of ENEMY_ATTACK_CUES) {
     const path = cues?.[cue];
-    if (!path || byIdent.has(soundIdent(path))) continue;
-    byIdent.set(soundIdent(path), cue);
+    if (!path || byIdent.has(cuePathIdent(path))) continue;
+    byIdent.set(cuePathIdent(path), cue);
   }
   for (const c of clips) {
     if (!c?.sound) continue;
@@ -6361,7 +6218,8 @@ function migrateDoorLock(o) {
   if (o.lockKey != null) return clampDoorLock(o.lockKey);
   if (o.locked) {
     const t = String(o.keyTag || o.tag || "").toLowerCase();
-    return t.includes("gold") ? "gold" : "silver";
+    if (t.includes("red")) return "red";
+    return t.includes("gold") || t.includes("blue") ? "blue" : "yellow";
   }
   return "unlocked";
 }
@@ -6376,7 +6234,9 @@ function migrateLoadedObject(o) {
   if (out.kind === "key") {
     out.kind = "pickup";
     const t = `${out.tag || ""} ${out.keyTag || ""} ${out.pickup || ""}`.toLowerCase();
-    out.pickup = t.includes("gold") ? "gold key" : "silver key";
+    if (t.includes("red")) out.pickup = "red keycard";
+    else if (t.includes("gold") || t.includes("blue")) out.pickup = "blue keycard";
+    else out.pickup = "yellow keycard";
   }
   if (out.kind === "doorway") out.lockKey = migrateDoorLock(out);
   return out;
@@ -6539,9 +6399,6 @@ function defaultEditorState() {
     layoutCameras: {},
     item: "backpack",
     itemOrbit: { yaw: 0.6, pitch: 0.35, dist: 16, target: { x: 0, y: 0, z: 0 } },
-    sound: SOUND_LOCKED[0].path,
-    hideUnused: true,
-    collapsedSoundFolders: [],
   };
 }
 
@@ -6617,7 +6474,6 @@ function parseEditorState(raw) {
     raw.mode === "layout" ||
     raw.mode === "weapons" ||
     raw.mode === "items" ||
-    raw.mode === "sounds" ||
     raw.mode === "build"
   ) {
     d.mode = raw.mode;
@@ -6676,12 +6532,6 @@ function parseEditorState(raw) {
     d.activeLevel = null;
   }
   if (typeof raw.item === "string" && ALL_MESH_KEYS.includes(raw.item)) d.item = raw.item;
-  if (typeof raw.sound === "string" && raw.sound) d.sound = raw.sound.replace(/\\/g, "/").toLowerCase();
-  if (raw.hideUnused != null) d.hideUnused = !!raw.hideUnused;
-  else if (raw.showAmbience != null) d.hideUnused = !raw.showAmbience;
-  if (Array.isArray(raw.collapsedSoundFolders)) {
-    d.collapsedSoundFolders = raw.collapsedSoundFolders.map((name) => String(name).toLowerCase());
-  }
   const io = raw.itemOrbit || {};
   const tgt = io.target || {};
   d.itemOrbit = {
@@ -6697,16 +6547,6 @@ function parseEditorState(raw) {
   return d;
 }
 
-function persistSounds(sounds) {
-  const out = {};
-  for (const [path, snd] of Object.entries(sounds || {})) {
-    if (!snd || typeof snd !== "object") continue;
-    const { freq, vol, wave, ...rest } = snd;
-    out[path] = rest;
-  }
-  return out;
-}
-
 /** Game JSON only — no editor camera/tab/selection. */
 function gameDocument(doc) {
   return {
@@ -6714,7 +6554,6 @@ function gameDocument(doc) {
     maps: doc.maps,
     weapons: doc.weapons,
     items: doc.items,
-    sounds: persistSounds(doc.sounds),
   };
 }
 
@@ -6729,7 +6568,6 @@ function createDefaultDocument() {
     enemies: createAllCreatures(),
     weapons: defaultWeapons(),
     items: defaultItemMeshes(),
-    sounds: defaultSounds(),
   };
 }
 
@@ -6856,7 +6694,6 @@ function normalizeDocument(raw) {
   doc.version = DOC_VERSION;
   doc.weapons = parseWeapons(raw.weapons);
   doc.items = parseItemMeshes(migrateItemMeshes(raw.items, fromVersion));
-  doc.sounds = parseSounds(raw.sounds);
   doc.editor = parseEditorState(raw.editor);
   doc.enemies = (doc.enemies || []).filter((e) => DOOM_SPRITE_PREFIX[e.name]);
   if (!doc.enemies.length) {
@@ -7350,7 +7187,6 @@ function gizmoAxisDragDelta(p, grab, axis, start, axisLen, cam, w, h, round = tr
 const HANDLE_DB = "doom64-editor";
 const HANDLE_STORE = "handles";
 const SHAREWARE_KEY = "shareware";
-const SOUND_BANK_KEY = "sound-banks";
 const WEAPONS_PNG_KEY = "weapons-png";
 const REPO_KEY = "repo";
 // Project root. The old "doc" file handle is left unread so a Doom64 path cannot be restored.
@@ -7740,53 +7576,6 @@ async function getFileInDir(dir, relPath) {
   } catch {
     return null;
   }
-}
-
-async function tryRestoreSoundBankDir() {
-  const handle = await loadStoredHandle(SOUND_BANK_KEY);
-  if (!handle) return null;
-  const state = await queryPermission(handle, "read");
-  if (state !== "granted") return null;
-  return handle;
-}
-
-async function pickSoundBankDirectory() {
-  if (!window.showDirectoryPicker) {
-    throw new Error("This browser cannot open a folder (needs Chromium file access)");
-  }
-  try {
-    const handle = await window.showDirectoryPicker({
-      id: "doom-sound-banks",
-      mode: "read",
-    });
-    await storeHandle(SOUND_BANK_KEY, handle);
-    return handle;
-  } catch (e) {
-    if (e.name === "AbortError") return null;
-    throw e;
-  }
-}
-
-const SOUND_BANK_FILES = ["AUDIOHED.WL1", "AUDIOT.WL1", "DOOM.WAD", "DAVE.EXE", "SOUNDS.CK1"];
-
-/** Read the five ref/ banks from the picked folder or its ref/ child. */
-async function loadSoundBankBuffers(dirHandle) {
-  const roots = [dirHandle];
-  try {
-    roots.push(await dirHandle.getDirectoryHandle("ref"));
-  } catch {
-    /* the folder may already be ref/ */
-  }
-  const out = {};
-  for (const name of SOUND_BANK_FILES) {
-    for (const root of roots) {
-      const fh = await getFileInDir(root, name);
-      if (!fh) continue;
-      out[name] = await (await fh.getFile()).arrayBuffer();
-      break;
-    }
-  }
-  return out;
 }
 
 /** Load pak0 then pak1 from the folder or an id1/ child. */
@@ -10761,9 +10550,9 @@ function pvDoorMeshSegs(obj, mesh) {
   const c = Math.cos(o.yaw);
   const sn = Math.sin(o.yaw);
   const verts = m.verts.map((v) => {
-    const lx = (v.x | 0) * s;
-    const ly = (v.y | 0) * s;
-    const lz = v.z | 0;
+    const lx = Number(v.x) * s;
+    const ly = Number(v.y) * s;
+    const lz = Number(v.z);
     return {
       x: o.x + lx * c + lz * sn,
       y: o.y + ly,
@@ -12429,7 +12218,7 @@ class ItemView {
     return {
       verts: indices.map((i) => {
         const v = mesh.verts[i];
-        return { x: v.x | 0, y: v.y | 0, z: v.z | 0 };
+        return { x: clampItemCoord(v.x), y: clampItemCoord(v.y), z: clampItemCoord(v.z) };
       }),
       lines: [...edgeKeys].map((k) => {
         const [a, b] = k.split(",").map(Number);
@@ -12860,7 +12649,8 @@ class ItemView {
         this.drag.gizmoAxisLen ?? GIZMO_FALLBACK_LEN,
         cam,
         this.cssW,
-        this.cssH
+        this.cssH,
+        false
       );
       if (delta == null) return;
       if (
@@ -12878,9 +12668,9 @@ class ItemView {
       const ray = screenRay(p.x, p.y, cam, this.cssW, this.cssH);
       const hit = intersectPlane(ray.origin, ray.dir, this.drag.grab, this.drag.planeN);
       if (!hit) return;
-      let dx = Math.round(hit.point.x - this.drag.grab.x);
-      let dy = Math.round(hit.point.y - this.drag.grab.y);
-      let dz = Math.round(hit.point.z - this.drag.grab.z);
+      let dx = hit.point.x - this.drag.grab.x;
+      let dy = hit.point.y - this.drag.grab.y;
+      let dz = hit.point.z - this.drag.grab.z;
       if (this.drag.plane === "xy") dz = 0;
       else if (this.drag.plane === "xz") dy = 0;
       else if (this.drag.plane === "yz") dx = 0;
@@ -13094,474 +12884,6 @@ class ItemView {
       ctx.setLineDash([4, 3]);
       ctx.strokeRect(r.x0 + 0.5, r.y0 + 0.5, r.w, r.h);
       ctx.setLineDash([]);
-    }
-  }
-}
-
-
-// ---- js/pcsfx.js ----
-/** Last sample index + 1 with |s| above 8-bit LSB. Trailing digital silence dropped. */
-function pcmActiveLength(pcm) {
-  if (!pcm || !pcm.length) return 0;
-  const eps = 1 / 256;
-  let end = pcm.length;
-  while (end > 0 && Math.abs(pcm[end - 1]) <= eps) end--;
-  return end;
-}
-
-function mixMono(buffer) {
-  const n = buffer.length;
-  const chs = buffer.numberOfChannels;
-  if (chs === 1) return buffer.getChannelData(0);
-  const out = new Float32Array(n);
-  for (let c = 0; c < chs; c++) {
-    const data = buffer.getChannelData(c);
-    for (let i = 0; i < n; i++) out[i] += data[i];
-  }
-  const inv = 1 / chs;
-  for (let i = 0; i < n; i++) out[i] *= inv;
-  return out;
-}
-
-async function decodeWav(ctx, buffer) {
-  const copy = buffer.slice(0);
-  return ctx.decodeAudioData(copy);
-}
-
-let audioCtx = null;
-
-function getAudioContext() {
-  if (!audioCtx) audioCtx = new AudioContext();
-  return audioCtx;
-}
-
-class SfxPreview {
-  constructor() {
-    this._nodes = [];
-    this._tickTimer = 0;
-    this.onTick = null;
-    this.playing = false;
-    this.kind = null;
-  }
-
-  stop() {
-    if (this._tickTimer) {
-      clearInterval(this._tickTimer);
-      this._tickTimer = 0;
-    }
-    for (const n of this._nodes) {
-      try {
-        n.stop?.();
-      } catch {
-        /* already stopped */
-      }
-      try {
-        n.disconnect?.();
-      } catch {
-        /* ok */
-      }
-    }
-    this._nodes = [];
-    this.playing = false;
-    this.kind = null;
-    this.onTick?.(-1);
-  }
-
-  async playOriginal(arrayBuffer, loop) {
-    this.stop();
-    const ctx = getAudioContext();
-    if (ctx.state === "suspended") await ctx.resume();
-    const decoded = await decodeWav(ctx, arrayBuffer);
-    const src = ctx.createBufferSource();
-    src.buffer = decoded;
-    src.loop = !!loop;
-    src.connect(ctx.destination);
-    src.onended = () => {
-      if (this.kind === "wav") this.stop();
-    };
-    src.start();
-    this._nodes = [src];
-    this.playing = true;
-    this.kind = "wav";
-  }
-
-  async playSpeaker(snd, loop) {
-    this.stop();
-    const ctx = getAudioContext();
-    if (ctx.state === "suspended") await ctx.resume();
-    alignSoundArrays(snd);
-    const n = snd.freq?.length || 0;
-    if (!n) return;
-    const tick = 1 / SOUND_TICK_HZ;
-    const master = ctx.createGain();
-    master.gain.value = 0.22;
-    master.connect(ctx.destination);
-
-    const osc = ctx.createOscillator();
-    osc.type = "square";
-    osc.frequency.value = 440;
-    const gain = ctx.createGain();
-    gain.gain.value = 0;
-    osc.connect(gain);
-    gain.connect(master);
-    osc.start();
-    this._nodes = [osc, gain, master];
-
-    const start = ctx.currentTime + 0.02;
-    const applyTick = (i, at) => {
-      const f = snd.freq[i] | 0;
-      const hz = wolfByteToHz(f);
-      const amp = f ? 1 : 0;
-      gain.gain.setValueAtTime(amp, at);
-      osc.frequency.setValueAtTime(Math.max(hz, 1), at);
-    };
-    const scheduleOnce = (origin) => {
-      for (let i = 0; i < n; i++) applyTick(i, origin + i * tick);
-      gain.gain.setValueAtTime(0, origin + n * tick);
-    };
-    scheduleOnce(start);
-    if (loop) {
-      const period = n * tick;
-      for (let r = 1; r < 32; r++) scheduleOnce(start + r * period);
-    }
-
-    let tickI = 0;
-    this.onTick?.(0);
-    this._tickTimer = setInterval(() => {
-      tickI++;
-      if (tickI >= n) {
-        if (loop) {
-          tickI = 0;
-          this.onTick?.(0);
-        } else {
-          this.stop();
-        }
-        return;
-      }
-      this.onTick?.(tickI);
-    }, 1000 / SOUND_TICK_HZ);
-
-    this.playing = true;
-    this.kind = "speaker";
-    if (!loop) {
-      const srcEnd = ctx.createBufferSource();
-      srcEnd.buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
-      srcEnd.connect(ctx.createGain());
-      srcEnd.onended = () => {
-        if (this.kind === "speaker") this.stop();
-      };
-      srcEnd.start(start + n * tick + 0.02);
-      this._nodes.push(srcEnd);
-    }
-  }
-}
-
-
-
-// ---- js/soundView.js ----
-const PAD_L = 44;
-const PAD_R = 12;
-const PAD_T = 18;
-const PAD_B = 4;
-const GAP = 10;
-const ORIG_H = 72;
-const AXIS_H = 18;
-const MIN_TICK_W = 6;
-const AXIS_STEP_SEC = 0.5;
-
-function clamp(v, lo, hi) {
-  return v < lo ? lo : v > hi ? hi : v;
-}
-
-function hzToY(hz, top, h) {
-  const z = clamp(hz, SOUND_HZ_MIN, SOUND_HZ_MAX);
-  const t = Math.log(z / SOUND_HZ_MIN) / Math.log(SOUND_HZ_MAX / SOUND_HZ_MIN);
-  return top + h * (1 - t);
-}
-
-class SoundView {
-  constructor(canvas, opts) {
-    this.canvas = canvas;
-    this.ctx = canvas.getContext("2d");
-    this.opts = opts;
-    this.enabled = false;
-    this.scroll = 0;
-    this.playTick = -1;
-    this.selectedTick = 0;
-    this.cssW = 0;
-    this.cssH = 0;
-    this._pcm = null;
-    this._pcmSr = 0;
-    this._pcmLive = 0;
-    this._pcmPath = null;
-    this._pcmHadBuf = false;
-    this._pcmGen = 0;
-    this._ro = new ResizeObserver(() => this.resize());
-    this._ro.observe(opts.stage || canvas.parentElement);
-    this.resize();
-
-    canvas.addEventListener("wheel", (e) => this.#onWheel(e), { passive: false });
-    canvas.addEventListener("contextmenu", (e) => e.preventDefault());
-  }
-
-  resize() {
-    if (!this.enabled) return;
-    const stage = this.opts.stage || this.canvas.parentElement;
-    const rect = stage.getBoundingClientRect();
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
-    const w = Math.max(64, Math.floor(rect.width));
-    const h = Math.max(64, Math.floor(rect.height));
-    this.canvas.width = Math.floor(w * dpr);
-    this.canvas.height = Math.floor(h * dpr);
-    this.canvas.style.width = `${w}px`;
-    this.canvas.style.height = `${h}px`;
-    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    this.cssW = w;
-    this.cssH = h;
-    this.draw();
-  }
-
-  setPlayTick(i) {
-    this.playTick = i;
-    if (this.enabled) this.draw();
-  }
-
-  draw() {
-    if (!this.enabled) return;
-    const ctx = this.ctx;
-    const w = this.cssW;
-    const h = this.cssH;
-    ctx.fillStyle = "#0a0a0c";
-    ctx.fillRect(0, 0, w, h);
-    const snd = this.opts.getSound?.();
-    if (!snd) {
-      this.#label(ctx, "Select a sound", 16, 28);
-      return;
-    }
-    alignSoundArrays(snd);
-    const showWave = this.opts.showWave?.() !== false;
-    if (showWave) this.#ensurePcm();
-    const layout = this.#layout(snd);
-    if (showWave) {
-      this.#drawOrig(ctx, snd, layout);
-      this.#drawTimeAxis(ctx, layout, layout.orig.top + layout.orig.h);
-    }
-    this.#drawFreq(ctx, snd, layout);
-    this.#drawTimeAxis(ctx, layout, layout.freq.top + layout.freq.h);
-    if (!snd.freq?.length) {
-      this.#label(ctx, snd.pending ? "Open sound banks" : "Empty", 16, layout.freq.top + 22);
-    }
-  }
-
-  #label(ctx, text, x, y) {
-    ctx.fillStyle = "#8b91a0";
-    ctx.font = "13px Segoe UI, sans-serif";
-    ctx.fillText(text, x, y);
-  }
-
-  #layout(snd) {
-    const w = this.cssW;
-    const h = this.cssH;
-    const showWave = this.opts.showWave?.() !== false;
-    const origH = showWave ? ORIG_H : 0;
-    const innerW = Math.max(40, w - PAD_L - PAD_R);
-    const rest = h - PAD_T - origH - AXIS_H * (showWave ? 2 : 1) - GAP * (showWave ? 1 : 0) - PAD_B;
-    const freqH = Math.max(48, rest);
-    const n = Math.max(1, snd.freq.length, showWave ? this.#wavTicks() : 0);
-    const tickW = Math.max(MIN_TICK_W, Math.min(14, innerW / n));
-    const vis = Math.max(1, Math.floor(innerW / tickW));
-    const maxScroll = Math.max(0, n - vis);
-    this.scroll = clamp(this.scroll, 0, maxScroll);
-    const cols = Math.min(vis, Math.max(0, n - this.scroll));
-    const origTop = PAD_T;
-    const freqTop = origTop + origH + (showWave ? AXIS_H + GAP : 0);
-    return {
-      innerW,
-      tickW,
-      vis,
-      cols,
-      orig: { top: origTop, h: origH },
-      freq: { top: freqTop, h: freqH },
-      n,
-    };
-  }
-
-  #wavTicks() {
-    if (!this._pcm || !(this._pcmSr > 0) || !(this._pcmLive > 0)) return 0;
-    const hop = this._pcmSr / SOUND_TICK_HZ;
-    return Math.min(SOUND_MAX_TICKS, Math.max(1, Math.ceil(this._pcmLive / hop)));
-  }
-
-  #ensurePcm() {
-    const path = this.opts.getSoundPath?.() || "";
-    const buf = path ? this.opts.getWavBuffer?.() : null;
-    const hasBuf = !!buf;
-    if (path === this._pcmPath && hasBuf === this._pcmHadBuf) return;
-    this._pcmPath = path;
-    this._pcmHadBuf = hasBuf;
-    this._pcm = null;
-    this._pcmSr = 0;
-    this._pcmLive = 0;
-    if (!buf) return;
-    const gen = ++this._pcmGen;
-    const ctx = getAudioContext();
-    const start = () => {
-      decodeWav(ctx, buf)
-        .then((decoded) => {
-          if (gen !== this._pcmGen) return;
-          this._pcm = mixMono(decoded);
-          this._pcmSr = decoded.sampleRate || 11025;
-          this._pcmLive = pcmActiveLength(this._pcm);
-          if (this.enabled) this.draw();
-        })
-        .catch(() => {
-          if (gen !== this._pcmGen) return;
-          this._pcm = null;
-          this._pcmLive = 0;
-        });
-    };
-    if (ctx.state === "suspended") ctx.resume().then(start, start);
-    else start();
-  }
-
-  #onWheel(e) {
-    if (!this.enabled) return;
-    const snd = this.opts.getSound?.();
-    if (!snd) return;
-    if (!snd.freq.length && !this._pcm) return;
-    e.preventDefault();
-    const layout = this.#layout(snd);
-    this.scroll = clamp(this.scroll + Math.sign(e.deltaY), 0, Math.max(0, layout.n - layout.vis));
-    this.draw();
-  }
-
-  #drawTimeAxis(ctx, layout, y) {
-    const { tickW, cols } = layout;
-    const plotW = cols * tickW;
-    ctx.strokeStyle = "#2e3340";
-    ctx.beginPath();
-    ctx.moveTo(PAD_L, y);
-    ctx.lineTo(PAD_L + plotW, y);
-    ctx.stroke();
-    const t0 = this.scroll / SOUND_TICK_HZ;
-    const t1 = (this.scroll + cols) / SOUND_TICK_HZ;
-    let t = Math.ceil(t0 / AXIS_STEP_SEC - 1e-9) * AXIS_STEP_SEC;
-    ctx.fillStyle = "#8b91a0";
-    ctx.font = "10px Segoe UI, sans-serif";
-    while (t <= t1 + 1e-9) {
-      const x = PAD_L + (t * SOUND_TICK_HZ - this.scroll) * tickW;
-      ctx.strokeStyle = "#2e3340";
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(x, y + 4);
-      ctx.stroke();
-      const col = t * SOUND_TICK_HZ - this.scroll;
-      ctx.textAlign = col <= 0.5 ? "left" : col >= cols - 0.5 ? "right" : "center";
-      ctx.fillText(t.toFixed(1), x, y + 14);
-      t += AXIS_STEP_SEC;
-    }
-    ctx.textAlign = "left";
-  }
-
-  #drawOrig(ctx, snd, layout) {
-    const { tickW, cols, orig } = layout;
-    const plotW = cols * tickW;
-    ctx.fillStyle = "#12141a";
-    ctx.fillRect(PAD_L, orig.top, plotW, orig.h);
-    ctx.strokeStyle = "#2e3340";
-    ctx.strokeRect(PAD_L, orig.top, plotW, orig.h);
-    ctx.fillStyle = "#8b91a0";
-    ctx.font = "10px Segoe UI, sans-serif";
-    ctx.textAlign = "left";
-    ctx.fillText("ORIG", 6, orig.top + 10);
-    const mid = orig.top + orig.h / 2;
-    ctx.strokeStyle = "#1c1f28";
-    ctx.beginPath();
-    ctx.moveTo(PAD_L, mid);
-    ctx.lineTo(PAD_L + plotW, mid);
-    ctx.stroke();
-    for (let c = 0; c < cols; c++) {
-      const i = this.scroll + c;
-      const x = PAD_L + c * tickW;
-      if (i === this.selectedTick) {
-        ctx.fillStyle = "rgba(212,160,23,0.15)";
-        ctx.fillRect(x, orig.top, tickW, orig.h);
-      }
-      if (this.playTick === i) {
-        ctx.fillStyle = "rgba(212,160,23,0.35)";
-        ctx.fillRect(x, orig.top, tickW, orig.h);
-      }
-    }
-    if (!this._pcm || !(this._pcmSr > 0)) {
-      ctx.fillStyle = "#8b91a0";
-      ctx.font = "12px Segoe UI, sans-serif";
-      ctx.fillText(this.opts.getWavBuffer?.() ? "Loading…" : "No original WAV", PAD_L + 8, mid + 4);
-      return;
-    }
-    const hop = this._pcmSr / SOUND_TICK_HZ;
-    const live = this._pcmLive || 0;
-    const startSamp = Math.floor(this.scroll * hop);
-    const endSamp = Math.max(startSamp + 1, Math.min(live, Math.floor((this.scroll + cols) * hop)));
-    const sampSpan = endSamp - startSamp;
-    const amp = orig.h / 2 - 3;
-    ctx.fillStyle = "#7eb8d4";
-    for (let px = 0; px < plotW; px++) {
-      const s0 = startSamp + Math.floor((px * sampSpan) / plotW);
-      const s1 = Math.max(s0 + 1, startSamp + Math.floor(((px + 1) * sampSpan) / plotW));
-      let mn = 0;
-      let mx = 0;
-      for (let s = s0; s < s1 && s < live; s++) {
-        const v = this._pcm[s];
-        if (v < mn) mn = v;
-        if (v > mx) mx = v;
-      }
-      const y0 = mid - mx * amp;
-      const y1 = mid - mn * amp;
-      ctx.fillRect(PAD_L + px, y0, 1, Math.max(1, y1 - y0));
-    }
-  }
-
-  #drawFreq(ctx, snd, layout) {
-    const { tickW, cols, freq } = layout;
-    ctx.fillStyle = "#12141a";
-    ctx.fillRect(PAD_L, freq.top, cols * tickW, freq.h);
-    ctx.strokeStyle = "#2e3340";
-    ctx.strokeRect(PAD_L, freq.top, cols * tickW, freq.h);
-    const marks = [125, 250, 500, 1000, 2000, 4000];
-    ctx.fillStyle = "#8b91a0";
-    ctx.font = "10px Segoe UI, sans-serif";
-    ctx.textAlign = "right";
-    for (const hz of marks) {
-      if (hz < SOUND_HZ_MIN || hz > SOUND_HZ_MAX) continue;
-      const y = hzToY(hz, freq.top, freq.h);
-      ctx.strokeStyle = "#1c1f28";
-      ctx.beginPath();
-      ctx.moveTo(PAD_L, y);
-      ctx.lineTo(PAD_L + cols * tickW, y);
-      ctx.stroke();
-      ctx.fillStyle = "#8b91a0";
-      ctx.fillText(hz >= 1000 ? `${hz / 1000}k` : String(hz), PAD_L - 4, y + 3);
-    }
-    ctx.textAlign = "left";
-    ctx.fillText("FREQ", 6, freq.top + 10);
-    for (let c = 0; c < cols; c++) {
-      const i = this.scroll + c;
-      if (i >= snd.freq.length) break;
-      const hz = wolfByteToHz(snd.freq[i]);
-      const x = PAD_L + c * tickW;
-      if (i === this.selectedTick) {
-        ctx.fillStyle = "rgba(212,160,23,0.15)";
-        ctx.fillRect(x, freq.top, tickW, freq.h);
-      }
-      if (this.playTick === i) {
-        ctx.fillStyle = "rgba(212,160,23,0.35)";
-        ctx.fillRect(x, freq.top, tickW, freq.h);
-      }
-      if (hz > 0) {
-        const y = hzToY(hz, freq.top, freq.h);
-        ctx.fillStyle = "#d4a017";
-        ctx.fillRect(x + 1, y, Math.max(1, tickW - 2), freq.top + freq.h - y);
-      }
     }
   }
 }
@@ -14156,267 +13478,8 @@ function showBuildView() {
 }
 
 
-// ---- js/pcsrc.js ----
-// Decode Wolf, Doom, Dave, and Keen PC sounds to Wolf inverse-freq bytes.
-// Audition only. Cues do not store these bytes; the build reads ref/ via tools/pcsrc.py.
-
-const DECIMATE = 3;
-const TICK_HZ = 50;
-const MAX_TICKS = 255;
-const KEEN_PIT = 0x2000;
-
-function decimate(data) {
-  const samples = [];
-  for (let i = 0; i < data.length; i += DECIMATE) {
-    const group = data.slice(i, i + DECIMATE);
-    samples.push(group.find((x) => x) || 0);
-    if (samples.length > MAX_TICKS) throw new Error("decimated sound is longer than 255 ticks");
-  }
-  return samples;
-}
-
-function pitchHz(pitch) {
-  if (pitch <= 0) return 0;
-  return 175 * 2 ** ((pitch - 1) / 24);
-}
-
-function hzToWolf(hz) {
-  if (hz <= 0) return 0;
-  return Math.max(1, Math.min(255, Math.round(PC_TIMER / (hz * 60))));
-}
-
-function divisorToWolf(divisor) {
-  if (divisor <= 0) return 0;
-  return Math.max(1, Math.min(255, Math.round(divisor / 60)));
-}
-
-function resample(samples, pitDiv) {
-  if (!samples.length) return [];
-  const div = pitDiv > 0 ? pitDiv : 65536;
-  const step = TICK_HZ * div;
-  const out = [];
-  let acc = 0;
-  let bucket = [];
-  let hold = 0;
-  for (const sample of samples) {
-    bucket.push(sample);
-    acc += step;
-    while (acc >= PC_TIMER && out.length < MAX_TICKS) {
-      acc -= PC_TIMER;
-      if (bucket.length) {
-        hold = bucket.find((x) => x) || 0;
-        bucket = [];
-      }
-      out.push(hold);
-    }
-    if (out.length >= MAX_TICKS) return out;
-  }
-  if (bucket.length && out.length < MAX_TICKS) out.push(bucket.find((x) => x) || 0);
-  return out;
-}
-
-function u16(bytes, offset) {
-  return bytes[offset] | (bytes[offset + 1] << 8);
-}
-
-function u32(bytes, offset) {
-  return (
-    bytes[offset] |
-    (bytes[offset + 1] << 8) |
-    (bytes[offset + 2] << 16) |
-    (bytes[offset + 3] << 24)
-  ) >>> 0;
-}
-
-function loadWolf(hedBuffer, audBuffer, names) {
-  const hed = new Uint8Array(hedBuffer);
-  const aud = new Uint8Array(audBuffer);
-  const offs = [];
-  for (let i = 0; i + 4 <= hed.length; i += 4) offs.push(u32(hed, i));
-  if (offs.length < names.length + 1) throw new Error("AUDIOHED is too short");
-  const out = new Map();
-  for (let i = 0; i < names.length; i++) {
-    const start = offs[i];
-    const length = u32(aud, start);
-    const data = [];
-    for (let j = 0; j < length; j++) data.push(aud[start + 6 + j]);
-    out.set(names[i], decimate(data));
-  }
-  return out;
-}
-
-function loadDoom(wadBuffer) {
-  const blob = new Uint8Array(wadBuffer);
-  const ident = String.fromCharCode(blob[0], blob[1], blob[2], blob[3]);
-  if (ident !== "IWAD" && ident !== "PWAD") throw new Error("DOOM.WAD is not a WAD");
-  const numlumps = u32(blob, 4);
-  const dirofs = u32(blob, 8);
-  const order = [];
-  const lumps = new Map();
-  for (let i = 0; i < numlumps; i++) {
-    const o = dirofs + i * 16;
-    const filepos = u32(blob, o);
-    const size = u32(blob, o + 4);
-    let name = "";
-    for (let c = 0; c < 8; c++) {
-      const ch = blob[o + 8 + c];
-      if (!ch) break;
-      name += String.fromCharCode(ch);
-    }
-    name = name.toUpperCase();
-    if (!name.startsWith("DP") || lumps.has(name)) continue;
-    order.push(name);
-    lumps.set(name, blob.subarray(filepos, filepos + size));
-  }
-  const out = new Map();
-  for (const name of order) {
-    const buf = lumps.get(name);
-    const length = buf[2] | (buf[3] << 8);
-    const data = [];
-    for (let j = 0; j < length; j++) data.push(buf[4 + j]);
-    out.set(name, decimate(data).map((p) => hzToWolf(pitchHz(p))));
-  }
-  return out;
-}
-
-function unpackLz91(buffer) {
-  const data = new Uint8Array(buffer);
-  if (data[0x1c] !== 0x4c || data[0x1d] !== 0x5a || data[0x1e] !== 0x39 || data[0x1f] !== 0x31) {
-    throw new Error("not an LZ91 executable");
-  }
-  const hdrsize = u16(data, 8);
-  const initcs = u16(data, 0x16);
-  const loader = initcs * 0x10 + hdrsize * 0x10;
-  const indata = data.subarray(0x20, loader);
-  const out = [];
-  let si = 0;
-  let dx = 0x10;
-  let bp = u16(indata, si);
-  si += 2;
-  const getbit = () => {
-    const bit = bp & 1;
-    bp >>= 1;
-    dx -= 1;
-    if (dx === 0) {
-      bp = u16(indata, si);
-      si += 2;
-      dx = 0x10;
-    }
-    return bit;
-  };
-  const copyFrom = (bx, count) => {
-    for (let n = 0; n < count; n++) {
-      const i = bx < 0 ? out.length + bx : bx;
-      out.push(out[i]);
-    }
-  };
-  while (true) {
-    if (getbit()) {
-      out.push(indata[si]);
-      si += 1;
-      continue;
-    }
-    if (getbit() === 0) {
-      const cx = (getbit() << 1) + getbit() + 2;
-      const bx = indata[si] - 0x100;
-      si += 1;
-      copyFrom(bx, cx);
-      continue;
-    }
-    const ax = u16(indata, si);
-    si += 2;
-    const bx = (((ax >> 11) & 0xff) << 8) + (ax & 0xff) - 0x2000;
-    const ah = (ax >> 8) & 7;
-    if (ah) {
-      copyFrom(bx, ah + 2);
-      continue;
-    }
-    const al = indata[si];
-    si += 1;
-    if (al === 0) break;
-    if (al !== 1) copyFrom(bx, al + 1);
-  }
-  return new Uint8Array(out);
-}
-
-function readWords(blob, offset) {
-  const words = [];
-  let p = offset;
-  while (p + 1 < blob.length) {
-    const word = u16(blob, p);
-    p += 2;
-    if (word === 0xffff) return words;
-    words.push(word);
-  }
-  throw new Error("sound has no terminator");
-}
-
-function identOf(name) {
-  return name.replace(/[^A-Za-z0-9]+/g, "").toUpperCase();
-}
-
-function parseBank(blob, base, mode, blankPrefix) {
-  const sig = String.fromCharCode(blob[base], blob[base + 1], blob[base + 2], blob[base + 3]);
-  if (sig !== "SPK\0" && sig !== "SND\0") throw new Error("sound bank is not SPK or SND");
-  let count = u16(blob, base + 8);
-  if (count === 0) count = (u16(blob, base + 16) >> 4) - 1;
-  const used = new Set();
-  let invented = 0;
-  const out = new Map();
-  for (let i = 0; i < count; i++) {
-    const off = base + 16 * (i + 1);
-    const doff = u16(blob, off);
-    const rate = blob[off + 3];
-    let raw = "";
-    for (let c = 0; c < 12; c++) {
-      const ch = blob[off + 4 + c];
-      if (!ch) break;
-      raw += String.fromCharCode(ch);
-    }
-    const ident0 = identOf(raw);
-    if (ident0.includes("UNUSED") || ident0 === "UNNAMED") continue;
-    let ident = ident0;
-    if (!ident) {
-      invented += 1;
-      ident = `${blankPrefix}${String(invented).padStart(2, "0")}`;
-    }
-    const baseName = ident;
-    let n = 2;
-    while (used.has(ident)) {
-      ident = `${baseName}${n}`;
-      n += 1;
-    }
-    used.add(ident);
-    const words = readWords(blob, base + doff);
-    const pit = mode === "dave" ? (rate <= 1 ? 65536 : Math.floor(65536 / rate)) : KEEN_PIT;
-    out.set(ident, resample(words.map(divisorToWolf), pit));
-  }
-  return out;
-}
-
-function loadDave(exeBuffer) {
-  const image = unpackLz91(exeBuffer);
-  const sig = [0x53, 0x50, 0x4b, 0x00];
-  let base = -1;
-  for (let i = 0; i + 4 <= image.length; i++) {
-    if (sig.every((b, k) => image[i + k] === b)) {
-      base = i;
-      break;
-    }
-  }
-  if (base < 0) throw new Error("DAVE.EXE has no SPK sound bank");
-  return parseBank(image, base, "dave", "DAVE");
-}
-
-function loadKeen(buffer) {
-  const blob = new Uint8Array(buffer);
-  if (blob[0] !== 0x53 || blob[1] !== 0x4e || blob[2] !== 0x44) throw new Error("SOUNDS.CK1 is not an SND bank");
-  return parseBank(blob, 0, "keen", "KEEN");
-}
-
-
 // ---- js/doompic.js ----
-/** DOOM picture and sprite-rotation index. loadDoom() only keeps DP* sounds. */
+/** DOOM picture and sprite-rotation index. */
 
 const PREFIXES = ["POSS", "TROO", "SARG", "BOSS"];
 
@@ -14706,6 +13769,7 @@ class StickOrtho {
       return;
     }
     if (e.button !== 0) return;
+    if (this.opts.showWire?.() === false) return;
     const hit = this.#hitVert(p.x, p.y);
     if (hit < 0) return;
     const selected = this.opts.getSelected?.() || [];
@@ -14802,6 +13866,7 @@ class StickOrtho {
       const dx = o.x - left * k;
       const dy = o.y - sprite.top * k;
       ctx.save();
+      ctx.imageSmoothingEnabled = false;
       ctx.globalAlpha = 0.85;
       if (sprite.flip) {
         ctx.translate(dx + dw, dy);
@@ -14812,7 +13877,7 @@ class StickOrtho {
       }
       ctx.restore();
     }
-    if (!verts) return;
+    if (!verts || this.opts.showWire?.() === false) return;
     const selected = new Set(this.opts.getSelected?.() || []);
     ctx.lineWidth = 1.5;
     for (const [a, b] of e.lines || []) {
@@ -14836,58 +13901,6 @@ class StickOrtho {
     }
   }
 }
-
-
-// ---- js/pclib.js ----
-// Sound library names. Sample bytes are not stored here.
-// tools/pcsrc.py reads ref/ at build time. The editor decodes a picked folder to audition.
-
-const PC_LIBRARY = {
-  wolf: [
-    "HITWALL", "SELECTWPN", "SELECTITEM", "HEARTBEAT", "MOVEGUN2", "MOVEGUN1",
-    "NOWAY", "NAZIHITPLAYER", "SCHABBSTHROW", "PLAYERDEATH", "DOGDEATH", "ATKGATLING",
-    "GETKEY", "NOITEM", "WALK1", "WALK2", "TAKEDAMAGE", "GAMEOVER",
-    "OPENDOOR", "CLOSEDOOR", "DONOTHING", "HALT", "DEATHSCREAM2", "ATKKNIFE",
-    "ATKPISTOL", "DEATHSCREAM3", "ATKMACHINEGUN", "HITENEMY", "SHOOTDOOR", "DEATHSCREAM1",
-    "GETMACHINE", "GETAMMO", "SHOOT", "HEALTH1", "HEALTH2", "BONUS1",
-    "BONUS2", "BONUS3", "GETGATLING", "ESCPRESSED", "LEVELDONE", "DOGBARK",
-    "ENDBONUS1", "ENDBONUS2", "BONUS1UP", "BONUS4", "PUSHWALL", "NOBONUS",
-    "PERCENT100", "BOSSACTIVE", "MUTTI", "SCHUTZAD", "AHHHG", "DIE",
-    "EVA", "GUTENTAG", "LEBEN", "SCHEIST", "NAZIFIRE", "BOSSFIRE",
-    "SSFIRE", "SLURPIE", "TOT_HUND", "MEINGOTT", "SCHABBSHA", "HITLERHA",
-    "SPION", "NEINSOVAS", "DOGATTACK", "FLAMETHROWER", "MECHSTEP", "GOOBS",
-    "YEAH", "DEATHSCREAM4", "DEATHSCREAM5", "DEATHSCREAM6", "DEATHSCREAM7", "DEATHSCREAM8",
-    "DEATHSCREAM9", "DONNER", "EINE", "ERLAUBEN", "KEIN", "MEIN",
-    "ROSE", "MISSILEFIRE", "MISSILEHIT",
-  ],
-  doom: [
-    "DPPISTOL", "DPSHOTGN", "DPSGCOCK", "DPSAWUP", "DPSAWIDL", "DPSAWFUL",
-    "DPSAWHIT", "DPRLAUNC", "DPRXPLOD", "DPFIRSHT", "DPFIRXPL", "DPPSTART",
-    "DPPSTOP", "DPDOROPN", "DPDORCLS", "DPSTNMOV", "DPSWTCHN", "DPSWTCHX",
-    "DPPLPAIN", "DPDMPAIN", "DPPOPAIN", "DPSLOP", "DPITEMUP", "DPWPNUP",
-    "DPOOF", "DPTELEPT", "DPPOSIT1", "DPPOSIT2", "DPPOSIT3", "DPBGSIT1",
-    "DPBGSIT2", "DPSGTSIT", "DPBRSSIT", "DPSGTATK", "DPCLAW", "DPPLDETH",
-    "DPPDIEHI", "DPPODTH1", "DPPODTH2", "DPPODTH3", "DPBGDTH1", "DPBGDTH2",
-    "DPSGTDTH", "DPBRSDTH", "DPPOSACT", "DPBGACT", "DPDMACT", "DPNOWAY",
-    "DPBAREXP", "DPPUNCH", "DPTINK", "DPBDOPN", "DPBDCLS", "DPITMBK",
-    "DPGETPOW", "DPPLASMA", "DPBFG", "DPCACSIT", "DPCYBSIT", "DPSPISIT",
-    "DPSKLATK", "DPCACDTH", "DPSKLDTH", "DPCYBDTH", "DPSPIDTH", "DPHOOF",
-    "DPMETAL",
-  ],
-  dave: [
-    "HITWALL", "FALLING", "OUCH", "WALKING", "JUMPING", "TREASURE",
-    "GOTTROPHY", "EXPLOSION", "FLYING", "NEXTLEVEL", "TOJETPACK", "GOTSOMETHNG",
-  ],
-  keen: [
-    "WLDWALKSND", "WLDBLOCKSND", "WLDENTERSND", "KEENWALKSND", "KEENBLOKSND", "KEENJUMPSND",
-    "KEENLANDSND", "KEENDIESND", "GOTBONUSSND", "GOTITEMSND", "GOTPARTSND", "KEENFIRESND",
-    "KEENPOGOSND", "POGOJUMPSND", "LVLDONESND", "GAMEOVERSND", "HISCORESND", "TELEPORTSND",
-    "CHUNKSMASH", "GOINDOORSND", "BUMPHEADSND", "USEKEYSND", "CANNONFIRE", "SLAMSND",
-    "CLICKSND", "CRYSTALSND", "PLUMMETSND", "EXTRAMANSND", "YORPBUMPSND", "KEENWLK2SND",
-    "YORPBOPSND", "GETCARDSND", "DOOROPENSND", "YORPSCREAM", "GARGSCREAM", "GUNCLICK",
-    "SHOTHIT", "TANKFIRE", "VORTSCREAM", "KEENCICLE", "KEENSLEFT",
-  ],
-};
 
 
 // ---- js/main.js ----
@@ -14931,6 +13944,7 @@ let sharewareWeapons = {};
 let sharewareWeaponMissing = [];
 let overlayOn = true;
 let refSpriteOn = true;
+let stickWireOn = true;
 let drawingOrtho = false;
 let doomSprites = null;
 let spriteSelClip = null;
@@ -14942,24 +13956,6 @@ let mdlScale = DEFAULT_MDL_SCALE;
 let weaponKey = "axe";
 let weaponFrame = 0;
 let itemMeshKey = "backpack";
-let soundPath = "sound/weapons/shotgn2.wav";
-/** Enemy cue row selected in the sound list. Null when a resident alias is selected. */
-let soundCue = null;
-let librarySource = "wolf";
-const LIBRARY_SOURCES = [
-  ["wolf", "Wolf"],
-  ["doom", "Doom"],
-  ["dave", "Dave"],
-  ["keen", "Keen"],
-];
-let libraryName = "HITWALL";
-let libraryFilter = "";
-const bankFreq = { wolf: null, doom: null, dave: null, keen: null };
-let hideUnused = true;
-const UNUSED_SOUND_FOLDERS = new Set(["ambience", "plats", "hknight", "buttons"]);
-const collapsedSoundFolders = new Set();
-let sharewareSounds = new Map();
-const sfxPreview = new SfxPreview();
 /** Collapsed room ids in the Objects tree. */
 const collapsedRooms = new Set();
 /** Maps-panel search. Session only; does not dirty the document. */
@@ -15229,6 +14225,21 @@ function refreshFromOrtho() {
   stickFront.draw();
 }
 
+function syncVertXyz() {
+  const row = document.querySelector("#right-editors .vert-xyz");
+  if (!row) return;
+  const e = activeEnemy();
+  if (!e || selectedVerts.length !== 1) return;
+  const v = e.frames[frameIndex]?.[selectedVerts[0]];
+  if (!v) return;
+  for (const axis of ["x", "y", "z"]) {
+    const inp = row.querySelector(`input[data-axis="${axis}"]`);
+    if (!inp || document.activeElement === inp) continue;
+    const next = String(v[axis]);
+    if (inp.value !== next) inp.value = next;
+  }
+}
+
 /** Ortho pixels-per-unit matches the perspective view at the XZ origin. */
 function syncStickScale() {
   const px = animView.pixelsAtOrigin();
@@ -15254,6 +14265,7 @@ function makeStickOrtho(id, horiz, rot) {
     onPose: () => {
       markDirty();
       refreshFromOrtho();
+      syncVertXyz();
     },
     onZoom: (factor) => animView.zoomBy(factor),
     getGroundPan: () => animView.groundPanY,
@@ -15261,6 +14273,7 @@ function makeStickOrtho(id, horiz, rot) {
       animView.groundPanY = y;
       animView.draw();
     },
+    showWire: () => stickWireOn,
     getSprite: () => (refSpriteOn ? orthoSprite(rot) : null),
     spriteScale: () => 0.35,
     vertLimit: () => vertLimitFor(activeEnemy()),
@@ -15317,20 +14330,6 @@ const itemView = new ItemView(document.getElementById("view-canvas"), {
   onStatus: (msg, isError) => setStatus(msg, isError),
   onViewChanged: () => markUi(),
 });
-
-const soundView = new SoundView(document.getElementById("view-canvas"), {
-  stage: document.getElementById("map-stage"),
-  getSound: () => {
-    const entry = libraryEntry();
-    return entry ? envelopeFromLibrary(entry) : null;
-  },
-  showWave: () => false,
-});
-let sfxFollow = "";
-sfxPreview.onTick = (i) => {
-  if (sfxFollow !== "library") return;
-  soundView.setPlayTick(i);
-};
 
 function setStatus(msg, isError = false) {
   statusEl.textContent = msg || "";
@@ -15524,9 +14523,6 @@ function collectEditorState() {
       dist: iorb.dist,
       target: { x: iorb.target.x, y: iorb.target.y, z: iorb.target.z },
     },
-    sound: soundPath,
-    hideUnused,
-    collapsedSoundFolders: [...collapsedSoundFolders],
   });
 }
 
@@ -15584,12 +14580,6 @@ function applyEditorState(ed) {
     iorb.target.x = ed.itemOrbit.target.x;
     iorb.target.y = ed.itemOrbit.target.y;
     iorb.target.z = ed.itemOrbit.target.z;
-    soundPath = ed.sound || soundPath;
-    hideUnused = !!ed.hideUnused;
-    const hideUnusedChk = document.getElementById("chk-hide-unused");
-    if (hideUnusedChk) hideUnusedChk.checked = hideUnused;
-    collapsedSoundFolders.clear();
-    for (const name of ed.collapsedSoundFolders) collapsedSoundFolders.add(name);
     setNeighbourDraw(ed.neighbourDraw, false);
     setRoomsOnlyDraw(ed.roomsOnlyDraw, false);
     setDrawMode(ed.localDraw);
@@ -15635,7 +14625,6 @@ function snapshot() {
     enemies: doc.enemies,
     weapons: doc.weapons,
     items: doc.items,
-    sounds: doc.sounds,
   });
 }
 
@@ -15715,26 +14704,8 @@ function stickClipFor(e, clip) {
   return stick;
 }
 
-function attackCueLabel(e, cue) {
-  const name = ENEMY_CUE_LABELS[cue];
-  const path = e.cues?.[cue] || "";
-  if (!path) return name;
-  const meta = soundStatusLabel(getSound(doc, path));
-  return meta === "empty" ? name : `${name} · ${meta}`;
-}
-
-function previewClipSound(clip, local) {
-  const e = activeEnemy();
-  const stick = stickClipFor(e, clip);
-  if (!stick) return;
-  const cue = String(stick.sound || "").toLowerCase();
-  if ((cue !== "melee" && cue !== "shoot") || (stick.soundFrame | 0) !== (local | 0)) return;
-  const path = e?.cues?.[cue] || "";
-  if (!path) return;
-  const snd = getSound(doc, path);
-  const freq = cueFreq(snd);
-  if (!freq?.length) return;
-  sfxPreview.playSpeaker({ freq, attack: 0 }, false).catch((err) => setStatus(String(err.message || err), true));
+function attackCueLabel(cue) {
+  return ENEMY_CUE_LABELS[cue];
 }
 
 function renderClipSoundFields(root, e, clip) {
@@ -15748,7 +14719,7 @@ function renderClipSoundFields(root, e, clip) {
   for (const cue of ENEMY_ATTACK_CUES) {
     const o = document.createElement("option");
     o.value = cue;
-    o.textContent = attackCueLabel(e, cue);
+    o.textContent = attackCueLabel(cue);
     sel.appendChild(o);
   }
   sel.value = ENEMY_ATTACK_CUES.includes(stick.sound) ? stick.sound : "";
@@ -15916,13 +14887,12 @@ function activeTimelineClip() {
 }
 
 function setMode(mode) {
-  if (editorMode === "sounds" && mode !== "sounds") sfxPreview.stop();
+  if (mode === "sounds") mode = "layout";
   editorMode = mode;
   document.getElementById("btn-mode-layout").classList.toggle("active", mode === "layout");
   document.getElementById("btn-mode-anim").classList.toggle("active", mode === "anim");
   document.getElementById("btn-mode-weapons").classList.toggle("active", mode === "weapons");
   document.getElementById("btn-mode-items")?.classList.toggle("active", mode === "items");
-  document.getElementById("btn-mode-sounds")?.classList.toggle("active", mode === "sounds");
   document.getElementById("btn-mode-build")?.classList.toggle("active", mode === "build");
   document.querySelector(".layout")?.classList.toggle("layout-build", mode === "build");
   const leftAside = document.querySelector(".left");
@@ -15951,8 +14921,6 @@ function setMode(mode) {
   document.getElementById("weapons-left").hidden = mode !== "weapons";
   const itemsLeft = document.getElementById("items-left");
   if (itemsLeft) itemsLeft.hidden = mode !== "items";
-  const soundsLeft = document.getElementById("sounds-left");
-  if (soundsLeft) soundsLeft.hidden = mode !== "sounds";
   document.getElementById("draw-mode-group").classList.toggle("inactive", mode !== "layout");
   for (const id of ["btn-draw-all", "btn-draw-local", "btn-draw-neighbours", "btn-draw-rooms-only"]) {
     const btn = document.getElementById(id);
@@ -15970,16 +14938,13 @@ function setMode(mode) {
         ? "LMB drag pans · wheel scale"
         : mode === "items"
           ? "LMB box-select verts · click vert/line to select · Shift add · gizmo moves · V add vert · L add line · Ctrl+C/V copy/paste · Del · F focus · MMB pan · Alt+LMB / RMB orbit · Alt+RMB zoom"
-          : mode === "sounds"
-            ? "Select a library sound to hear it · wheel scrolls · Apply copies it onto the cue"
-            : mode === "build"
+          : mode === "build"
               ? "Open the repo once · Reload after a build"
               : animHintText();
   layoutView.enabled = mode === "layout";
   animView.enabled = mode === "anim";
   weaponView.enabled = mode === "weapons";
   itemView.enabled = mode === "items";
-  soundView.enabled = mode === "sounds";
   if (mode === "layout") layoutView.resize();
   else if (mode === "anim") {
     requestAnimationFrame(() => {
@@ -15989,7 +14954,6 @@ function setMode(mode) {
     });
   } else if (mode === "weapons") weaponView.resize();
   else if (mode === "items") itemView.resize();
-  else if (mode === "sounds") soundView.resize();
   if (mode === "build") showBuildView();
   if (mode !== "anim") stopAnimPlay();
   refreshAll();
@@ -16500,27 +15464,15 @@ function updateCenterChrome() {
     editorMode === "weapons"
       ? WEAPON_LABELS[weaponKey] || "Weapons"
       : editorMode === "items"
-        ? itemMeshKey === "backpack"
-          ? "Backpack"
-          : itemMeshKey
-        : editorMode === "sounds"
-          ? libraryName || "Sounds"
-          : editorMode === "build"
-            ? "Build"
-            : "Enemy";
+        ? itemMeshKey
+        : editorMode === "build"
+          ? "Build"
+          : "Enemy";
   if (statsEl) {
-    if (editorMode === "sounds") {
-      const bytes = soundPayloadBytes(doc.sounds, cueFreq);
-      statsEl.hidden = false;
-      statsEl.textContent = `${bytes} / ${SOUND_PAYLOAD_MAX} B exported`;
-      statsEl.title = "Resident pcsounds.asm payload (enemy SFX stream with poses)";
-      statsEl.classList.toggle("error", bytes > SOUND_PAYLOAD_MAX);
-    } else {
-      statsEl.hidden = true;
-      statsEl.textContent = "";
-      statsEl.title = "";
-      statsEl.classList.remove("error");
-    }
+    statsEl.hidden = true;
+    statsEl.textContent = "";
+    statsEl.title = "";
+    statsEl.classList.remove("error");
   }
 }
 
@@ -16728,7 +15680,7 @@ function renderMeshKeyList(ul, keys) {
     const li = document.createElement("li");
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.textContent = key === "backpack" ? "Backpack" : key;
+    btn.textContent = key;
     if (key === itemMeshKey) btn.className = "active";
     btn.addEventListener("click", () => {
       itemMeshKey = key;
@@ -16742,7 +15694,26 @@ function renderMeshKeyList(ul, keys) {
   }
 }
 
+function renderItemBudget() {
+  const bud = itemGlobalBudgets(doc);
+  const fill = (id, n) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = `${n} / ${ITEM_TABLE_MAX}`;
+    el.classList.toggle("error", n > ITEM_TABLE_MAX - 1);
+  };
+  fill("bud-item-nv", bud.pickups.nv);
+  fill("bud-item-nx", bud.pickups.nx);
+  fill("bud-item-nz", bud.pickups.nz);
+  fill("bud-item-ne", bud.pickups.ne);
+  fill("bud-door-nv", bud.doors.nv);
+  fill("bud-door-nx", bud.doors.nx);
+  fill("bud-door-nz", bud.doors.nz);
+  fill("bud-door-ne", bud.doors.ne);
+}
+
 function renderItemList() {
+  renderItemBudget();
   renderMeshKeyList(document.getElementById("item-mesh-list"), ITEM_MESH_KEYS);
   renderMeshKeyList(document.getElementById("door-mesh-list"), DOOR_MESH_KEYS);
 }
@@ -16787,8 +15758,6 @@ function syncSharewareFolderButtons() {
   if (weaponBtn) weaponBtn.textContent = label;
   const animBtn = document.getElementById("btn-anim-folder");
   if (animBtn) animBtn.textContent = label;
-  const soundBtn = document.getElementById("btn-sound-folder");
-  if (soundBtn) soundBtn.textContent = label;
   const exportBtn = document.getElementById("btn-weapon-export");
   if (exportBtn) exportBtn.disabled = !Object.keys(sharewareWeapons).length;
 }
@@ -16865,475 +15834,6 @@ function renderWeaponList() {
     });
     li.appendChild(btn);
     ul.appendChild(li);
-  }
-}
-
-function catalogSoundPaths() {
-  const set = new Set(Object.keys(doc.sounds || {}));
-  for (const key of sharewareSounds.keys()) set.add(key);
-  return [...set]
-    .filter((p) => p.startsWith("sound/") && p.endsWith(".wav"))
-    .sort();
-}
-
-function syncSoundCuePath() {
-  if (!soundCue) return;
-  const e = (doc.enemies || []).find((en) => en.name === soundCue.enemy);
-  soundPath = e?.cues?.[soundCue.cue] || "";
-}
-
-function resolvedFreq(origin, name) {
-  const side = bankFreq[origin];
-  if (!side || !name) return null;
-  const freq = side.get(String(name).toUpperCase());
-  return freq ? freq.slice() : [];
-}
-
-function cueFreq(snd) {
-  if (!snd) return null;
-  const origin = snd.origin || "";
-  if (origin === "empty" || origin === "") return [];
-  if (origin === "wolf" || origin === "doom" || origin === "dave" || origin === "keen") {
-    return resolvedFreq(origin, snd.library);
-  }
-  return null;
-}
-
-async function openSoundBanks(dir, quiet) {
-  const files = await loadSoundBankBuffers(dir);
-  const next = { wolf: null, doom: null, dave: null, keen: null };
-  const missing = [];
-  if (files["AUDIOHED.WL1"] && files["AUDIOT.WL1"]) {
-    next.wolf = loadWolf(files["AUDIOHED.WL1"], files["AUDIOT.WL1"], PC_LIBRARY.wolf);
-  } else missing.push("AUDIOHED.WL1 / AUDIOT.WL1");
-  if (files["DOOM.WAD"]) {
-    next.doom = loadDoom(files["DOOM.WAD"]);
-    doomSprites = loadDoomSprites(files["DOOM.WAD"]);
-  } else missing.push("DOOM.WAD");
-  if (files["DAVE.EXE"]) next.dave = loadDave(files["DAVE.EXE"]);
-  else missing.push("DAVE.EXE");
-  if (files["SOUNDS.CK1"]) next.keen = loadKeen(files["SOUNDS.CK1"]);
-  else missing.push("SOUNDS.CK1");
-  if (!next.wolf && !next.doom && !next.dave && !next.keen) {
-    throw new Error("Folder has none of the sound banks");
-  }
-  bankFreq.wolf = next.wolf;
-  bankFreq.doom = next.doom;
-  bankFreq.dave = next.dave;
-  bankFreq.keen = next.keen;
-  if (!quiet) {
-    if (missing.length) setStatus(`Sound banks open, missing ${missing.join(", ")}`, true);
-    else setStatus("Sound banks open");
-  }
-  refreshAll();
-}
-
-function soundStatusLabel(snd) {
-  if (
-    snd?.library &&
-    (snd.origin === "wolf" || snd.origin === "doom" || snd.origin === "dave" || snd.origin === "keen")
-  ) {
-    return snd.library;
-  }
-  return "empty";
-}
-
-function libraryRows() {
-  const names = PC_LIBRARY[librarySource] || [];
-  return names
-    .map((name) => ({ name, freq: resolvedFreq(librarySource, name) || [] }))
-    .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
-}
-
-function libraryNameVisible(name) {
-  const terms = libraryFilter.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  if (!terms.length) return true;
-  const hay = String(name).toLowerCase();
-  return terms.some((term) => hay.includes(term));
-}
-
-function libraryEntry() {
-  return libraryRows().find((row) => row.name === libraryName) || null;
-}
-
-function libraryDuplicates() {
-  const seen = new Map();
-  const dups = new Map();
-  for (const entry of libraryRows()) {
-    if (!entry.freq.length) continue;
-    const key = entry.freq.join(",");
-    const first = seen.get(key);
-    if (first) dups.set(entry.name, first);
-    else seen.set(key, entry.name);
-  }
-  return dups;
-}
-
-function libraryCanonical(entry) {
-  if (!entry) return null;
-  const canon = libraryDuplicates().get(entry.name);
-  if (!canon) return entry;
-  return libraryRows().find((row) => row.name === canon) || entry;
-}
-
-function envelopeFromLibrary(entry) {
-  const freq = resolvedFreq(librarySource, entry.name);
-  if (!freq) return { freq: [], attack: 0, pending: true };
-  return { freq: freq.map((b) => b & 255), attack: 0 };
-}
-
-function playLibrarySelection(loop) {
-  const entry = libraryEntry();
-  soundView.selectedTick = 0;
-  soundView.scroll = 0;
-  soundView.draw();
-  const freq = entry ? resolvedFreq(librarySource, entry.name) : null;
-  if (!freq) {
-    sfxFollow = "";
-    sfxPreview.stop();
-    setStatus("Open the sound-bank folder to play", true);
-    return;
-  }
-  if (!freq.length) {
-    sfxFollow = "";
-    sfxPreview.stop();
-    setStatus("Library sound is empty", true);
-    return;
-  }
-  sfxFollow = "library";
-  sfxPreview.playSpeaker({ freq, attack: 0 }, !!loop).catch((err) =>
-    setStatus(String(err.message || err), true)
-  );
-}
-
-function appendSoundFolder(root, title) {
-  const key = title.toLowerCase();
-  const collapsed = collapsedSoundFolders.has(key);
-  const wrap = document.createElement("div");
-  wrap.className = "sound-folder";
-  const h = document.createElement("h3");
-  const twist = document.createElement("button");
-  twist.type = "button";
-  twist.className = "sound-twist";
-  twist.textContent = collapsed ? "▸" : "▾";
-  twist.title = collapsed ? "Expand" : "Collapse";
-  twist.addEventListener("click", (ev) => {
-    ev.stopPropagation();
-    if (collapsedSoundFolders.has(key)) collapsedSoundFolders.delete(key);
-    else collapsedSoundFolders.add(key);
-    markUi();
-    renderSoundList();
-  });
-  const label = document.createElement("span");
-  label.textContent = title;
-  h.append(twist, label);
-  wrap.appendChild(h);
-  root.appendChild(wrap);
-  return collapsed ? null : wrap;
-}
-
-function appendSoundRow(host, { label, title, meta, active, path, onPick }) {
-  const row = document.createElement("div");
-  row.className = "sound-row";
-  const btn = document.createElement("button");
-  btn.type = "button";
-  if (active) btn.className = "active";
-  const name = document.createElement("span");
-  name.className = "sound-name";
-  name.textContent = label;
-  if (title) name.title = title;
-  const metaEl = document.createElement("span");
-  metaEl.className = "sound-meta";
-  metaEl.textContent = meta;
-  btn.append(name, metaEl);
-  btn.addEventListener("click", () => {
-    onPick?.();
-    sfxPreview.stop();
-    soundPath = path || "";
-    soundView.selectedTick = 0;
-    soundView.scroll = 0;
-    markUi();
-    refreshAll();
-    const freq = path ? cueFreq(getSound(doc, path)) : null;
-    if (!freq?.length) return;
-    sfxFollow = "";
-    soundView.setPlayTick(-1);
-    sfxPreview.playSpeaker({ freq, attack: 0 }, false).catch((err) =>
-      setStatus(String(err.message || err), true)
-    );
-  });
-  row.appendChild(btn);
-  host.appendChild(row);
-}
-
-function renderSoundList() {
-  const root = document.getElementById("sound-list");
-  if (!root) return;
-  root.innerHTML = "";
-  syncSoundCuePath();
-  for (const e of enemiesByHp(doc.enemies)) {
-    const host = appendSoundFolder(root, e.name);
-    for (const cue of ["sight", "wince", "shoot", "melee", "death"]) {
-      const path = e.cues?.[cue] || "";
-      if (!host) continue;
-      const snd = path ? getSound(doc, path) : null;
-      appendSoundRow(host, {
-        label: ENEMY_CUE_LABELS[cue],
-        title: path ? `SOUND_${soundIdent(path)}` : "No sound",
-        meta: path ? soundStatusLabel(snd) : "(none)",
-        active: soundCue?.enemy === e.name && soundCue?.cue === cue,
-        path,
-        onPick: () => {
-          soundCue = { enemy: e.name, cue };
-        },
-      });
-    }
-  }
-  // Monster folders are the five cues above. Everything else (weapons, player,
-  // items, doors, …) stays a real row so its speaker sample can be assigned.
-  const enemyFolders = new Set(["soldier", "knight", "dog", "wizard", "ogre", "shambler", "boss1", "zombie", "demon"]);
-  const byFolder = new Map();
-  for (const path of catalogSoundPaths()) {
-    const folder = (soundFolder(path) || "root").toLowerCase();
-    if (enemyFolders.has(folder)) continue;
-    if (hideUnused && UNUSED_SOUND_FOLDERS.has(folder)) continue;
-    if (!byFolder.has(folder)) byFolder.set(folder, []);
-    byFolder.get(folder).push(path);
-  }
-  for (const [folder, paths] of byFolder) {
-    const host = appendSoundFolder(root, folder);
-    if (!host) continue;
-    for (const path of paths) {
-      appendSoundRow(host, {
-        label: soundLeafIdent(path),
-        title: `SOUND_${soundIdent(path)}`,
-        meta: soundStatusLabel(getSound(doc, path)),
-        active: !soundCue && path === soundPath,
-        path,
-        onPick: () => {
-          soundCue = null;
-        },
-      });
-    }
-  }
-}
-
-function renderSoundInspector(root) {
-  syncSoundCuePath();
-  const h = document.createElement("h2");
-  h.textContent = soundCue
-    ? `${soundCue.enemy} ${ENEMY_CUE_LABELS[soundCue.cue]}`
-    : soundShortName(soundPath);
-  root.appendChild(h);
-  const snd = soundPath ? getSound(doc, soundPath) : null;
-  if (soundCue && !soundPath) {
-    const p = document.createElement("p");
-    p.className = "muted";
-    p.textContent = "No sound on this cue.";
-    root.appendChild(p);
-    return;
-  }
-  if (!snd) {
-    const p = document.createElement("p");
-    p.className = "muted";
-    p.textContent = "Select a sound.";
-    root.appendChild(p);
-    return;
-  }
-  alignSoundArrays(snd);
-  const locked = isSoundLocked(soundPath);
-  const hasWav = sharewareSounds.has(soundPath);
-  const folder = sharewareFolderName();
-  const st = document.createElement("p");
-  st.className = "muted";
-  const ident = soundIdent(soundPath);
-  const freq = cueFreq(snd);
-  const sized = freq ? `${freq.length} ticks · ${2 + freq.length} B` : "open sound banks to play";
-  st.textContent = hasWav
-    ? `${folder || "PAK"} · SOUND_${ident} · ${soundStatusLabel(snd)} · ${sized}`
-    : `${soundStatusLabel(snd)} · ${sized}`;
-  root.appendChild(st);
-
-  const loopChk = document.createElement("input");
-  loopChk.type = "checkbox";
-  loopChk.id = "chk-sfx-loop";
-
-  const playRow = document.createElement("div");
-  playRow.className = "btn-row";
-  const playWav = document.createElement("button");
-  playWav.type = "button";
-  playWav.textContent = "Play original";
-  playWav.disabled = !hasWav;
-  playWav.addEventListener("click", () => {
-    const buf = sharewareSounds.get(soundPath);
-    if (!buf) return;
-    sfxFollow = "";
-    soundView.setPlayTick(-1);
-    sfxPreview.playOriginal(buf, !!loopChk.checked).catch((err) => setStatus(String(err.message || err), true));
-  });
-  const playSpk = document.createElement("button");
-  playSpk.type = "button";
-  playSpk.textContent = "Play speaker";
-  playSpk.disabled = !cueFreq(snd)?.length;
-  playSpk.addEventListener("click", () => {
-    const play = cueFreq(ensureSound(doc, soundPath));
-    if (!play?.length) return;
-    sfxFollow = "";
-    soundView.setPlayTick(-1);
-    sfxPreview.playSpeaker({ freq: play, attack: 0 }, !!loopChk.checked).catch((err) =>
-      setStatus(String(err.message || err), true)
-    );
-  });
-  const stop = document.createElement("button");
-  stop.type = "button";
-  stop.textContent = "Stop";
-  stop.addEventListener("click", () => sfxPreview.stop());
-  playRow.append(playWav, playSpk, stop);
-  root.appendChild(playRow);
-
-  const loopLab = document.createElement("label");
-  loopLab.className = "field";
-  const loopSpan = document.createElement("span");
-  loopSpan.textContent = "Loop";
-  loopLab.append(loopSpan, loopChk);
-  root.appendChild(loopLab);
-
-  const source = document.createElement("select");
-  for (const [id, label] of LIBRARY_SOURCES) {
-    const o = document.createElement("option");
-    o.value = id;
-    o.textContent = label;
-    if (librarySource === id) o.selected = true;
-    source.appendChild(o);
-  }
-  source.addEventListener("change", () => {
-    librarySource = LIBRARY_SOURCES.some(([id]) => id === source.value) ? source.value : "wolf";
-    const rows = libraryRows();
-    if (!rows.some((row) => row.name === libraryName)) libraryName = rows[0]?.name || "";
-    const loop = !!loopChk.checked;
-    refreshAll();
-    playLibrarySelection(loop);
-  });
-  const bankBtn = document.createElement("button");
-  bankBtn.type = "button";
-  bankBtn.textContent = bankFreq[librarySource] ? "Sound banks open" : "Open sound banks";
-  bankBtn.addEventListener("click", async () => {
-    try {
-      const dir = await pickSoundBankDirectory();
-      if (!dir) return;
-      await openSoundBanks(dir);
-    } catch (err) {
-      setStatus(String(err.message || err), true);
-    }
-  });
-  root.appendChild(bankBtn);
-  root.appendChild(field("Library", source));
-
-  const filter = document.createElement("input");
-  filter.type = "search";
-  filter.placeholder = "door open";
-  filter.spellcheck = false;
-  filter.value = libraryFilter;
-  filter.addEventListener("input", () => {
-    libraryFilter = filter.value;
-    fillLibraryList();
-  });
-  root.appendChild(field("Filter", filter));
-
-  const libList = document.createElement("div");
-  libList.className = "sound-lib";
-  function fillLibraryList() {
-    libList.innerHTML = "";
-    const dups = libraryDuplicates();
-    for (const entry of libraryRows()) {
-      if (!libraryNameVisible(entry.name)) continue;
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.textContent = entry.name;
-      btn.dataset.name = entry.name;
-      const canon = dups.get(entry.name);
-      if (canon) {
-        btn.classList.add("dup");
-        btn.title = `Same as ${canon}`;
-      }
-      if (entry.name === libraryName) btn.classList.add("active");
-      btn.addEventListener("click", () => {
-        libraryName = entry.name;
-        for (const b of libList.querySelectorAll("button")) {
-          b.classList.toggle("active", b.dataset.name === libraryName);
-        }
-        updateCenterChrome();
-        playLibrarySelection(!!loopChk.checked);
-      });
-      libList.appendChild(btn);
-    }
-  }
-  fillLibraryList();
-  root.appendChild(libList);
-
-  const libRow = document.createElement("div");
-  libRow.className = "btn-row";
-  const playLib = document.createElement("button");
-  playLib.type = "button";
-  playLib.textContent = "Play library";
-  playLib.disabled = !bankFreq[librarySource];
-  playLib.addEventListener("click", () => playLibrarySelection(!!loopChk.checked));
-  const applyLib = document.createElement("button");
-  applyLib.type = "button";
-  applyLib.textContent = "Apply";
-  applyLib.addEventListener("click", () => {
-    const entry = libraryCanonical(libraryEntry());
-    if (!entry || !soundPath) return;
-    libraryName = entry.name;
-    pushUndo();
-    const snd = ensureSound(doc, soundPath);
-    delete snd.freq;
-    snd.attack = 0;
-    snd.origin = librarySource;
-    snd.library = entry.name;
-    soundView.selectedTick = 0;
-    soundView.scroll = 0;
-    markDirty();
-    refreshAll();
-    setStatus(`Applied ${librarySource} ${entry.name}`);
-  });
-  libRow.append(playLib, applyLib);
-  root.appendChild(libRow);
-
-  const voiceSel = document.createElement("select");
-  for (let i = 0; i < SOUND_VOICE_LABELS.length; i++) {
-    const o = document.createElement("option");
-    o.value = String(i);
-    o.textContent = SOUND_VOICE_LABELS[i];
-    if (snd.voice === i) o.selected = true;
-    voiceSel.appendChild(o);
-  }
-  voiceSel.addEventListener("change", () => {
-    pushUndo();
-    ensureSound(doc, soundPath).voice = clampSoundVoice(voiceSel.value);
-    markDirty();
-    refreshAll();
-  });
-  root.appendChild(field("Voice", voiceSel));
-
-  const pri = document.createElement("input");
-  pri.type = "number";
-  pri.min = "0";
-  pri.max = "99";
-  pri.value = String(snd.priority);
-  pri.addEventListener("change", () => {
-    pushUndo();
-    ensureSound(doc, soundPath).priority = clampSoundPriority(pri.value);
-    markDirty();
-    refreshAll();
-  });
-  root.appendChild(field("Priority", pri));
-
-  if (locked) {
-    const note = document.createElement("p");
-    note.className = "muted";
-    note.textContent = `Locked export · SOUND_${soundIdent(soundPath)}`;
-    root.appendChild(note);
   }
 }
 
@@ -17470,7 +15970,9 @@ function vec3Field(label, specs) {
   const wrap = document.createElement("div");
   wrap.className = "vec3-inputs";
   for (const s of specs) {
-    wrap.appendChild(numInput(s.value, s.onChange, s.min, s.max, s.step));
+    const inp = numInput(s.value, s.onChange, s.min, s.max, s.step);
+    if (s.axis) inp.dataset.axis = s.axis;
+    wrap.appendChild(inp);
   }
   row.append(span, wrap);
   return row;
@@ -17992,10 +16494,6 @@ function renderLayoutObjectFields(root, objs) {
 function renderInspector() {
   const root = document.getElementById("right-editors");
   root.innerHTML = "";
-  if (editorMode === "sounds") {
-    renderSoundInspector(root);
-    return;
-  }
   if (editorMode === "items") {
     const h = document.createElement("h2");
     h.textContent = "Item";
@@ -18341,13 +16839,13 @@ function renderInspector() {
       markDirty();
       refreshAll();
     };
-    root.appendChild(
-      vec3Field("XYZ", [
-        { value: v.x, onChange: (n) => setC("x", n), min: lo, max: lim, step: enemyHasSprites(e) ? 0.25 : undefined },
-        { value: v.y, onChange: (n) => setC("y", n), min: lo, max: lim, step: enemyHasSprites(e) ? 0.25 : undefined },
-        { value: v.z, onChange: (n) => setC("z", n), min: lo, max: lim, step: enemyHasSprites(e) ? 0.25 : undefined },
-      ])
-    );
+    const xyz = vec3Field("XYZ", [
+      { axis: "x", value: v.x, onChange: (n) => setC("x", n), min: lo, max: lim, step: enemyHasSprites(e) ? 0.25 : undefined },
+      { axis: "y", value: v.y, onChange: (n) => setC("y", n), min: lo, max: lim, step: enemyHasSprites(e) ? 0.25 : undefined },
+      { axis: "z", value: v.z, onChange: (n) => setC("z", n), min: lo, max: lim, step: enemyHasSprites(e) ? 0.25 : undefined },
+    ]);
+    xyz.classList.add("vert-xyz");
+    root.appendChild(xyz);
   }
 
   if (!enemyHasSprites(e)) renderDoomSource(root, e);
@@ -18605,7 +17103,8 @@ function setCustomSkeleton(e, on) {
 function animHintText() {
   const e = activeEnemy();
   if (enemyHasSprites(e)) {
-    return "Left/front drag the on-screen axes · perspective orbits · V add vert · L add line · Del delete · Ctrl+C/V selection · Add/Remove frames · [ ] frames";
+    const wire = stickWireOn ? "Space hide wireframe" : "Space show wireframe";
+    return `Left/front drag the on-screen axes · ${wire} · perspective orbits · V add vert · L add line · Del delete · Ctrl+C/V selection · Add/Remove frames · [ ] frames`;
   }
   if (e?.customSkeleton && pendingBind) {
     return "Box-select mesh verts · Shift add · V done · Esc cancels · F focus · RMB orbit";
@@ -18893,13 +17392,11 @@ async function loadSharewareFromHandle(handle) {
       sharewareMissing = ENEMY_TYPES.map((t) => t.name);
       sharewareWeapons = {};
       sharewareWeaponMissing = [...WEAPON_KEYS];
-      sharewareSounds = new Map();
       setStatus("No pak0.pak / pak1.pak in that folder", true);
       refreshPanels();
       return;
     }
     const lumps = parsePakBuffers(buffers);
-    sharewareSounds = indexPakSounds(lumps);
     const { models, missing } = loadEnemyMdls(lumps);
     sharewareModels = models;
     sharewareMissing = missing;
@@ -18909,18 +17406,16 @@ async function loadSharewareFromHandle(handle) {
     clampWeaponPreviewFrame();
     const n = Object.keys(models).length;
     const wn = Object.keys(sharewareWeapons).length;
-    const sn = sharewareSounds.size;
     const miss = missing.length ? ` · missing ${missing.join(", ")}` : "";
     const wmiss = weapons.missing.length ? ` · weapons missing ${weapons.missing.join(", ")}` : "";
     setStatus(
-      `Loaded ${n} enemy / ${wn} weapon model${wn === 1 ? "" : "s"} / ${sn} sounds from ${sharewareFolderName()}${miss}${wmiss}`
+      `Loaded ${n} enemy / ${wn} weapon model${wn === 1 ? "" : "s"} from ${sharewareFolderName()}${miss}${wmiss}`
     );
   } catch (err) {
     sharewareModels = {};
     sharewareMissing = ENEMY_TYPES.map((t) => t.name);
     sharewareWeapons = {};
     sharewareWeaponMissing = [...WEAPON_KEYS];
-    sharewareSounds = new Map();
     setStatus(String(err.message || err), true);
   }
   if (restoreMdlRigBackup()) markDirty();
@@ -18931,15 +17426,6 @@ async function loadSharewareFromHandle(handle) {
     refreshPanels();
   }
   if (editorMode === "weapons") weaponView.draw();
-  if (editorMode === "sounds") soundView.draw();
-}
-
-function indexPakSounds(lumps) {
-  const map = new Map();
-  for (const [key, buf] of lumps) {
-    if (key.startsWith("sound/") && key.endsWith(".wav")) map.set(key, buf);
-  }
-  return map;
 }
 
 function adoptDoomSprites(buf) {
@@ -18975,8 +17461,7 @@ async function openSharewareFolder() {
   }
   try {
     await loadSharewareFromHandle(handle);
-    const files = await loadSoundBankBuffers(handle);
-    if (files["DOOM.WAD"]) adoptDoomSprites(files["DOOM.WAD"]);
+    await loadProjectSprites();
   } catch (err) {
     setStatus(String(err.message || err), true);
   }
@@ -19181,7 +17666,6 @@ function stopAnimPlay() {
     clearInterval(animPlayTimer);
     animPlayTimer = null;
   }
-  sfxPreview.stop();
 }
 
 function updateLoopButton() {
@@ -19212,7 +17696,6 @@ function toggleAnimPlay() {
   frameLocal = 0;
   applyFrameLocal();
   syncPlayUi();
-  previewClipSound(clip, 0);
   animPlaying = true;
   animPlayTimer = setInterval(tickAnimPlay, ANIM_PLAY_MS);
   updatePlayButton();
@@ -19244,7 +17727,6 @@ function tickAnimPlay() {
   }
   applyFrameLocal();
   syncPlayUi();
-  previewClipSound(clip, frameLocal);
 }
 
 function setOverlayOn(on) {
@@ -19300,7 +17782,6 @@ function refreshPanels() {
   renderEnemyList();
   renderWeaponList();
   renderItemList();
-  renderSoundList();
   renderInspector();
   syncWeaponScaleInputs();
   syncSharewareFolderButtons();
@@ -19310,7 +17791,6 @@ function refreshPanels() {
   if (editorMode === "anim") animView.draw();
   if (editorMode === "weapons") weaponView.draw();
   if (editorMode === "items") itemView.draw();
-  if (editorMode === "sounds") soundView.draw();
 }
 
 function refreshAll() {
@@ -19319,7 +17799,6 @@ function refreshAll() {
   if (editorMode === "layout") layoutView.draw();
   else if (editorMode === "weapons") weaponView.draw();
   else if (editorMode === "items") itemView.draw();
-  else if (editorMode === "sounds") soundView.draw();
   else if (editorMode !== "build") animView.draw();
 }
 
@@ -19334,9 +17813,6 @@ document.getElementById("btn-mode-weapons").addEventListener("click", () => {
 });
 document.getElementById("btn-mode-items")?.addEventListener("click", () => {
   setMode("items");
-});
-document.getElementById("btn-mode-sounds")?.addEventListener("click", () => {
-  setMode("sounds");
 });
 document.getElementById("btn-mode-build")?.addEventListener("click", () => {
   setMode("build");
@@ -19365,12 +17841,6 @@ document.getElementById("weapon-scale-num").addEventListener("change", (e) => {
 });
 document.getElementById("btn-weapon-folder")?.addEventListener("click", () => void openSharewareFolder());
 document.getElementById("btn-anim-folder")?.addEventListener("click", () => void openSharewareFolder());
-document.getElementById("btn-sound-folder")?.addEventListener("click", () => void openSharewareFolder());
-document.getElementById("chk-hide-unused")?.addEventListener("change", (e) => {
-  hideUnused = !!e.target.checked;
-  markUi();
-  refreshAll();
-});
 document.getElementById("btn-weapon-export")?.addEventListener("click", () => {
   exportWeaponPngs().catch((err) => setStatus(String(err.message || err), true));
 });
@@ -19621,6 +18091,16 @@ window.addEventListener("keydown", (e) => {
     }
   }
   if (editorMode === "anim") {
+    if (e.code === "Space" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault();
+      if (!e.repeat) {
+        stickWireOn = !stickWireOn;
+        stickLeft.draw();
+        stickFront.draw();
+        updateAnimHint();
+      }
+      return;
+    }
     if (e.key === "Escape") {
       if (pendingBind || bindJoint >= 0) {
         e.preventDefault();
@@ -19696,15 +18176,6 @@ buildPalette();
 setMode("layout");
 updateUndoButtons();
 
-async function restoreSoundBanksQuietly() {
-  try {
-    const dir = await tryRestoreSoundBankDir();
-    if (dir) await openSoundBanks(dir, true);
-  } catch {
-    /* folder optional */
-  }
-}
-
 async function restoreSharewareQuietly() {
   try {
     const dir = await tryRestoreSharewareDir();
@@ -19734,7 +18205,6 @@ async function boot() {
     if (loaded) {
       await applyLoadedDoc(loaded);
       await restoreSharewareQuietly();
-      await restoreSoundBanksQuietly();
       return;
     }
     const stored = await getStoredProjectDir();
@@ -19750,7 +18220,6 @@ async function boot() {
       false
     );
     await restoreSharewareQuietly();
-    await restoreSoundBanksQuietly();
   } catch (err) {
     setStatus(String(err.message || err), true);
   }

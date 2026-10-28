@@ -150,7 +150,7 @@ spawn_ogre_grenade
 	cmp #$80
 	ror gr_vzh,x
 	ror gr_vzl,x
-	lda #SOUND_WEAPONS_GRENADE
+	lda #SOUND_RLAUNC_E
 	jmp play_sound
 .sog_rts
 	rts
@@ -636,7 +636,7 @@ gren_lava_hit
 .glh_fx
 	jsr .gex_place
 	jsr start_explosion
-	lda #SOUND_WEAPONS_R_EXP3
+	lda #SOUND_RXPLOD
 	jsr play_sound
 	jmp gren_clear
 
@@ -706,7 +706,7 @@ gren_explode
 	jsr .gex_place
 	jsr gren_splash
 	jsr start_explosion
-	lda #SOUND_WEAPONS_R_EXP3
+	lda #SOUND_RXPLOD
 	jsr play_sound
 	ldx obj_i
 	lda #0
