@@ -457,17 +457,6 @@ export async function loadSharewarePakBuffers(dirHandle) {
   return buffers;
 }
 
-/** 3D_Models.pk3 beside pak0, or in an id1/ child. */
-export async function loadPk3Buffer(dirHandle) {
-  for (const rel of ["3D_Models.pk3", "id1/3D_Models.pk3", "3d_models.pk3", "id1/3d_models.pk3"]) {
-    const fh = await getFileInDir(dirHandle, rel);
-    if (!fh) continue;
-    const file = await fh.getFile();
-    return await file.arrayBuffer();
-  }
-  return null;
-}
-
 export async function ensureWeaponsPngDirectory() {
   if (weaponsPngDirHandle && (await ensurePermission(weaponsPngDirHandle, "readwrite"))) {
     return weaponsPngDirHandle;

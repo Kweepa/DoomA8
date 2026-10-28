@@ -12,4 +12,3 @@ it. The joystick then strafes.
 Walk into doors to open them.
 Walk over items to pick them up.
 Walk into switches to activate them.
-Some switches must be shot.

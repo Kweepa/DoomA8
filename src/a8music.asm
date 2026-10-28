@@ -1,5 +1,5 @@
 ; Menu music (Atari). Decodes the stream tools/genpokey.py writes into
-; menu_music_data.asm and drives POKEY from the menu VBI (a8_music_tick).
+; music/at_dooms_gate.asm and drives POKEY from the menu VBI (a8_music_tick).
 ; ch1+2 joined 16-bit @1.79 MHz (AUDCTL bit 4+6), ch3 / ch4 8-bit.
 ;
 ; Stream: LZ tokens into a 4 KB ring, giving mask + changed-column bytes per
@@ -511,4 +511,4 @@ mus_fetch
 mus_dist	!byte $a0, $c0, $80, $00	; pure, poly4, noise, silent
 mus_vmask	!byte $0f, $0f, $0f, $00
 
-!source "menu_music_data.asm"
+!source "../music/at_dooms_gate.asm"

@@ -1126,7 +1126,10 @@ def main() -> None:
         if isinstance(enemy.get("frames"), list) and enemy["frames"]:
             enemy["_authored"] = True
         else:
-            bake_poses_from_id1(enemy, mdls[name])
+            mdl = mdls.get(name)
+            if mdl is None:
+                raise SystemExit(f"{name}: no authored frames")
+            bake_poses_from_id1(enemy, mdl)
             if name in ("Scrag", "Ogre", "Shambler"):
                 enemy["_store_all"] = True
         apply_export_clips(enemy)

@@ -470,8 +470,8 @@ def load_enemy_mdls(id1: Path) -> dict[str, dict]:
     lumps = load_id1(id1)
     models: dict[str, dict] = {}
     for enemy in ("Possessed", "Baron", "Pinky", "Scrag", "Ogre", "Shambler", "Chthon", "Imp", "Demon"):
+        # Possessed / Baron / Pinky / Imp poses are authored. The MD2 set is gone.
         if enemy in DOOM_PARTS:
-            models[enemy] = load_doom_enemy(enemy)
             continue
         path = ENEMY_MDL_PATHS[enemy]
         blob = lumps.get(path.lower())

@@ -23,6 +23,10 @@ WRAP = """\
 !cpu 6502
 !to "../tmp/music_test.bin", plain
 effects_vol = $08fd
+SAMPLE_MS_PAL = 20
+SAMPLE_MS_NTSC = 17
+video_ms = $08f6
+a8_pal_hue = $0680
 *= $5000
 !source "a8music.asm"
 """

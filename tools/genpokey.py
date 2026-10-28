@@ -4,7 +4,7 @@
 The PSID player is run in py65 and every $D400-$D418 write is logged. A SID
 envelope model turns that into per-voice pitch / gate / wave state per SID tick.
 The three SID voices are mapped onto POKEY (ch1+2 joined 16-bit @1.79 MHz,
-ch3 and ch4 8-bit), and the result is packed into src/menu_music_data.asm.
+ch3 and ch4 8-bit), and the result is packed into music/at_dooms_gate.asm.
 
 The data is a sparse column stream, not volumes: the player (src/a8music.asm)
 runs a small per-channel envelope every VBI from (AD, SR) pairs, and steps the
@@ -45,13 +45,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
-TUNE = ROOT / "mkmusic" / "MK_DOOM_4_REFERENCE_ringfix.sid"  # Realms of Chthon
-OUT_ASM = ROOT / "src" / "menu_music_data.asm"
-BUDGET = 2700  # bytes of packed data (menu.prg has to fit the ATR's free sectors)
+TUNE = ROOT / "ref" / "At_Dooms_Gate_E1M1.sid"
+OUT_ASM = ROOT / "music" / "at_dooms_gate.asm"
+# Packed blob must land in the menu image below MUS_BSS ($6F00). The ATR has
+# far more free sectors than that gap.
+BUDGET = 8000
 
-LOAD = INIT = 0x9000
-PLAY = 0x9003
 PAL_PHI2 = 985248.0
+PAL_FRAME_HZ = PAL_PHI2 / (63.0 * 312.0)  # header speed bit 0 clear: one play() per PAL frame
 POKEY_64K = 63921.0
 POKEY_15K = 15699.0
 POKEY_179 = 1789773.0
@@ -83,20 +84,29 @@ def die(msg: str) -> None:
 # SID player emulation
 # --------------------------------------------------------------------------
 
-def load_psid(path: Path) -> bytearray:
+def load_psid(path: Path):
+    """Return (mem, load, size, init, play, vbi_timed, song).
+
+    song is the 0-based tune number passed in A, from the PSID start-song field.
+    vbi_timed is header speed bit 0 clear (play once per PAL frame). Otherwise
+    init is expected to program CIA1 timer A and play runs at PHI2/latch.
+    """
     d = path.read_bytes()
-    if d[:4] != b"PSID":
+    if d[:4] != b"PSID" or len(d) < 0x7C:
         die(f"{path.name}: not a PSID")
-    _ver, off, load, init, play = struct.unpack(">HHHHH", d[4:14])
+    _ver, off, load, init, play, _songs, start, speed = struct.unpack(">HHHHHHHH", d[4:20])
     body = bytearray(d[off:])
     if load == 0:
+        if len(body) < 2:
+            die(f"{path.name}: missing load address")
         load = body[0] | body[1] << 8
         del body[:2]
-    if (load, init, play) != (LOAD, INIT, PLAY):
-        die(f"{path.name}: unexpected load/init/play")
+    if not body or load + len(body) > 65536 or init == 0 or play == 0:
+        die(f"{path.name}: bad load/init/play (${load:04x}/${init:04x}/${play:04x})")
     mem = bytearray(65536)
     mem[load:load + len(body)] = body
-    return mem
+    song = (max(start, 1) - 1) & 0xFF
+    return mem, load, len(body), init, play, (speed & 1) == 0, song
 
 
 def emulate(path: Path, extra_loops: int = 3):
@@ -108,7 +118,7 @@ def emulate(path: Path, extra_loops: int = 3):
     """
     from py65.devices.mpu6502 import MPU
 
-    mem = load_psid(path)
+    mem, load, size, init, play, vbi, song = load_psid(path)
     cur: list[tuple[int, int]] = []
 
     class WMem(bytearray):
@@ -130,12 +140,18 @@ def emulate(path: Path, extra_loops: int = 3):
         while m.pc != 0xFF00:
             m.step()
             n += 1
-            if n > 200000:
-                die("player hang")
+            if n > 500000:
+                die(f"player hang at ${m.pc:04x}")
 
-    call(INIT)
-    latch = wm[0xDC04] | wm[0xDC05] << 8
-    tick_hz = PAL_PHI2 / latch
+    m.a = song
+    call(init)
+    if vbi:
+        tick_hz = PAL_FRAME_HZ
+    else:
+        latch = wm[0xDC04] | wm[0xDC05] << 8
+        if latch == 0:
+            die("CIA timer not programmed and the header is not a VBI tune")
+        tick_hz = PAL_PHI2 / latch
     init_writes = [(k, v) for k, v in cur if k < 0xDC00]
     cur.clear()
 
@@ -145,10 +161,13 @@ def emulate(path: Path, extra_loops: int = 3):
     limit = 20000
     n = 0
     while n < limit:
-        call(PLAY)
+        call(play)
         ticks.append([(k, v) for k, v in cur])
         cur.clear()
-        h = hashlib.md5(bytes(wm[0x9000:0xA000]) + bytes(wm[0xF0:0xF8])).hexdigest()
+        # Player state lives in the loaded image and zero page. A loop is the
+        # first repeated snapshot. A 1-tick "loop" means the window missed the
+        # real state (a counter outside the image, usually).
+        h = hashlib.md5(bytes(wm[load:load + size]) + bytes(wm[:0x100])).hexdigest()
         if loop_start is None and h in seen:
             loop_start = seen[h]
             loop_len = n - loop_start
@@ -157,6 +176,8 @@ def emulate(path: Path, extra_loops: int = 3):
         n += 1
     if loop_start is None:
         die("no loop found")
+    if loop_len < 16:
+        die(f"loop is {loop_len} ticks; player state is outside the image and zero page")
     return tick_hz, init_writes, ticks, loop_start, loop_len
 
 
@@ -633,8 +654,12 @@ def exp_shift(level: int) -> int:
 
 
 def rate16(tick_hz: float, std: int) -> int:
-    """Ticks per VBI as 0.16 (std 0 PAL, 1 NTSC)."""
-    return int(round(tick_hz / VBI_HZ[std] * 65536.0))
+    """Ticks per VBI as 0.16 (std 0 PAL, 1 NTSC).
+
+    The player adds this once per frame and steps at most one tick on carry,
+    so a tune faster than the VBI locks to one tick per frame.
+    """
+    return min(65535, int(round(tick_hz / VBI_HZ[std] * 65536.0)))
 
 
 def play_blob(blob: bytes, tick_hz: float, std: int):
@@ -739,11 +764,16 @@ def build(args) -> None:
             w = cols[k if k < ni + nl else k - nl]
             if tks[k] != tuple(w[:4]) + tuple(x & 0x7F for x in w[4:]):
                 die(f"{name}: round trip mismatch at tick {k}: {tks[k]} vs {w}")
-        # Envelope vs the SID model at each VBI (second pass covers the END wrap).
+        # Envelope vs the SID model on the clock the player actually runs
+        # (a tune faster than the VBI is one tick per frame, not tick_hz).
         ref_err = []
         vbi_hz = VBI_HZ[std]
+        played = vbi_hz * rate16(tick_hz, std) / 65536.0
+        if rate16(tick_hz, std) == 65535 and tick_hz > vbi_hz + 0.01:
+            print(f"genpokey: {name} is one tick per VBI ({vbi_hz:.2f} Hz; "
+                  f"the SID tick is {tick_hz:.2f})")
         times = [(k + 0.5) / vbi_hz for k in range(len(vbis))]
-        rframes = render_voices(tick_hz, init_writes, ticks, total_ticks, times)
+        rframes = render_voices(played, init_writes, ticks, total_ticks, times)
         for k, row in enumerate(rframes):
             for vi, r in enumerate(row):
                 res = RES.index(order[vi])
@@ -762,7 +792,7 @@ def build(args) -> None:
         "; Generated by tools/genpokey.py. Do not edit.",
         f"; {args.sid.name}: {ni} intro + {nl} loop ticks at {tick_hz:.2f} Hz, {len(blob)} bytes.",
         "mus_rate_lo\t!byte " + ",".join(f"${rate16(tick_hz, s) & 255:02x}" for s in (0, 1)),
-        "mus_rate_hi\t!byte " + ",".join(f"${rate16(tick_hz, s) >> 8:02x}" for s in (0, 1)),
+        "mus_rate_hi\t!byte " + ",".join(f"${(rate16(tick_hz, s) >> 8) & 255:02x}" for s in (0, 1)),
         "mus_spf_lo\t!byte " + ",".join(f"${v & 255:02x}" for v in SPF),
         "mus_spf_hi\t!byte " + ",".join(f"${v >> 8:02x}" for v in SPF),
         "mus_audctl\t!byte " + f"${blob[0]:02x}",
@@ -773,13 +803,15 @@ def build(args) -> None:
     for i in range(ntok, len(blob), 16):
         lines.append("\t!byte " + ",".join(f"${b:02x}" for b in blob[i:min(i + 16, len(blob))]))
     lines.append("mus_data_end")
-    OUT_ASM.write_text("\n".join(lines) + "\n", encoding="ascii")
-    print(f"genpokey: wrote {OUT_ASM.relative_to(ROOT)}")
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    args.out.write_text("\n".join(lines) + "\n", encoding="ascii")
+    print(f"genpokey: wrote {args.out.relative_to(ROOT)}")
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--sid", type=Path, default=TUNE)
+    ap.add_argument("--out", type=Path, default=OUT_ASM)
     ap.add_argument("--order", default="pair,c3,c4", help="resource for SID voice 1,2,3")
     ap.add_argument("--clock", type=int, choices=(15, 64), default=64, help="ch3/4 base clock (kHz)")
     ap.add_argument("--window", type=int, default=RING_BYTES - 1)

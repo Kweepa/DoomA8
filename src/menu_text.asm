@@ -56,7 +56,7 @@ credits2_text
 	!byte 0
 
 credits3_text
-	!scr "Original music by mandy kane,",0
+	!scr "Music by benjamin dibbert,",0
 	!scr "butchered by an automatic sid to",0
 	!scr "pokey translation.",0
 	!scr " ",0

@@ -90,6 +90,16 @@ title_ram	!fill LOGO_LINES * 4, 0	; pf0, pf1, pf2, bk — PAL-converted
 !zone
 a8_nmist	!byte 0
 !zone
+a8_nmi_x	!byte 0
+!zone
+a8_ipf0		!byte 0			; next text row, blasted before playfield DMA
+!zone
+a8_ipf1		!byte 0
+!zone
+a8_ipf2		!byte 0
+!zone
+a8_ipbk		!byte 0
+!zone
 a8_sx		!byte 0
 !zone
 a8_sy		!byte 0
@@ -312,8 +322,8 @@ a8_clear_pm
 ; The DLI is the last blank line (no playfield DMA). Mode E fetches every
 ; other cycle from 18 and the old stack preload missed cycle 105, so each
 ; palette step covered two scanlines and painted the menu.
-; Text DLIs fire on the line above the row and release in hblank, so line 0
-; already has this row's colours. The font keeps its top row and descenders.
+; Text rows use a8_nmi_text. Its DLI is the last scanline of the previous
+; row; the handler WSYNCs so the new paper starts on the next line.
 !zone
 a8_build_dl
 	lda #<A8_DL
@@ -425,7 +435,11 @@ a8_nmi
 .dli
 	ldx a8_line
 	cpx #LOGO_LINES
-	bcs .trow
+	bcc .logo
+	lda #0
+	sta $d40f
+	jmp .dout
+.logo
 	sta a8_nmist
 	lda #0
 	sta $d40f
@@ -468,37 +482,74 @@ a8_nmi
 	sta A8_NMIEN
 	inx					; first text DLI paints the next row
 	stx a8_rowi
-	jmp .dout
-.trow
-	ldx a8_rowi
-	cpx #A8_ROWS
-	bcs .trow_on
-	lda a8_pf2,x
-	sta a8_nmist
-	lda #$40				; DLI off across WSYNC (it re-arms on resume)
-	sta A8_NMIEN
-	lda a8_pf1,x
-	sta $d40a				; hblank: ink lands before mode-2 DMA
-	sta A8_COLPF1
-	lda a8_nmist
-	sta A8_COLPF2
 	lda a8_pf0,x
-	sta A8_COLPF0
+	sta a8_ipf0
+	lda a8_pf1,x
+	sta a8_ipf1
+	lda a8_pf2,x
+	sta a8_ipf2
 	lda a8_colbk,x
+	sta a8_ipbk
+	lda #<a8_nmi_text
+	sta $fffa
+	lda #>a8_nmi_text
+	sta $fffb
+	jmp .dout
+; Text DLIs only. Fires on the last line of the previous row; WSYNC holds
+; the new colours until that line ends so the paper does not flip early.
+a8_nmi_text
+	pha
+	lda $d40f
+	bpl .tvbi
+	lda #$40
+	sta A8_NMIEN
+	lda a8_ipf2
+	sta $d40a
+	sta A8_COLPF2
+	lda a8_ipf1
+	sta A8_COLPF1
+	lda a8_ipbk
 	sta A8_COLBK
+	lda a8_ipf0
+	sta A8_COLPF0
 	lda #0
 	sta $d40f
+	stx a8_nmi_x
+	ldx a8_rowi
 	inx
 	stx a8_rowi
-.trow_on
+	cpx #A8_ROWS
+	bcs .tnxt
+	lda a8_pf0,x
+	sta a8_ipf0
+	lda a8_pf1,x
+	sta a8_ipf1
+	lda a8_pf2,x
+	sta a8_ipf2
+	lda a8_colbk,x
+	sta a8_ipbk
+.tnxt
 	lda #$c0
 	sta A8_NMIEN
+	ldx a8_nmi_x
+	pla
+	rti
+.tvbi
+	txa
+	pha
+	lda #0
+	sta $d40f
+	jmp .vbi
 .dout
 	pla
 	tax
 	pla
 	rti
 .vbi
+	lda #<a8_nmi
+	sta $fffa
+	lda #>a8_nmi
+	sta $fffb
 	tya
 	pha
 	inc a8_vbi_n
@@ -1558,8 +1609,8 @@ a8_clear_text
 	bne .ct
 	rts
 
-; 96 glyphs, all 8 rows. Line 0 is this row's colour (see .trow), so the
-; bottom row stays — comma tail, one line under the period.
+; 96 glyphs, all 8 rows. Line 0 is this row's colour, so the bottom row
+; stays — comma tail, one line under the period.
 !zone
 a8_load_font
 	lda #<MENU_FONT

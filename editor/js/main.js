@@ -156,7 +156,6 @@ import {
   getStoredSharewareHandle,
   sharewareFolderName,
   loadSharewarePakBuffers,
-  loadPk3Buffer,
   readEnemyFiles,
   writeEnemyFiles,
   readProjectBytes,
@@ -165,8 +164,6 @@ import {
 } from "./io.js";
 import { showBuildView } from "./buildView.js";
 import { parsePakBuffers } from "./pak.js";
-import { unzipPk3 } from "./zip.js";
-import { loadDoomEnemies } from "./doommesh.js";
 import { loadDoomSprites, spriteHit, spriteLetters } from "./doompic.js";
 import { StickOrtho } from "./stickOrtho.js";
 import {
@@ -4205,28 +4202,6 @@ async function loadSharewareFromHandle(handle) {
     const { models, missing } = loadEnemyMdls(lumps);
     sharewareModels = models;
     sharewareMissing = missing;
-    const pk3 = await loadPk3Buffer(handle);
-    const doomNames = ["Possessed", "Baron", "Pinky", "Imp"];
-    if (pk3) {
-      try {
-        const zipFiles = await unzipPk3(pk3);
-        const doom = loadDoomEnemies(zipFiles);
-        Object.assign(sharewareModels, doom.models);
-        sharewareMissing = sharewareMissing.filter((name) => !doom.models[name]);
-        for (const name of doom.missing) {
-          if (!sharewareMissing.includes(name)) sharewareMissing.push(name);
-        }
-      } catch (err) {
-        console.warn("3D_Models.pk3:", err);
-        for (const name of doomNames) {
-          if (!sharewareModels[name] && !sharewareMissing.includes(name)) sharewareMissing.push(name);
-        }
-      }
-    } else {
-      for (const name of doomNames) {
-        if (!sharewareMissing.includes(name)) sharewareMissing.push(name);
-      }
-    }
     const weapons = loadWeaponMdls(lumps);
     sharewareWeapons = weapons.models;
     sharewareWeaponMissing = weapons.missing;

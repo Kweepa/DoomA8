@@ -17,8 +17,6 @@ JS_ORDER = [
   "js/gizmo.js",
   "js/io.js",
     "js/pak.js",
-    "js/zip.js",
-    "js/doommesh.js",
     "js/mdl.js",
     "js/layoutView.js",
     "js/overheadView.js",
