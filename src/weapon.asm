@@ -182,9 +182,6 @@ init_weapon_hw
 init_weapon
 	jsr init_weapon_hw
 	jsr init_grenades
-	lda #0
-	sta spit_on
-	sta spit_flash
 	jmp reset_loadout
 
 ; Axe, shotgun, pistol. 25 shells, 50 bullets. Pistol selected.

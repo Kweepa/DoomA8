@@ -10,7 +10,7 @@ import struct
 from copy import deepcopy
 from pathlib import Path
 
-from doommdl import POSE_SCALE, editor_verts, js_round, load_enemy_mdls, select_mdl_clips
+from doommdl import js_round
 from gensounds import ENEMY_CUES
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -33,29 +33,14 @@ META_ROW = 41  # mem.asm META_ROW; prepended to every .pose
 PAIN_MAX = 4
 PAIN_KEY = re.compile(r"^pain[a-z]?$")
 DEATH_KEY = re.compile(r"^(bdeath|death[a-z]?)$")
-# Clip-local fire frames (matches the pose-row fire byte). Pinned as an attack key.
-# Grunt is $ff: the shoot cue calls AI_CMD_FIRE, and the shoot soundFrame is
-# pinned on its own so that pose stays stored. Shambler magic and Demon leap
-# are special-cased in their AI banks. Zombie is $ff too: AI_CMD_ANIM_FIRE
-# throws at attack_len-3 (the melee sound, two frames before the last), and
-# pack_poses pins that frame.
-# Rottweiler is 3: Doom dog_bite is attack4.
+# Clip-local fire frames (matches the pose-row fire byte).
 FIRE_FRAME = [1, 1, 1, 1]
-CHTHON_FIRE2 = 17  # second lava throw; keep in sync with mem.asm CHTHON_FIRE2
-# paine local frames kept: 0..10 is the knockdown, frame 10 is the corpse.
-# The get-up tail is not stored.
-ZOMBIE_PAINE_LEN = 11
-# Mid-distance stick LOD threshold (CAM_ZH); Ogre needs more for chainsaw tip.
+# Mid-distance stick LOD threshold (CAM_ZH).
 DEFAULT_LOD_Z = {
     "Possessed": 4,
     "Baron": 8,
     "Pinky": 4,
-    "Scrag": 4,
-    "Ogre": 10,
-    "Shambler": 64,
-    "Chthon": 4,
     "Imp": 4,
-    "Demon": 8,
 }
 
 # Game byte (Doom health / 5). editor/doom64.json "hp" overrides this.
@@ -63,12 +48,7 @@ DEFAULT_HP = {
     "Possessed": 4,
     "Baron": 200,
     "Pinky": 30,
-    "Scrag": 16,
-    "Ogre": 40,
-    "Shambler": 120,
-    "Chthon": 80,
     "Imp": 12,
-    "Demon": 60,
 }
 
 # Resident only while the type's bank is loaded. Two slots, not N columns.
@@ -76,16 +56,11 @@ RANGE = {
     "Possessed": 30,
     "Baron": 12,
     "Pinky": 4,
-    "Scrag": 24,
-    "Ogre": 30,
-    "Shambler": 30,
-    "Chthon": 40,
     "Imp": 12,
-    "Demon": 10,
 }
 # Used when the enemy record has no painChance. Editor value wins.
 DEFAULT_PAIN_CHANCE = 0x80
-PAIN_CHANCE = {"Imp": 0xFF, "Pinky": 0xFF, "Baron": 0, "Ogre": 0x40}
+PAIN_CHANCE = {"Imp": 0xFF, "Pinky": 0xFF, "Baron": 0}
 ENEMY_CLASS = {}
 
 # Single roles: (clip_name, len_override|None). Attack: list of candidate names
@@ -112,47 +87,12 @@ ROLE_CLIPS = {
         "walk": ("walk", None),
         "attack": ["melee"],
     },
-    "Scrag": {
-        "stand": ("hover", None),
-        "alert": ("hover", 4),
-        "run": ("fly", None),
-        "walk": ("fly", None),
-        "attack": ["magatt"],
-    },
-    "Ogre": {
-        "stand": ("stand", None),
-        "alert": ("pull", None),
-        "run": ("run", None),
-        "walk": ("walk", None),
-        "attack": ["swing", "shoot"],
-    },
-    "Shambler": {
-        "stand": ("stand", None),
-        "alert": ("smash", None),
-        "run": ("walk", None),
-        "walk": ("walk", None),
-        "attack": ["smash", "swingr", "swingl", "magic"],
-    },
-    "Chthon": {
-        "stand": ("rise", None),
-        "alert": ("rise", None),
-        "run": ("rise", None),
-        "walk": ("rise", None),
-        "attack": ["attack"],
-    },
     "Imp": {
         "stand": ("stand", None),
         "alert": ("stand", None),
         "run": ("walk", None),
         "walk": ("walk", None),
         "attack": ["attack"],
-    },
-    "Demon": {
-        "stand": ("stand", None),
-        "alert": ("stand", 4),
-        "run": ("run", None),
-        "walk": ("run", None),
-        "attack": ["attacka", "leap"],
     },
 }
 
@@ -276,14 +216,6 @@ def pack_clip_events(enemy: dict, ids: dict[str, int]) -> bytes:
         if frame >= length:
             frame = length - 1
         frames = [start + frame]
-        # Chthon throws lava twice per attack; a shoot sound on the first throw covers the second.
-        if (
-            name == "Chthon"
-            and clip_key(c.get("name", "")) == "attack"
-            and frame == FIRE_FRAME[TYPES.index("Chthon")]
-            and CHTHON_FIRE2 < length
-        ):
-            frames.append(start + CHTHON_FIRE2)
         sid = ids[stem]
         for logical in frames:
             if logical > 255 or sid > 255:
@@ -338,32 +270,6 @@ def require_role(enemy: dict, role: str) -> tuple[int, int]:
     raise SystemExit(f"{enemy['name']}: no {role} clip (and no fallback)")
 
 
-SHAMBLER_ATTACKS = ("smash", "swingr", "swingl", "magic")
-
-
-def check_shambler_roles(enemy: dict) -> None:
-    """Slot 0..3 are smash, swingr, swingl, magic. Chase plays the walk clip."""
-    if enemy.get("name") != "Shambler":
-        return
-    want = list(SHAMBLER_ATTACKS)
-    got = [
-        clip_key(c.get("name", ""))
-        for c in enemy.get("clips") or []
-        if clip_key(c.get("name", "")) in set(want)
-    ]
-    if got != want:
-        raise SystemExit(
-            "Shambler attacks must be "
-            + ", ".join(want)
-            + " in export order, got "
-            + (", ".join(got) if got else "none")
-        )
-    run = find_role(enemy, "run")
-    walk = find_role(enemy, "walk")
-    if run is None or run != walk:
-        raise SystemExit("Shambler run role must resolve to the walk clip")
-
-
 def find_attack_clips(enemy: dict) -> list[tuple[int, int]]:
     """All ROLE attack candidate names present in clips (export order), up to PAIN_MAX."""
     names = ROLE_CLIPS.get(enemy["name"], {}).get("attack") or []
@@ -414,84 +320,7 @@ def apply_export_clips(enemy: dict) -> None:
     enemy["clips"] = new_clips
 
 
-VERT_MIN = -128
-VERT_MAX = 127
-SKEL_VERT_MAX = 509
-
-
-def _clamp_pose(n: float, custom: bool) -> int:
-    v = js_round(n)
-    if custom:
-        return max(-SKEL_VERT_MAX, min(SKEL_VERT_MAX, v))
-    return max(VERT_MIN, min(VERT_MAX, v))
-
-
-def bake_poses_from_id1(enemy: dict, mdl: dict) -> None:
-    """Full-unit stick poses from jointVerts. Shift/pack stays in export_type."""
-    name = enemy.get("name", "?")
-    custom = bool(enemy.get("customSkeleton"))
-    nv = enemy_nv(enemy)
-    joints = (enemy.get("mdlRig") or {}).get("jointVerts") or []
-    if len(joints) != nv:
-        raise SystemExit(f"{name}: binding has {len(joints)} joints, skeleton has {nv}")
-    for i, group in enumerate(joints):
-        if not group:
-            raise SystemExit(f"{name}: joint {i} has no mesh verts")
-    names = enemy.get("exportClips")
-    if not isinstance(names, list):
-        names = None
-    kept = select_mdl_clips(mdl, names)
-    if not kept:
-        raise SystemExit(f"{name}: no MDL clips to bake")
-    sounds: dict[str, dict] = {}
-    for c in enemy.get("clips") or []:
-        sounds[str(c.get("name", ""))] = c
-        sounds.setdefault(clip_key(c.get("name", "")), c)
-    frames: list = []
-    clips: list[dict] = []
-    start = 0
-    for clip in kept:
-        dst = {"name": clip["name"], "start": start, "len": len(clip["frames"])}
-        src = sounds.get(clip["name"]) or sounds.get(clip_key(clip["name"]))
-        if src:
-            dst = clip_with_sound(dst, src)
-        clips.append(dst)
-        for fr in clip["frames"]:
-            verts = editor_verts(mdl, fr["index"], POSE_SCALE)
-            pose = []
-            for group in joints:
-                acc = []
-                for idx in group:
-                    i = int(idx)
-                    if 0 <= i < len(verts):
-                        acc.append(verts[i])
-                if not acc:
-                    raise SystemExit(f"{name}: joint binding missed the mesh")
-                n = len(acc)
-                pose.append(
-                    {
-                        "x": _clamp_pose(sum(v["x"] for v in acc) / n, custom),
-                        "y": _clamp_pose(sum(v["y"] for v in acc) / n, custom),
-                        "z": _clamp_pose(sum(v["z"] for v in acc) / n, custom),
-                    }
-                )
-            frames.append(pose)
-        start += len(clip["frames"])
-    enemy["frames"] = frames
-    enemy["clips"] = clips
-    enemy["exportClips"] = [c["name"] for c in clips]
-
-
-def variant_key(enemy: dict, what: str) -> re.Pattern:
-    """Zombie: paina is flinch, paine is the knockdown. Frame 10 is the corpse.
-    Chthon: boss.mdl names the flinch shocka/b/c, not pain*."""
-    name = enemy.get("name")
-    if name == "Zombie":
-        if what == "pain":
-            return re.compile(r"^paina?$")
-        return re.compile(r"^paine$")
-    if name == "Chthon" and what == "pain":
-        return re.compile(r"^shock[a-z]?$")
+def variant_key(what: str) -> re.Pattern:
     return PAIN_KEY if what == "pain" else DEATH_KEY
 
 
@@ -552,7 +381,7 @@ def build_meta_row(name: str, enemy: dict, nframes: int, n_stored: int, lod: int
         row[o] = b & 0xFF
         o += 1
     for what in ("pain", "death"):
-        n, starts, lens = pad_variants(find_variant_clips(enemy, variant_key(enemy, what), what))
+        n, starts, lens = pad_variants(find_variant_clips(enemy, variant_key(what), what))
         row[o] = n
         o += 1
         for b in starts + lens:
@@ -572,26 +401,6 @@ def build_meta_row(name: str, enemy: dict, nframes: int, n_stored: int, lod: int
     o += 1
     if o != META_ROW:
         raise SystemExit(f"{name}: meta row wrote {o} bytes, expected {META_ROW}")
-    if name == "Demon":
-        # MDL order is leap then attacka, so variant 0 is the leap.
-        leap = next(
-            (
-                c
-                for c in enemy.get("clips") or []
-                if clip_key(c.get("name", "")) == "leap"
-            ),
-            None,
-        )
-        leap_len = int(leap["len"]) if leap else 0
-        print(
-            f"Demon attack_n={row[8]} starts={list(row[9:13])} lens={list(row[13:17])} "
-            f"leap_len={leap_len} fire_byte={row[37]}"
-        )
-        if leap_len < 10:
-            raise SystemExit(
-                f"Demon leap is {leap_len} frames; DEMON_LEAP_FIRE is 9 "
-                "(use the clamped sound frame instead)"
-            )
     return bytes(row)
 
 
@@ -839,129 +648,6 @@ def trim_to_budget(gx: list[int], gy: list[int], gz: list[int], enemy: dict, nv:
     return len(gx) // nv
 
 
-def s8_val(b: int) -> int:
-    return b if b < 128 else b - 256
-
-
-def frames_xyz(gx: list[int], gy: list[int], gz: list[int], nframes: int, nv: int) -> list[list[int]]:
-    frs: list[list[int]] = []
-    for i in range(nframes):
-        xyz: list[int] = []
-        off = i * nv
-        for arr in (gx, gy, gz):
-            for v in range(nv):
-                xyz.append(s8_val(arr[off + v]))
-        frs.append(xyz)
-    return frs
-
-
-def acc_at(frs: list[list[int]], i: int) -> int:
-    if i <= 0 or i >= len(frs) - 1:
-        return 0
-    return max(abs(frs[i + 1][k] - 2 * frs[i][k] + frs[i - 1][k]) for k in range(len(frs[i])))
-
-
-def clip_ranges(enemy: dict, nframes: int) -> list[tuple[str, int, int]]:
-    out: list[tuple[str, int, int]] = []
-    for role in ("stand", "alert", "run", "walk"):
-        found = find_role(enemy, role)
-        if found is None:
-            continue
-        start, length = found
-        if start < nframes and length > 0:
-            out.append((role, start, min(length, nframes - start)))
-    for i, (start, length) in enumerate(find_attack_clips(enemy)):
-        if start < nframes and length > 0:
-            out.append((f"attack{i}", start, min(length, nframes - start)))
-    for what in ("pain", "death"):
-        key = variant_key(enemy, what)
-        for i, (start, length) in enumerate(find_variant_clips(enemy, key, what)):
-            if start < nframes and length > 0:
-                out.append((f"{what}{i}", start, min(length, nframes - start)))
-    return out
-
-
-def json_clip_ranges(enemy: dict, nframes: int) -> list[tuple[str, int, int]]:
-    out: list[tuple[str, int, int]] = []
-    for c in enemy.get("clips") or []:
-        start = int(c["start"])
-        length = int(c["len"])
-        if start >= nframes or length <= 0:
-            continue
-        length = min(length, nframes - start)
-        out.append((clip_key(c.get("name", "")), start, length))
-    return out
-
-
-def uncovered_runs(covered: list[bool]) -> list[tuple[int, int]]:
-    out: list[tuple[int, int]] = []
-    i = 0
-    n = len(covered)
-    while i < n:
-        if covered[i]:
-            i += 1
-            continue
-        j = i + 1
-        while j < n and not covered[j]:
-            j += 1
-        out.append((i, j - i))
-        i = j
-    return out
-
-
-def pick_keys(frs: list[list[int]], start: int, length: int, extra: tuple[int, ...] = ()) -> list[int]:
-    if length <= 2:
-        return []
-    min_sep = max(2, length // 3)
-    keys: list[int] = []
-    for e in extra:
-        if start < e < start + length - 1:
-            keys.append(e)
-        if len(keys) >= 2:
-            return sorted(keys[:2])
-    scored = [(acc_at(frs, i), i) for i in range(start + 1, start + length - 1)]
-    scored.sort(reverse=True)
-    for _acc, i in scored:
-        if any(abs(i - k) < min_sep for k in keys):
-            continue
-        keys.append(i)
-        if len(keys) == 2:
-            break
-    return sorted(keys)
-
-
-def cadence_keep(start: int, length: int, keys: list[int]) -> set[int]:
-    if length <= 0:
-        return set()
-    last = start + length - 1
-    keyset = set(keys)
-    kept: list[int] = []
-    f = start
-    while f < last:
-        plug = [k for k in sorted(keyset) if f < k < f + 2]
-        kept.append(f)
-        if plug:
-            k = plug[0]
-            kept.append(k)
-            f = k + 2
-        else:
-            f += 2
-    kept.append(last)
-    return set(kept)
-
-
-def grunt_shoot_pose_key(enemy: dict, start: int) -> tuple[int, ...]:
-    """Grunt fire byte is $ff, so the shoot soundFrame is the attack pose key."""
-    for c in enemy.get("clips") or []:
-        if clip_key(c.get("name", "")) != "shoot":
-            continue
-        if int(c["start"]) != start or not c.get("sound"):
-            continue
-        frame = int(c.get("soundFrame") or 0)
-        return (start + frame,)
-    return ()
-
-
 def load_doc() -> dict:
     doc = json.loads(DOC.read_text(encoding="utf-8"))
     enemies = []
@@ -1011,80 +697,10 @@ def pack_poses(
     gz: list[int],
     enemy: dict,
     nframes: int,
-    type_i: int,
     nv: int,
-    skip_leftover: set[str] | None = None,
 ) -> tuple[list[int], list[int], list[int], list[int], int]:
-    """Keep first/+2/keys/last per clip (roles and leftover JSON clips). pose_map: stored or $FF."""
-    if enemy.get("_authored") or enemy.get("_store_all"):
-        return pack_kept(gx, gy, gz, list(range(nframes)), nv, str(enemy.get("name", "?")))
-    skip_leftover = skip_leftover or set()
-    frs = frames_xyz(gx, gy, gz, nframes, nv)
-    covered = [False] * nframes
-    keep: set[int] = set()
-    fire_off = FIRE_FRAME[type_i]
-    for name, start, length in clip_ranges(enemy, nframes):
-        extra: tuple[int, ...] = ()
-        if name.startswith("attack"):
-            if TYPES[type_i] == "Demon":
-                extra = (start + 5, start + 9)
-            elif TYPES[type_i] == "Chthon":
-                extra = (start + fire_off, start + CHTHON_FIRE2)
-            elif 0 <= fire_off < 255:
-                extra = (start + fire_off,)
-        keep |= cadence_keep(start, length, pick_keys(frs, start, length, extra))
-        for i in range(start, start + length):
-            covered[i] = True
-    for _name, start, length in json_clip_ranges(enemy, nframes):
-        if _name in skip_leftover:
-            continue
-        if all(covered[start : start + length]):
-            continue
-        keep |= cadence_keep(start, length, pick_keys(frs, start, length))
-        for i in range(start, start + length):
-            covered[i] = True
-    for start, length in uncovered_runs(covered):
-        keep |= cadence_keep(start, length, pick_keys(frs, start, length))
-    kept_sorted = sorted(keep)
-    idx_of = {g: i for i, g in enumerate(kept_sorted)}
-    pose_map = [idx_of[i] if i in idx_of else 0xFF for i in range(nframes)]
-    for i, m in enumerate(pose_map):
-        if m != 0xFF:
-            continue
-        if i == 0 or i == nframes - 1:
-            raise SystemExit(f"{enemy['name']}: lerp at endpoint {i}")
-        if pose_map[i - 1] == 0xFF or pose_map[i + 1] == 0xFF:
-            raise SystemExit(f"{enemy['name']}: lerp {i} missing stored neighbor")
-    if enemy.get("customSkeleton"):
-        pose_map = [pose_map[i - 1] if m == 0xFF else m for i, m in enumerate(pose_map)]
-    # Identical XYZ shares one stored slot. pose_map still indexes a stored pose, so
-    # ent_set_pose stays on the frame-stride path.
-    seen: dict[tuple[int, ...], int] = {}
-    unique: list[int] = []
-    alias = [0] * len(kept_sorted)
-    for old_i, fi in enumerate(kept_sorted):
-        off = fi * nv
-        key = tuple(gx[off : off + nv] + gy[off : off + nv] + gz[off : off + nv])
-        slot = seen.get(key)
-        if slot is None:
-            slot = len(unique)
-            seen[key] = slot
-            unique.append(fi)
-        alias[old_i] = slot
-    kept_sorted = unique
-    pose_map = [0xFF if m == 0xFF else alias[m] for m in pose_map]
-    n_stored = len(kept_sorted)
-    if n_stored > 127:
-        raise SystemExit(f"{enemy['name']}: {n_stored} stored poses > 127")
-
-    def pack_axis(src: list[int]) -> list[int]:
-        out: list[int] = []
-        for fi in kept_sorted:
-            off = fi * nv
-            out.extend(src[off : off + nv])
-        return out
-
-    return pack_axis(gx), pack_axis(gy), pack_axis(gz), pose_map, n_stored
+    """Store every authored frame. pose_map indexes stored slots."""
+    return pack_kept(gx, gy, gz, list(range(nframes)), nv, str(enemy.get("name", "?")))
 
 
 def enemy_hp_byte(enemy: dict, name: str) -> int:
@@ -1108,7 +724,6 @@ def enemy_pain_chance_byte(enemy: dict, name: str) -> int:
 def main() -> None:
     doc = load_doc()
     by_name = {e["name"]: e for e in doc["enemies"]}
-    mdls = load_enemy_mdls(ROOT / "ref" / "id1")
     ids_path = ENEMY_DIR / "sound_ids.json"
     if not ids_path.is_file():
         raise SystemExit(f"missing {ids_path}; run gensounds.py first")
@@ -1132,17 +747,9 @@ def main() -> None:
             raise SystemExit(f"missing enemy {name}")
         enemy = deepcopy(by_name[name])
         apply_tool_cues(enemy)
-        if isinstance(enemy.get("frames"), list) and enemy["frames"]:
-            enemy["_authored"] = True
-        else:
-            mdl = mdls.get(name)
-            if mdl is None:
-                raise SystemExit(f"{name}: no authored frames")
-            bake_poses_from_id1(enemy, mdl)
-            if name in ("Scrag", "Ogre", "Shambler"):
-                enemy["_store_all"] = True
+        if not (isinstance(enemy.get("frames"), list) and enemy["frames"]):
+            raise SystemExit(f"{name}: no authored frames")
         apply_export_clips(enemy)
-        check_shambler_roles(enemy)
         gx, gy, gz, lines, _clips, nv, shift = export_type(enemy)
         nframes = trim_to_budget(gx, gy, gz, enemy, nv)
         dos = DOS_NAME[ti]
@@ -1158,10 +765,9 @@ def main() -> None:
         except (TypeError, ValueError):
             lod = DEFAULT_LOD_Z.get(name, 4)
         lod = max(0, min(255, lod))
-        skip_leftover: set[str] = set()
         while True:
             pgx, pgy, pgz, pose_map, n_stored = pack_poses(
-                gx, gy, gz, enemy, nframes, ti, nv, skip_leftover
+                gx, gy, gz, enemy, nframes, nv
             )
             row = build_meta_row(name, enemy, nframes, n_stored, lod)
             payload = (

@@ -115,46 +115,6 @@ spawn_player_grenade
 .spg_rts
 	rts
 
-spawn_ogre_grenade
-	ldx enemy_idx
-	stx obj_i
-	+lda_mx en_type
-	sta ent_type
-	ldy #GREN_WRIST_L
-	jsr ent_vert_world
-	jsr gren_alloc
-	bcc .sog_rts
-	stx obj_i
-	lda cam_xh
-	sec
-	sbc org_xh
-	sta rot0
-	lda cam_zh
-	sec
-	sbc org_zh
-	sta rot1
-	jsr atan2_yaw
-	sta rot2
-	ldx obj_i
-	lda #GREN_OWN_EN
-	jsr gren_fill_slot
-	ldx obj_i
-	lda #GREN_OGRE_Y
-	sta gr_vyh,x
-	; Half horizontal speed, double the loft: same range, twice the air time.
-	lda gr_vxh,x
-	cmp #$80
-	ror gr_vxh,x
-	ror gr_vxl,x
-	lda gr_vzh,x
-	cmp #$80
-	ror gr_vzh,x
-	ror gr_vzl,x
-	lda #SOUND_RLAUNC_E
-	jmp play_sound
-.sog_rts
-	rts
-
 update_grenades
 	ldx #0
 .ug
@@ -197,7 +157,7 @@ gren_tick
 	sta proc_tmp1
 	ldx obj_i
 	lda gr_flags,x
-	and #GREN_F_LAVA | GREN_F_FLESH
+	and #GREN_F_FLESH
 	bne .gt_move
 	sec
 	lda gr_vyl,x
@@ -289,12 +249,6 @@ gren_asr5
 gren_bounce
 	pha
 	ldx obj_i
-	lda gr_flags,x
-	and #GREN_F_LAVA
-	beq .gb_flesh
-	pla
-	jmp gren_explode
-.gb_flesh
 	lda gr_flags,x
 	and #GREN_F_FLESH
 	beq .gb_n
@@ -453,14 +407,9 @@ gren_move_y
 	ldy col_room
 	lda proc_tmp0			; tick ms remainder: peek_rc_floor zeroes it
 	pha
-	lda gr_flags,x
-	and #GREN_F_LAVA
-	sta fb_nocrate
 	jsr floor_below_y
 	pla
 	sta proc_tmp0			; PLA/STA keep C
-	lda #0
-	sta fb_nocrate			; LDA/STA keep C
 	bcc gren_try_y
 	lda proc_tmp2
 	cmp save_xh
@@ -541,11 +490,7 @@ gren_solid_at
 	lda gr_yh,x
 	adc #EYE_HEIGHT
 	sta cam_yh
-	lda gr_flags,x
-	and #GREN_F_LAVA
-	lsr
-	lsr
-	tay				; Y=2 lava (passes crates), 0 otherwise
+	ldy #0
 	jsr solid_at_col
 	pla
 	sta cam_yh
@@ -610,9 +555,6 @@ gren_hit_player
 	bcc .ghp_rts
 	ldx obj_i
 	lda gr_flags,x
-	and #GREN_F_LAVA
-	bne gren_lava_hit
-	lda gr_flags,x
 	and #GREN_F_FLESH
 	bne gren_flesh_hit
 	jmp gren_explode
@@ -622,22 +564,6 @@ gren_hit_player
 gren_flesh_hit
 	lda #FLESH_DMG
 	jsr take_damage
-	jmp gren_clear
-
-; Direct hit is LAVA_DMG. The burst is the grenade explosion without a second splash.
-LAVA_DMG = 100
-gren_lava_hit
-	lda #LAVA_DMG
-	jsr take_damage
-	ldx obj_i
-	lda fx_on
-	beq .glh_fx
-	jmp gren_clear
-.glh_fx
-	jsr .gex_place
-	jsr start_explosion
-	lda #SOUND_RXPLOD
-	jsr play_sound
 	jmp gren_clear
 
 gren_clear
@@ -989,7 +915,5 @@ gdo_cxh	!byte 0
 gdo_cy	!byte 0
 gdo_cyh	!byte 0
 gdo_r	!byte 0
-
-fb_nocrate	!byte 0			; nonzero: floor_below ignores crates (lava only)
 
 grenade_end = *

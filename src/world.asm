@@ -56,9 +56,6 @@ world_init
 	jsr init_backpacks
 	jsr init_enemies
 	jsr init_grenades
-	lda #0
-	sta spit_on
-	sta spit_flash
 	jsr init_drops
 	lda spawn_y
 	sta floor_y
@@ -73,15 +70,6 @@ init_backpacks
 	lda #0
 	sta rune_taken
 	sta doom_anim_ph
-	sta ch_anim_phase
-	sta ch_req
-	sta ch_shock
-	sta ch_bolt_l
-	sta ch_bolt_h
-	sta ch_phase
-	sta ch_phase+1
-	lda #$ff
-	sta ch_enemy
 	ldx #0
 .ib_lp
 	cpx	map_nbackpacks
@@ -96,12 +84,6 @@ init_backpacks
 
 ; All enemies idle, HP from type, frame 0
 init_enemies
-	lda #0
-	sta sham_arc
-	sta sham_pain_l
-	sta sham_pain_h
-	lda #$ff
-	sta sham_pain_i
 	lda #$a5
 	sta random8
 	lda #0
@@ -118,7 +100,6 @@ init_enemies
 	sta en_timer_h,x
 	sta en_step,x
 	sta en_step_h,x
-	sta en_pat_n,x
 	sta en_pain_i,x
 	+lda_mx en_rot			; map rot = editor octant (0=+Z)
 	sta en_dir,x
@@ -395,8 +376,6 @@ floor_below_y
 	lda #0
 	sta proc_tmp0
 .fb_surf
-	lda fb_nocrate			; lava: crate tops are not floor (electrodes)
-	bne .fb_p
 	ldx #0
 .fb_c
 	cpx	map_ncrates
@@ -1690,11 +1669,6 @@ try_backpack_pickup
 	ldx obj_i
 	lda #1
 	sta bp_taken,x
-	+lda_mx bp_type
-	cmp #BP_KEY_RED
-	bne .tbp_n
-	lda #1
-	sta rune_taken
 .tbp_n
 	ldx obj_i
 	inx
@@ -2131,9 +2105,6 @@ near_box_xz
 	sec
 	rts
 
-update_chthon_elec
-	rts
-
 ; ------------------------------------------------------------------
 ; A = cooked enable-tag id (1..15). Clear tr_purpose bits 4–7 on matches.
 ; ------------------------------------------------------------------
@@ -2365,10 +2336,6 @@ trig_enter
 	beq .te_summon
 	cmp #TRIG_UNLOCK
 	beq .te_unlock
-	cmp #TRIG_LOWER
-	beq .te_lower
-	cmp #TRIG_FIRE
-	beq .te_fire
 	cmp #TRIG_END
 	bne .te_rts
 	jmp next_level
@@ -2398,20 +2365,6 @@ trig_enter
 .te_unlock
 	+lda_mx tr_arg
 	jmp door_unlock_tag
-.te_lower
-	lda #CH_REQ_LOWER
-	bne .te_elec
-.te_fire
-	lda #CH_REQ_FIRE
-.te_elec
-	stx obj_i
-	stx ch_trig
-	sta ch_req
-	jsr room_has_chthon
-	bcs .te_rts
-	lda #0
-	sta ch_req
-	rts
 .te_tele
 	lda map_ndests
 	beq .te_tele_rts

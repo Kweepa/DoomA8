@@ -330,14 +330,8 @@ AI_CMD_APPROACH_ENTER	= 6
 AI_CMD_IDLE		= 7
 AI_CMD_DRAW		= 8
 AI_CMD_PAIN		= 9
-AI_CMD_ELEC		= 10
-AI_CMD_ANIM_FIRE	= 11
-AI_CMD_PAIN_TICK	= 12
-AI_CMD_PAIN_ASK		= 13
-AI_CMD_DEATH		= 14		; corpse finished: grunt/ogre drop
-AI_CMD_SCRAG_DODGE	= 15		; scrag bank: hold-bubble sidestep, C=1 if set
-AI_CMD_RED_ON		= 16		; chthon bank: line bodies ora->eor (pixel %10 red on paper)
-AI_CMD_RED_OFF		= 17		; chthon bank: restore ora
+AI_CMD_ANIM_FIRE	= 11		; 10, 12, 13, 15–17 unused; do not renumber
+AI_CMD_DEATH		= 14		; corpse finished: death drop
 AI_AP_MOVE		= 0
 AI_AP_STAND		= 1
 AI_AP_NEXT		= 2
@@ -438,8 +432,7 @@ ENEMY_CULL_R	= 2			; view-space |x| vs z+R (8.8 high)
 ENEMY_CULL_H	= 6			; view-space |y| vs z+H (figure height)
 ENEMY_MAX		= 24		; MAP_NENEMIES ≤ this
 EN_IDLE		= 0
-EN_PATROL		= 1			; unused slot; was wander
-EN_ALERT		= 2
+EN_ALERT		= 2			; 1 reserved; do not renumber
 EN_APPROACH		= 3
 EN_ATTACK		= 4
 EN_PAIN		= 5
@@ -449,54 +442,13 @@ EN_GONE		= 8
 ENEMY_DETECT	= 20		; Chebyshev XZ wake distance
 ENEMY_STEP_MS	= 200		; approach cell cadence (dt acc + remainder)
 ENEMY_STEP_JIT	= $7f		; approach entry step phase mask, < ENEMY_STEP_MS
-OGRE_STEP_MS	= 400		; ogre approach cadence (2× ENEMY_STEP_MS)
-DOG_REPATH_N	= 50		; dog chase frames between repaths (~1s at 20ms)
-DOG_WAIT_MS	= 2000		; idle pause when player is on another floor piece
 DEATH_HOLD_MS	= 1600		; EN_DEAD last-frame hold before EN_GONE
 GRUNT_BACKOFF	= 8		; Chebyshev ≤ this → weight dodge away from player
-SCRAG_HOLD_R	= 12		; Chebyshev ≤ this + LOS → stop closing, spit
 GRUNT_ATK_MS	= 1500		; min time in approach before the next attack
-KNIGHT_ATK_MS	= 1500
-ROTT_ATK_MS	= 1500
-SCRAG_ATK_MS	= 2000		; Q1 wiz_fast14 SUB_AttackFinished(2)
-OGRE_ATK_MS	= 1500
-SHAM_ATK_MS	= 1500
-SHAM_STEP_MS	= 400		; approach cadence (2× ENEMY_STEP_MS)
-ZOMBIE_ATK_MS	= 1500
 DOOM_STEP_MS	= 300		; Poss / Imp / Pinky / Baron cell cadence
 DOOM_ATK_MS	= 256		; reattack after a claw or flesh throw
-DEMON_ATK_MS	= 1500
-OGRE_MELEE_R	= 6		; chainsaw Chebyshev; grenade uses enemy_range
-OGRE_SWING_FIRE	= 4		; clip-local hit; shoot uses enemy_fire_frame
-SHAM_MELEE_R	= 6		; Q1 vlen 100, same face range as the ogre saw
-SHAM_VAR_SMASH	= 0
-SHAM_VAR_SWINGR	= 1
-SHAM_VAR_SWINGL	= 2
-SHAM_VAR_MAGIC	= 3
-SHAM_SMASH_FIRE	= 9		; smash10, 0-indexed
-SHAM_CLAW_FIRE	= 6		; swingr7 / swingl7
-SHAM_BOLT_LO	= 5		; magic6..magic8, three CastLightning ticks
-SHAM_BOLT_HI	= 8
-SHAM_BOLT_H	= 6		; chest above feet (Q1 origin+40)
-SHAM_BOLT_DROP	= EYE_HEIGHT - 2	; end Y = cam_yh − this (feet + 2)
-SHAM_BOLT_DMG	= 10		; Q1 LightningDamage 10; player HP is 100
-SHAM_BODY_R	= 4		; hitscan half-width; pixels += R*FOCAL/z
-SHAM_HIT_R	= 4		; grenade XZ chebyshev
-SHAM_HIT_H	= 10		; grenade Y span above feet (exclusive)
-SHAM_PAIN_MS	= 2000		; Q1 pain_finished = time + 2
-SHAM_PAIN_ALWAYS	= 80		; damage/80 flinch; 400÷5 because HP is ÷5
-CHTHON_FIRE2	= 17		; second throw in the attack clip (vert 13)
-OGRE_SAW_DMG	= 12		; 12/14/16/18 = 2×(6+(rnd&3))
-KNIGHT_SLASH_DMG	= 4		; 4–7 with rnd&3 (Doom ai_melee *3 vs ogre *4)
-KNIGHT_RUNATK_FIRE	= 5		; runattack clip-local hit (0-indexed)
-KNIGHT_ATKB_FIRE	= 7		; attackb clip-local hit (0-indexed)
-DEMON_MELEE_R	= 4		; claw Chebyshev; leap closes until this
-DEMON_LEAP_STEP_MS	= 100		; leap cell cadence
-DEMON_MELEE_FIRE	= 5		; attacka clip-local hit (0-indexed)
-DEMON_LEAP_FIRE	= 9		; leap clip-local hit (0-indexed)
-DEMON_DMG		= 8		; 8–15 with rnd&7
-ZOMBIE_STEP_MS	= 400		; slow walk; 2× grunt approach cadence
-FLESH_DMG		= 10		; Doom zombie missile 10 (player HP 100)
+DEMON_MELEE_R	= 4		; claw Chebyshev
+FLESH_DMG		= 10		; flesh chunk (player HP 100)
 AXE_DMG		= 4			; Doom axe 20 ÷ 5
 AXE_HIT_R		= 3			; XZ chebyshev radius for axe hit test
 SHOT_DMG_MAX	= 11		; Doom SSG 14×4=56 ÷ 5
@@ -657,15 +609,13 @@ GREN_OWN_PL		= 0
 GREN_OWN_EN		= 1
 GREN_F_BOUNCE		= 1			; fuse running
 GREN_F_PEND		= 2			; waiting on fx_on
-GREN_F_FLESH		= 4			; zombie chunk: no bounce/explode
-GREN_F_LAVA		= 8			; straight flight, burst on contact
+GREN_F_FLESH		= 4			; flesh chunk: no bounce/explode
 GREN_TICK_MS		= 32
 GREN_FLOOR_XZ_ASR	= 1			; /2 XZ per floor hop
 GREN_GRAV		= $01EC			; 60 u/s² × 32ms as 8.8
-GREN_SPEED		= 30			; enemy horizontal (ogre uses this; was 2×)
+GREN_SPEED		= 30			; enemy horizontal
 GREN_SPEED_PL		= 64			; player outward; loft stays GREN_SPEED_Y
 GREN_SPEED_Y		= 10		; upward (was 20; ~22° not 45°)
-GREN_OGRE_Y		= 8			; ogre loft: double air time for half horizontal speed
 GREN_FUSE_MS		= 2000
 GREN_LIFE_MS		= 5000
 GREN_DMG_MAX		= 24		; Doom 120 ÷ 5
@@ -675,11 +625,6 @@ GREN_WRIST_L		= 5			; skeleton "Wrist L"
 GREN_WRIST_R		= 7			; skeleton "Wrist R"
 GREN_R			= $60			; screen-triangle half-extent 0.375
 GREN_VEL_ASR		= 5			; tip = view-vel >> 5
-; Scrag spit — tracer + delayed hitscan
-SPIT_DMG		= 9			; Doom wizard spike (unscaled; player HP is 100)
-SPIT_TIP_VERT		= 12			; muzzle tip bone
-SPIT_LEN		= 16			; tracer Chebyshev length toward player
-SPIT_FLIGHT_MS		= 160			; ~1.3 units at 8 u/s; strafe clears perp > 1
 VIEW_SPR_X0	= 24 + VIEW_COL * 8	; 88 — viewport (0,0) → VIC
 VIEW_SPR_Y0	= 50 + VIEW_ROW * 8	; 122
 SPLAT_INSET_X	= 24		; melee cue never on viewport edge (0..191)
@@ -774,7 +719,6 @@ AMMO_SHELLS_MAX		= 100
 AMMO_NAILS_MAX		= 200
 AMMO_GRENADES_MAX	= 100
 AMMO_SHELLS_BOX		= 20
-AMMO_SHELLS_DEATH	= 5			; unused; poss/grunt now drop a shells box
 AMMO_NAILS_BOX		= 25
 AMMO_GRENADES_BOX	= 5
 AMMO_NAILS_GUN		= 30
@@ -854,13 +798,13 @@ shot_hit_i	= $CE8B + A8_OFF			; closest hitscan enemy, $ff = miss
 shot_hit_z	= $CE8C + A8_OFF			; CAM_ZH of that hit
 hurt_flash_l	= $CE8D + A8_OFF			; remaining red-border ms
 hurt_flash_h	= $CE8E + A8_OFF
-bite_splat_i	= $CE8F + A8_OFF			; dog idx pending blood splat, $ff = none
+bite_splat_i	= $CE8F + A8_OFF			; enemy idx pending blood splat, $ff = none
 status_ms_l	= $CE90 + A8_OFF			; status HUD remaining ms
 status_ms_h	= $CE91 + A8_OFF
 door_i0		= $CE92 + A8_OFF			; room door slice start
 door_i1		= $CE93 + A8_OFF			; exclusive end
 sw_match	= $CE94 + A8_OFF			; cooked door/enable-tag id while unlocking/arming
-en_pat_n	= $CE95 + A8_OFF			; ENEMY_MAX: dog repath frames, Chthon rise latch
+; $CE95–$CEAC reserved (was en_pat_n, 24). Do not slide en_pain_i.
 en_pain_i	= $CEAD + A8_OFF			; ENEMY_MAX: pain/death/attack variant index
 have_keys	= $CEC5 + A8_OFF			; HAVE_YELLOW / HAVE_BLUE / HAVE_RED
 pu_kind		= $CEC6 + A8_OFF			; 0 or BP_RADSUIT
@@ -895,7 +839,7 @@ gr_fuse_l	= $CF11 + A8_OFF
 gr_fuse_h	= $CF15 + A8_OFF
 gr_life_l	= $CF19 + A8_OFF
 gr_life_h	= $CF1D + A8_OFF
-sham_alert_ph	= $CF21 + A8_OFF			; flips each anim tick; 1 = hold Shambler alert or magic frame
+; $CF21 reserved (was sham_alert_ph). Do not slide hit_dmg.
 hit_dmg		= $CF22 + A8_OFF			; applied damage for the current damage_enemy call
 dodge_dx	= $CF23 + A8_OFF			; select_dodge_dir: signed dx toward player
 dodge_dz	= $CF24 + A8_OFF			; signed dz toward player
@@ -948,27 +892,7 @@ stream_room	= $CF42 + A8_OFF
 ; Explosion particle vel — FX_N × vx/vy s8 (integrated at draw)
 fx_vx		= $CF43 + A8_OFF			; 24
 fx_vy		= $CF5B + A8_OFF			; 24
-; Scrag spit — 4 control + 3 axes (player 8.8, wrist 8.8).
-; Axis stride 4: player lo, player hi, wrist lo, wrist hi. X, Y, Z.
-; Tracer end is rebuilt at draw.
-spit_on		= $CF73 + A8_OFF
-spit_room	= $CF74 + A8_OFF
-spit_owner	= $CF75 + A8_OFF			; enemy index
-spit_flash	= $CF76 + A8_OFF			; 0 = tracer done, hitscan next update
-spit_axes	= $CF77 + A8_OFF
-spit_xl		= spit_axes		; player X lo at fire
-spit_xh		= spit_axes+1
-spit_oxl	= spit_axes+2		; wrist X
-spit_oxh	= spit_axes+3
-spit_yl		= spit_axes+4		; aim Y lo (eye − 1)
-spit_yh		= spit_axes+5
-spit_oyl	= spit_axes+6		; wrist Y
-spit_oyh	= spit_axes+7
-spit_zl		= spit_axes+8		; player Z lo at fire
-spit_zh		= spit_axes+9
-spit_ozl	= spit_axes+10		; wrist Z
-spit_ozh	= spit_axes+11
-spit_prod	= spit_axes+4		; 32-bit product, lo first. Y axis is dead once the hitscan runs.
+; $CF73–$CF82 reserved (was scrag spit). Do not slide splat_src.
 splat_src	= $CF83 + A8_OFF			; mode-E splat rows (21×3)
 ; Evicted from KERNAL ZP ($90–$bf / SETNAM $b7–$bc). Abs OK — not (ptr),y.
 wish_dx		= $CF85 + A8_OFF			; signed move intent X
@@ -1042,65 +966,8 @@ ai_pose_lo	= $CFC8 + A8_OFF
 ai_pose_hi	= $CFC9 + A8_OFF
 ai_cmd		= $CFCA + A8_OFF
 ai_field	= $CFCB + A8_OFF
-rune_taken	= $CFCC + A8_OFF			; 1 = red keycard picked up (Chthon gate)
-ch_anim_phase	= $CFCD + A8_OFF			; flips each anim tick; 1 = skip Chthon this step
-ch_crate	= $CFCE + A8_OFF			; two crate SoA indices
-ch_home		= $CFD0 + A8_OFF			; home Y of each electrode
-ch_phase	= $CFD2 + A8_OFF			; 0 up, 1 lowering, 2 hold, 3 rising
-ch_acc_l	= $CFD4 + A8_OFF			; per-crate ms accumulator lo
-ch_acc_h	= $CFD6 + A8_OFF			; per-crate ms accumulator hi
-ch_bolt_l	= $CFD8 + A8_OFF			; lightning remaining
-ch_bolt_h	= $CFD9 + A8_OFF
-ch_req		= $CFDA + A8_OFF			; 1 lower, 2 fire
-ch_trig		= $CFDB + A8_OFF			; trigger SoA index for the request
-ch_shock	= $CFDC + A8_OFF			; 1 = shockc loops until the bolt ends
-ch_enemy	= $CFDD + A8_OFF			; Chthon index, $ff until the crates are cached
-ch_psx		= $CFDE + A8_OFF			; electrode scratch
-ch_psy		= $CFDF + A8_OFF
-ch_pok		= $CFE0 + A8_OFF
-ch_ax		= $CFE1 + A8_OFF			; bolt endpoints (crate centres)
-ch_ay		= $CFE2 + A8_OFF
-ch_az		= $CFE3 + A8_OFF
-ch_by		= $CFE4 + A8_OFF
-ch_bz		= $CFE5 + A8_OFF
-ch_best		= $CFE6 + A8_OFF
-ch_dist		= $CFE7 + A8_OFF
-ch_i		= $CFE8 + A8_OFF
-ch_prod		= $CFE9 + A8_OFF
-ch_prod_h	= $CFEA + A8_OFF
-; Shambler pain lock + bolt scratch. Ends at $CFFF (charset A is $D000).
-sham_arc	= $CFEB + A8_OFF			; 1 = magic frames 5..7, V3 crackle
-sham_pain_i	= $CFEC + A8_OFF			; locked enemy, $ff = none
-sham_pain_l	= $CFED + A8_OFF
-sham_pain_h	= $CFEE + A8_OFF
-sham_ax		= $CFEF + A8_OFF			; segment start (chest)
-sham_ay		= $CFF0 + A8_OFF
-sham_az		= $CFF1 + A8_OFF
-sham_bx		= $CFF2 + A8_OFF			; segment end (player or blocker)
-sham_by		= $CFF3 + A8_OFF
-sham_bz		= $CFF4 + A8_OFF
-sham_hx		= $CFF5 + A8_OFF			; nearest blocker
-sham_hy		= $CFF6 + A8_OFF
-sham_hz		= $CFF7 + A8_OFF
-sham_best	= $CFF8 + A8_OFF			; nearest t, $ff = clear
-sham_i		= $CFF9 + A8_OFF
-sham_px		= $CFFA + A8_OFF
-sham_py		= $CFFB + A8_OFF
-sham_pz		= $CFFC + A8_OFF
-sham_pok	= $CFFD + A8_OFF
-sham_psx	= $CFFE + A8_OFF
-sham_psy	= $CFFF + A8_OFF
-CH_PHASE_UP	= 0
-CH_PHASE_DOWN	= 1
-CH_PHASE_HOLD	= 2
-CH_PHASE_RISE	= 3
-CH_STEP_MS	= 256			; 1 world unit; ~2s for the 8-unit drop
-CH_DROP		= 8
-CH_HOLD_MS	= 30000
-CH_BOLT_MS	= 5000
-CH_SHOCK_DMG	= 40			; half of Chthon's 80 HP
-CH_REQ_LOWER	= 1
-CH_REQ_FIRE	= 2
+rune_taken	= $CFCC + A8_OFF			; reserved quicksave byte; do not drop
+; $CFCD–$CFFF reserved (was chthon/shambler). Charset A is $D000. Do not slide.
 HAVE_YELLOW	= 1
 HAVE_BLUE	= 2
 HAVE_RED	= 4

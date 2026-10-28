@@ -643,12 +643,6 @@ draw_plat_mesh
 	sta edge_b+1
 	jmp stroke_mesh
 
-; No Chthon. Callers treat C=0 as an ordinary room. X restored from obj_i.
-room_has_chthon
-	clc
-	ldx obj_i
-	rts
-
 ; Pickup mesh: type in A (BP_*). nv=0 → backpack mesh.
 draw_backpack_mesh
 	ldx obj_i
@@ -1569,24 +1563,17 @@ draw_world
 	+lda_mx plat_sz
 	sta box_sz
 	+lda_mx plat_solid
-	bne .dw_pl_low
+	bne .dw_pl_fr
 	lda box_sx
 	cmp #5
-	bcs .dw_pl_low
+	bcs .dw_pl_fr
 	lda box_sz
 	cmp #5
-	bcs .dw_pl_low
+	bcs .dw_pl_fr
 	lda cam_yh
 	cmp box_y
 	bcs .dw_pl_fr			; eye at or above the plane
 	jmp .dw_pln			; small non-solid, viewed from below
-.dw_pl_low
-	lda box_y
-	cmp floor_y
-	bcs .dw_pl_fr
-	jsr room_has_chthon
-	bcc .dw_pl_fr
-	jmp .dw_pln			; lava pit: platform under the floor we're on
 .dw_pl_fr
 	jsr frustum_hits
 	bcc .dw_plr

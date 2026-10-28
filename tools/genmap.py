@@ -406,8 +406,6 @@ def cook_one(level: dict, map_key: str) -> bytes:
     TRIG_ELEV = 4
     TRIG_SUMMON = 5
     TRIG_UNLOCK = 6
-    TRIG_LOWER = 7
-    TRIG_FIRE = 8
     TRIG_HURT_SM = 9
     TRIG_PURPOSE = {
         "message": TRIG_MSG,
@@ -418,8 +416,6 @@ def cook_one(level: dict, map_key: str) -> bytes:
         "elevator": TRIG_ELEV,
         "summon": TRIG_SUMMON,
         "unlock": TRIG_UNLOCK,
-        "lower_electrode": TRIG_LOWER,
-        "fire_electrodes": TRIG_FIRE,
     }
     SW_DEST_DOOR = 0
     SW_DEST_ELEV = 1
@@ -812,8 +808,6 @@ def cook_one(level: dict, map_key: str) -> bytes:
         ri = room_index(rooms, e, "enemy")
         name = e.get("enemy") or "Possessed"
         if name not in ENEMY_TYPE:
-            if name in ("Scrag", "Ogre", "Shambler", "Chthon", "Demon"):
-                continue
             raise SystemExit(f"unknown enemy type {name}")
         # Center of placement box (feet on y)
         en_x.append(e["x"] + e["sx"] // 2)
@@ -1177,8 +1171,7 @@ TRIG_TELE	= 3
 TRIG_ELEV	= 4
 TRIG_SUMMON	= 5
 TRIG_UNLOCK	= 6
-TRIG_LOWER	= 7
-TRIG_FIRE	= 8
+; 7 and 8 unused (were electrode). Do not renumber.
 TRIG_HURT_SM	= 9
 TRIG_PURPOSE_MASK	= $0F
 TRIG_GATED_MASK	= $F0
@@ -1227,7 +1220,6 @@ ENT_PINKY	= 2
 ENT_IMP	= 3
 ENEMY_NTYPES	= 4
 ENEMY_CLASS_HUM	= 0
-ENEMY_CLASS_DOG	= 1
 """
 
 

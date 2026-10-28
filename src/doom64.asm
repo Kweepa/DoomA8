@@ -102,7 +102,6 @@ main
 	jsr update_grenades
 	jsr update_status
 	jsr update_triggers
-	jsr update_chthon_elec
 	jsr enemies_update
 !if  PROFILE = 1 {
 	ldy #PROF_UPDATE

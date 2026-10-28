@@ -229,18 +229,6 @@ def weapon_pngs() -> list[Path]:
     return [folder, *pics]
 
 
-def id1_paks() -> list[Path]:
-    folder = ROOT / "ref" / "id1"
-    if not folder.is_dir():
-        return [folder]
-    paks = [
-        path
-        for path in folder.iterdir()
-        if path.is_file() and path.suffix.lower() == ".pak"
-    ]
-    return [folder, *paks] if paks else [folder]
-
-
 def ref_audio() -> list[Path]:
     return [ROOT / "ref" / "DOOM.WAD"]
 
@@ -347,7 +335,6 @@ def steps(exe: str) -> list[Step]:
                 TOOLS / "doommdl.py",
                 doc,
                 *enemy_json(),
-                *id1_paks(),
                 ENEMIES / "sound_ids.json",
             ],
             # Pose PRGs and enemy_sizes.asm are rewritten by genaibanks.

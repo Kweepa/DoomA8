@@ -390,7 +390,7 @@ export function usesLinkTag(kind) {
 }
 
 /** Trigger purposes. Tag is used for teleport / elevator / summon / unlock. */
-export const TRIGGER_PURPOSES = ["message", "end_level", "hurt", "hurt_small", "teleport", "elevator", "summon", "unlock", "lower_electrode", "fire_electrodes"];
+export const TRIGGER_PURPOSES = ["message", "end_level", "hurt", "hurt_small", "teleport", "elevator", "summon", "unlock"];
 export const TRIGGER_PURPOSE_LABELS = {
   message: "Display message",
   end_level: "End of level",
@@ -400,8 +400,6 @@ export const TRIGGER_PURPOSE_LABELS = {
   elevator: "Activate elevator",
   summon: "Summon elevator",
   unlock: "Unlock door",
-  lower_electrode: "Lower electrode",
-  fire_electrodes: "Fire electrodes",
 };
 
 export function clampTriggerPurpose(s) {
@@ -2168,7 +2166,6 @@ export const MAP_HDR_BYTES = 24;
 
 // Keep in sync with tools/genenemies.py (clip-local fire + role names).
 const FIRE_FRAME = [1, 1, 1, 1];
-const CHTHON_FIRE2 = 17;
 const PAIN_MAX = 4;
 const ROLE_CLIPS = {
   Possessed: { stand: ["stand"], alert: ["stand"], run: ["walk"], walk: ["walk"], attack: ["missile"] },
@@ -2271,9 +2268,8 @@ function findPoseAttackVariants(name, clips) {
   return out;
 }
 
-function findPoseVariants(clips, kind, name) {
-  let re = kind === "pain" ? /^pain[a-z]?$/ : /^(bdeath|death[a-z]?)$/;
-  if (kind === "pain" && name === "Chthon") re = /^shock[a-z]?$/;
+function findPoseVariants(clips, kind) {
+  const re = kind === "pain" ? /^pain[a-z]?$/ : /^(bdeath|death[a-z]?)$/;
   const out = [];
   for (const c of clips) {
     if (!re.test(poseClipKey(c.name))) continue;
@@ -2417,7 +2413,7 @@ export function packedPoseBytes(enemy, clips, frames) {
     ranges.push([`attack${i}`, start, Math.min(length, nLogical - start)]);
   });
   for (const kind of ["pain", "death"]) {
-    findPoseVariants(clipList, kind, name).forEach(([start, length], i) => {
+    findPoseVariants(clipList, kind).forEach(([start, length], i) => {
       if (start >= nLogical || length <= 0) return;
       ranges.push([`${kind}${i}`, start, Math.min(length, nLogical - start)]);
     });
@@ -2425,9 +2421,7 @@ export function packedPoseBytes(enemy, clips, frames) {
   for (const [role, start, length] of ranges) {
     let extra = [];
     if (typeof role === "string" && role.startsWith("attack")) {
-      if (name === "Demon") extra = [start + 5, start + 9];
-      else if (name === "Chthon") extra = [start + fireOff, start + CHTHON_FIRE2];
-      else if (fireOff >= 0 && fireOff < 255) extra = [start + fireOff];
+      if (fireOff >= 0 && fireOff < 255) extra = [start + fireOff];
     }
     for (const i of poseCadenceKeep(start, length, posePickKeys(frs, start, length, extra))) {
       keep.add(i);

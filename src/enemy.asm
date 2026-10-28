@@ -589,17 +589,10 @@ enemy_facing_ok
 ; Wolf-style dodge: pick en_dir toward player (diagonal first)
 select_dodge_dir
 	ldx enemy_idx
-	jsr enemy_get_class
-	bne .sdd_nodir
 	lda en_dir,x
 	tay
 	lda en_opp,y
 	sta ai_turn
-	jmp .sdd_dlt
-.sdd_nodir
-	lda #$ff
-	sta ai_turn
-.sdd_dlt
 	lda cam_xh
 	sec
 	+sbc_mx en_x
@@ -673,8 +666,7 @@ select_dodge_dir
 .sdd_ord
 	; Grunt too close: prefer away (swap toward↔away, rebuild diag)
 	ldx enemy_idx
-	jsr enemy_get_class
-	bne .sdd_zig
+	+ldy_mx en_type
 	cpy #ENT_BARON
 	beq .sdd_zig			; baron closes, doesn't back off
 	jsr enemy_chebyshev
@@ -949,34 +941,7 @@ enemy_shoot_cue
 .esc_rts
 	rts
 
-; A = attack variant (0=swing, 1=shoot). Face player; saw rev on swing.
-enemy_enter_ogre_attack
-	ldx enemy_idx
-	sta en_pain_i,x
-	lda #EN_ATTACK
-	sta en_state,x
-	lda #0
-	sta en_frame,x
-	jsr enemy_play_clip_sfx_enter
-	ldx enemy_idx
-	jmp enemy_face_player
-
-; A = smash / swingr / swingl / magic. Face player.
-enemy_enter_shambler_attack
-	ldx enemy_idx
-	sta en_pain_i,x
-	lda #EN_ATTACK
-	sta en_state,x
-	lda #0
-	sta en_frame,x
-	sta sham_arc
-	jsr enemy_play_clip_sfx_enter
-	ldx enemy_idx
-	jmp enemy_face_player
-
-; A = attack variant (0=leap, 1=claw). MDL order. Zero step so the leap doesn't inherit chase cadence.
-; Knight (0=runattack, 1=attackb) shares the demon entry: same state, zero step.
-enemy_enter_knight_attack
+; A = attack variant. Zero step so a leap doesn't inherit chase cadence.
 enemy_enter_demon_attack
 	ldx enemy_idx
 	sta en_pain_i,x
@@ -1027,7 +992,7 @@ enemy_enter_approach
 	ldx enemy_idx
 	lda en_timer,x
 	ora en_timer_h,x
-	beq .eea_rts			; no cooldown (Chthon)
+	beq .eea_rts			; no cooldown
 	jsr rnd8
 	clc
 	adc en_timer,x
@@ -1185,7 +1150,6 @@ enemy_probe_dir
 	jmp enemy_pos_ok
 
 ; Try step in en_dir; repath if blocked. Also clamp.
-; Scrag: keep hover Y (do not floor-snap).
 enemy_try_step
 	ldx enemy_idx
 	lda en_dir,x
@@ -1208,28 +1172,6 @@ enemy_try_step
 	jsr enemy_set_geom
 	jsr enemy_clamp_room
 .ets_rts
-	rts
-
-; One cell along current en_dir. C=1 moved.
-enemy_patrol_step
-	ldx enemy_idx
-	lda en_dir,x
-	jsr enemy_probe_dir
-	bcc .eps_no
-	ldx enemy_idx
-	lda col_x
-	+sta_mx en_x
-	lda col_z
-	+sta_mx en_z
-	lda proc_tmp2
-	+sta_mx en_y
-	lda en_dir,x
-	jsr enemy_set_geom
-	jsr enemy_clamp_room
-	sec
-	rts
-.eps_no
-	clc
 	rts
 
 ; Clamp en_x/z: matching-top rb (standing, else nearest), not lid union.

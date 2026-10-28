@@ -507,25 +507,10 @@ a8_keys
 .nk
 	rts
 
-; World channel: elevator rumble or Shambler/Chthon crackle when idle.
+; World channel: elevator rumble when idle.
 a8_noise
 	lda sfx_index+2
 	bpl .rts
-	lda ch_bolt_l
-	ora ch_bolt_h
-	ora sham_arc
-	beq .elev
-	jsr rnd8
-	and #$3f
-	clc
-	adc #$20
-	sta $d204				; AUDF3
-	lda effects_vol
-	and #$0f
-	ora #$80				; noise
-	sta $d205
-	rts
-.elev
 	lda elev_noise_n
 	beq .off
 	lda #$30
