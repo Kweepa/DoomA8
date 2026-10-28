@@ -136,8 +136,8 @@ Caps: `MAP_MAX_BYTES` 4096, pose payload 4096, fused bank 8192.
 | `$C7E8`–`$C7F7` | 16 | Unused |
 | `$C7F8`–`$C7FF` | 8 | VIC sprite pointers for matrix B |
 | `$C800`–`$C8FF` | 256 | Weapon body sprites 0–3 (`WPN_RAM`, 4×64) |
-| `$C900`–`$C93F` | 64 | Sprite 4 muzzle / spark / nail L (`WPN_FLASH`) |
-| `$C940`–`$C97F` | 64 | Sprite 5 nail R (`WPN_FLASH2`) |
+| `$C900`–`$C93F` | 64 | Sprite 4 muzzle / spark / chaingun L (`WPN_FLASH`) |
+| `$C940`–`$C97F` | 64 | Sprite 5 chaingun R (`WPN_FLASH2`) |
 | `$C980`–`$C9BF` | 64 | Sprite 6 enemy muzzle (`WPN_EMUZ`) |
 | `$C9C0`–`$C9FF` | 64 | Sprite 7 impact splat (`WPN_SPLAT`) |
 | `$CA00`–`$CE81` | 642 | Project / clip / game scratch (table below) |
@@ -285,7 +285,7 @@ Vertex tables are 16 slots. Edge clip tables are 32 slots. Unique-X/Z product ta
 | `$CCE0` | 16 | `COL_PXL` | |
 | `$CCF0` | 16 | `COL_PXH` | |
 | `$CD00` | 1 | `ammo_shells` | |
-| `$CD01` | 1 | `ammo_nails` | |
+| `$CD01` | 1 | unused | |
 | `$CD02` | 1 | `ammo_grenades` | |
 | `$CD03` | 1 | `have_wpn` | `HAVE_*` bitfield |
 | `$CD04` | 32 | `bp_taken` | `BP_MAX` |

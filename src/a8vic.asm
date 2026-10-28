@@ -92,7 +92,7 @@ a8_take_dl
 	rts
 
 ; Bitmap LMS address. Head is 14 bytes: top, title LMS, map, blank,
-; shells, nails, grenades, blank, message, seam, seam blank, mode E.
+; bullets, shells, rockets, blank, message, seam, seam blank, mode E.
 DL_LMS		= DL + 14
 
 set_draw_ptrs

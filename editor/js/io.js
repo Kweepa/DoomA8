@@ -182,6 +182,53 @@ export async function writeEnemyFiles(records) {
   }
 }
 
+const MAP_FILE_KEYS = ["e1m1", "e1m2", "e1m3", "e1m4", "e1m5", "e1m6", "e1m7", "e1m8"];
+
+async function mapDir(create) {
+  if (!projectDirHandle) return null;
+  const editor = await projectDirHandle.getDirectoryHandle("editor");
+  return editor.getDirectoryHandle("maps", create ? { create: true } : undefined);
+}
+
+/** Per-map records keyed by E1M1..E1M8. Null when editor/maps is not there yet. */
+export async function readMapFiles() {
+  let dir;
+  try {
+    dir = await mapDir(false);
+  } catch {
+    return null;
+  }
+  if (!dir) return null;
+  const out = {};
+  let any = false;
+  for (const key of MAP_FILE_KEYS) {
+    try {
+      const fh = await dir.getFileHandle(`${key}.json`);
+      const text = await (await fh.getFile()).text();
+      out[key.toUpperCase()] = JSON.parse(text);
+      any = true;
+    } catch {
+      /* missing file */
+    }
+  }
+  return any ? out : null;
+}
+
+export async function writeMapFiles(records) {
+  const dir = await mapDir(true);
+  if (!dir) return;
+  const byFile = new Map(records.map((rec) => [rec.file, rec.data]));
+  for (const key of MAP_FILE_KEYS) {
+    const file = `${key}.json`;
+    const data = byFile.get(file);
+    if (!data) continue;
+    const fh = await dir.getFileHandle(file, { create: true });
+    const w = await fh.createWritable();
+    await w.write(JSON.stringify(data, null, 2));
+    await w.close();
+  }
+}
+
 export async function getStoredProjectDir() {
   return loadStoredHandle(PROJECT_KEY);
 }

@@ -198,7 +198,7 @@ slot_of_y
 	pla
 	rts
 
-; X = enemy. A preserved. Y = slot * PAIN_MAX + en_pain_i (pain/death/attack variant)
+; X = enemy. A preserved. Y = slot * PAIN_MAX + en_pain_i (pain/death variant)
 !if PAIN_MAX != 4 {
 	!error "pain_var_off assumes PAIN_MAX=4"
 }
@@ -265,7 +265,7 @@ enemy_logical_frame
 	rts
 .elf_atk
 	lda en_frame,x
-	jsr pain_var_off
+	jsr ldy_slot
 	clc
 	adc enemy_attack_start,y
 	tay
@@ -659,7 +659,7 @@ doom_grow
 +
 }
 
-; 8.8 view → unclamped 16-bit screen, then CS. persp88 is far enemies only.
+; 8.8 view → unclamped 16-bit screen, then CS.
 ; Verts sharing an XZ column (col_ptr table) share z_eye, inv and PROJ_X:
 ; box corners come in vertical pairs, so half the divides/X-projections.
 mesh_project
@@ -1907,131 +1907,9 @@ xform_item_at
 	rts
 }
 
-; True-project feet (slot 11); limb PROJ = feet + dCAM * trunc(FOCAL/z) >> 8.
-; mesh_nv verts. Fills PROJ_* and per-vert outcodes. Caller runs mesh_clip.
-ent_far_project
-	lda mesh_nv
-	sta mesh_nwork
-!if PROFILE = 1 {
-	ldx #NV_PROJ
-	jsr prof_add_nv
-}
-	lda CAM_Z+11
-	sta z_eye
-	lda CAM_ZH+11
-	sta z_eye_h
-	lda CAM_X+11
-	sta ylo
-	lda CAM_XH+11
-	sta yhi
-	jsr persp88
-	sta ox0l
-	ldy #0
-	ora #0
-	bpl +
-	ldy #$ff
-+
-	sty ox0h
-	lda CAM_Y+11
-	sta ylo
-	lda CAM_YH+11
-	sta yhi
-	jsr persp88
-	sta oy0l
-	ldy #0
-	ora #0
-	bpl +
-	ldy #$ff
-+
-	sty oy0h
-	lda #0
-	sta ylo
-	lda #1
-	sta yhi
-	jsr persp88
-	sta far_scale
-	jsr mulset_a			; per-enemy constant → fast-mul set A
-	lda #0
-	sta vindex
-.far_pv
-	ldx vindex
-	sec
-	lda CAM_X,x
-	sbc CAM_X+11
-	sta nlo
-	lda CAM_XH,x
-	sbc CAM_XH+11
-	sta nhi
-	jsr smul16_a			; × far_scale
-	lda nhi
-	cmp #$80
-	ror nhi
-	ror nlo
-	clc
-	lda nlo
-	adc ox0l
-	sta nlo
-	lda nhi
-	adc ox0h
-	sta nhi
-	ldx vindex
-	lda nlo
-	sta PROJ_X,x
-	lda nhi
-	sta PROJ_XH,x
-	sec
-	lda CAM_Y,x
-	sbc CAM_Y+11
-	sta nlo
-	lda CAM_YH,x
-	sbc CAM_YH+11
-	sta nhi
-	jsr smul16_a			; × far_scale
-	lda nhi
-	cmp #$80
-	ror nhi
-	ror nlo
-	clc
-	lda nlo
-	adc oy0l
-	sta nlo
-	lda nhi
-	adc oy0h
-	sta nhi
-	ldx vindex
-	lda nlo
-	sta PROJ_Y,x
-	lda nhi
-	sta PROJ_YH,x
-	inc vindex
-	lda vindex
-	cmp mesh_nv
-	bne .far_pv
-
-	lda #0
-	sta vindex
-.far_hoist
-	jsr vert_hoist
-	inc vindex
-	lda vindex
-	cmp mesh_nv
-	bne .far_hoist
-	rts
-
-; CAM[] filled, mesh_nv/mesh_ne and edge pointers set. Slot 11 is the feet.
-; Far when that depth reaches the type's lodZ; otherwise a full project.
+; CAM[] filled, mesh_nv/mesh_ne and edge pointers set. Per-vertex project.
 enemy_project
-	lda CAM_ZH+11
-	bmi .ep_full
-	ldx obj_i
-	jsr ldy_slot
-	cmp enemy_lod_z,y
-	bcc .ep_full
-	jsr ent_far_project
-	jmp .ep_clip
-.ep_full
 	jsr mesh_project
-.ep_clip
 !if PROFILE = 1 {
 	ldy #PROF_PROJ
 	jsr prof_add_bucket
@@ -2172,7 +2050,6 @@ SKEL_CMD_DRAW = 0
 SKEL_CMD_LERP = 1
 
 ; Shift-0 custom mesh, one batch, 12..16 slots. Same rotate as the stick.
-; Slot 11 is the feet (pinned at export). Falls into the stick LOD tail.
 ; ent_type set, CAM[0] is the origin.
 draw_one_batch
 	jsr ent_set_pose
@@ -2335,7 +2212,7 @@ try_bite_splat
 	rts
 
 ; If this enemy is on its ranged fire frame (or latched pending), claim sprite-6 muzzle at tip.
-; Grunt: weapon (12). Ogre shoot: Wrist L. Depth in rot1 for start_enemy_muzzle.
+; Slot 12 is the weapon vertex pinned at export. Depth in rot1 for start_enemy_muzzle.
 try_enemy_muzzle
 	jsr enemy_muzzle_want
 	bcc .temz_rts
@@ -2369,11 +2246,12 @@ enemy_muzzle_want
 	cpy #ENT_PINKY
 	beq .emw_no			; bite — no muzzle
 	cpy #ENT_BARON
-	beq .emw_var
-	jmp .emw_ff
-.emw_var
-	lda en_pain_i,x
-	beq .emw_no			; bite / swing — no muzzle
+	beq .emw_kind
+	cpy #ENT_IMP
+	bne .emw_ff
+.emw_kind
+	lda atk_kind,x
+	beq .emw_no			; claw shares the attack clip — no muzzle
 .emw_ff
 	jsr ldy_slot
 	lda emuz_pending

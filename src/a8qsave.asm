@@ -35,7 +35,7 @@ QSO_SAVE	= 0
 QSO_VERIFY	= 1
 QSO_RESTORE	= 2
 QSO_MAGIC	= $a5
-QSO_VER		= 1
+QSO_VER		= 2
 QSO_HDR		= 9
 QSO_BYTES	= QSAVE_N * 128
 OP_READ		= $52			; same values as the SIO commands qs_sector takes
@@ -524,8 +524,8 @@ qso_n		!byte 1, 0, 0, 0
 qso_tab
 	+qf player_hp, 0
 	+qf player_armour, 0
+	+qf combat_armor, 0
 	+qf ammo_shells, 0
-	+qf ammo_nails, 0
 	+qf ammo_grenades, 0
 	+qf ammo_bullets, 0
 	+qf have_wpn, 0

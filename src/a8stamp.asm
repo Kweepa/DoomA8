@@ -30,7 +30,7 @@ stamp_view
 	sta stamp_base
 	ldx cur_weapon
 	lda wpn_fr_base,x
-	cpx #WPN_NAIL
+	cpx #WPN_CHAIN
 	bne .body
 	clc
 	adc wpn_fr
@@ -60,9 +60,9 @@ stamp_view
 .no4
 	lda flash5_phase
 	beq .no5
-	lda #<spr_nail_fr_b
+	lda #<spr_chain_fr_b
 	sta init_ptr
-	lda #>spr_nail_fr_b
+	lda #>spr_chain_fr_b
 	sta init_ptr+1
 	lda flash5_phase
 	jsr stamp_flash

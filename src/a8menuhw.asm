@@ -1370,7 +1370,7 @@ a8_stage_dl
 	beq .nom
 	lda #$f0				; top blank + DLI
 	sta GAME_DL_STAGE
-	lda #$82				; nails + DLI
+	lda #$82				; shells + DLI
 	sta GAME_DL_STAGE + 7
 .nom
 	lda #<BMP_A
@@ -1407,7 +1407,7 @@ a8_game_dl
 	!byte $82				; map + DLI
 	!byte $70				; 8 blanks
 	!byte $02				; shells
-	!byte $02				; nails
+	!byte $02				; shells
 	!byte $82				; grenades + DLI
 	!byte $70				; 8 blanks
 	!byte $02				; message

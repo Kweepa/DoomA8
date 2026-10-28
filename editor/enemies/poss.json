@@ -2919,7 +2919,8 @@
         "E"
       ],
       "sound": "shoot",
-      "soundFrame": 4
+      "soundFrame": 4,
+      "attackFrame": 4
     },
     {
       "name": "pain",
@@ -2978,7 +2979,7 @@
       []
     ]
   },
-  "lodZ": 10,
+  "weaponVert": 12,
   "hp": 20,
   "painChance": 128,
   "customSkeleton": true,

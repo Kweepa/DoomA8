@@ -25,7 +25,6 @@ REQUIRED = [
     "enemy_probe_dir",
     "enemy_set_geom",
     "enemy_face_player",
-    "pick_attack_var",
     "pain_var_off",
     "slot_of_y",
     "floor_below_y",
@@ -68,7 +67,6 @@ REQUIRED = [
     "elev_noise_on",
     "elev_noise_off",
     "kill_enemy",
-    "spawn_death_drop",
     # Line-body pixel sites (lda (colptr),y / ora #m).
     "esd0", "esd1", "esd2", "esd3",
     "esu0", "esu1", "esu2", "esu3",

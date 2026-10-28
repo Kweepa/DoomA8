@@ -815,19 +815,11 @@ copy_meta_row
 	sta enemy_walk_len,x
 	iny
 	lda (src_ptr),y
-	sta enemy_attack_n,x
+	sta enemy_attack_start,x
 	iny
-	lda #<enemy_attack_start
-	sta dst_ptr
-	lda #>enemy_attack_start
-	sta dst_ptr+1
-	jsr .cmr_quad
-	lda #<enemy_attack_len
-	sta dst_ptr
-	lda #>enemy_attack_len
-	sta dst_ptr+1
-	jsr .cmr_quad
-	ldx meta_scratch
+	lda (src_ptr),y
+	sta enemy_attack_len,x
+	iny
 	lda (src_ptr),y
 	sta enemy_pain_n,x
 	iny
@@ -867,9 +859,6 @@ copy_meta_row
 	iny
 	lda (src_ptr),y
 	sta enemy_class,x
-	iny
-	lda (src_ptr),y
-	sta enemy_lod_z,x
 	iny
 	lda (src_ptr),y
 	sta enemy_nframes,x

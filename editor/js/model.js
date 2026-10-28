@@ -86,6 +86,16 @@ export const DOOM_SPRITE_PREFIX = {
   Baron: "BOSS",
 };
 export const WEAPON_VERT = 12;
+
+/** Game muzzle reads batch slot 12. Export parks this vertex there. */
+export function clampWeaponVert(n, nv) {
+  const count = Math.max(0, nv | 0);
+  if (!count) return 0;
+  const fallback = Math.min(WEAPON_VERT, count - 1);
+  const v = Number(n);
+  if (!Number.isFinite(v)) return fallback;
+  return Math.max(0, Math.min(count - 1, v | 0));
+}
 export const WRIST_R = 7;
 export const JOINT_NAMES = [
   "Hip L",
@@ -114,16 +124,8 @@ export const ANIM_ORBIT_DIST_MAX = 400;
 export const ITEM_ORBIT_DIST_MIN = 8;
 export const ITEM_ORBIT_DIST_MAX = 80;
 export const DOC_VERSION = 10;
-/** Mid-distance stick LOD: full project while CAM_ZH < lodZ (world units). */
-export const DEFAULT_ENEMY_LOD_Z = 4;
-export const ENEMY_LOD_Z_BY_NAME = {
-  Possessed: 4,
-  Baron: 8,
-  Pinky: 4,
-  Imp: 4,
-};
 export const DEFAULT_WEAPON_SCALE = 0.4;
-export const WEAPON_KEYS = ["axe", "shot2", "nail", "rock"];
+export const WEAPON_KEYS = ["axe", "shot2", "chain", "rock"];
 export const WEAPON_LABELS = {
   axe: "Axe",
   shot2: "Super shotgun",
@@ -167,16 +169,6 @@ export function clampMdlScale(n) {
   const v = Number(n);
   if (!Number.isFinite(v)) return DEFAULT_MDL_SCALE;
   return Math.max(0.1, Math.min(2, v));
-}
-
-export function defaultEnemyLodZ(name) {
-  return ENEMY_LOD_Z_BY_NAME[name] ?? DEFAULT_ENEMY_LOD_Z;
-}
-
-export function clampEnemyLodZ(n, name) {
-  const v = Number(n);
-  if (!Number.isFinite(v)) return defaultEnemyLodZ(name);
-  return Math.max(0, Math.min(255, v | 0));
 }
 
 /**
@@ -1172,9 +1164,7 @@ export function parseItemMeshes(raw) {
   const src = { ...raw };
   const meshAlias = {
     "health 25%": "small health",
-    "health 50%": "large health",
-    armour: "green armor",
-    nails: "ammo box",
+    grenades: "box of rockets",
     grenades: "box of rockets",
     nailgun: "chaingun",
     "grenade launcher": "rocket launcher",
@@ -1370,10 +1360,33 @@ export function normalizeClipSound(raw, len) {
   return { sound: cue, soundFrame: Math.max(0, Math.min(raw.soundFrame | 0, n - 1)) };
 }
 
+/** Present attackFrame clamped to 0..len-1. Missing stays missing. */
+export function clampAttackFrame(raw, len) {
+  const n = Math.max(1, len | 0);
+  if (raw == null || raw === "") return null;
+  let frame = Number(raw);
+  if (!Number.isFinite(frame)) return null;
+  frame = frame | 0;
+  if (frame < 0) frame = 0;
+  if (frame > n - 1) frame = n - 1;
+  return frame;
+}
+
+/** Missing attackFrame is clip-local frame 1, then clamped. */
+export function attackFrameOrDefault(raw, len) {
+  const set = clampAttackFrame(raw, len);
+  if (set != null) return set;
+  return clampAttackFrame(1, len);
+}
+
 export function withClipSound(clip, src) {
-  const extra = normalizeClipSound(src || clip, clip.len);
-  if (!extra.sound) return { name: clip.name, start: clip.start, len: clip.len };
-  return { name: clip.name, start: clip.start, len: clip.len, ...extra };
+  const from = src || clip;
+  const extra = normalizeClipSound(from, clip.len);
+  const out = { name: clip.name, start: clip.start, len: clip.len, ...extra };
+  const attackRaw = from.attackFrame != null ? from.attackFrame : clip.attackFrame;
+  const attackFrame = clampAttackFrame(attackRaw, clip.len);
+  if (attackFrame != null) out.attackFrame = attackFrame;
+  return out;
 }
 
 export function normalizeClips(raw, frameCount) {
@@ -1392,7 +1405,7 @@ export function normalizeClips(raw, frameCount) {
 }
 
 /**
- * Placeable types. Index is the game type id (FIRE_FRAME / ENT_*).
+ * Placeable types. Index is the game type id (ENT_*).
  * hp is the default game byte (Doom health / 5). Edited values live on the
  * enemy record; lists sort by that.
  */
@@ -2096,7 +2109,7 @@ export function figureTemplateName(obj) {
   return obj.kind === "spawn" ? "Possessed" : obj.enemy || "Possessed";
 }
 
-/** World-space first-frame stick verts for a placed enemy (1/4 scale, feet on floor center). */
+/** Rest pose. Palette icons and the spawn marker stay here. */
 export function enemyPreviewFrame(template) {
   const frames = template?.frames;
   if (!frames?.length) return null;
@@ -2109,8 +2122,30 @@ export function enemyPreviewFrame(template) {
   return frames[0];
 }
 
-export function enemyPlacementWorldVerts(obj, template) {
-  const frame = enemyPreviewFrame(template);
+/** src/mem.asm ANIM_MS. Doom types in enemy.asm advance every other tick. */
+const ANIM_MS = 100;
+const DOOM_SLOW_WALK = new Set(["Possessed", "Baron", "Pinky", "Imp"]);
+
+function walkStepMs(name) {
+  return DOOM_SLOW_WALK.has(name) ? ANIM_MS * 2 : ANIM_MS;
+}
+
+/** Run/walk clip frame at the game step clock. All placed enemies share one phase. */
+function walkCycleFrame(template, now) {
+  const frames = template?.frames;
+  if (!frames?.length) return null;
+  const role = findPoseRole(template?.name, template?.clips || [], "run");
+  if (!role) return enemyPreviewFrame(template);
+  const [start, len] = role;
+  if (len < 1) return enemyPreviewFrame(template);
+  const fi = (start | 0) + (Math.floor(now / walkStepMs(template.name)) % len);
+  if (fi < 0 || fi >= frames.length) return enemyPreviewFrame(template);
+  return frames[fi];
+}
+
+/** World-space stick verts (1/4 scale, feet on floor center). Enemies loop walk. */
+export function enemyPlacementWorldVerts(obj, template, now = performance.now()) {
+  const frame = obj?.kind === "enemy" ? walkCycleFrame(template, now) : enemyPreviewFrame(template);
   if (!frame) return [];
   const ox = obj.x + obj.sx / 2;
   const oy = obj.y;
@@ -2164,8 +2199,7 @@ export const STICK_POSE_BYTES = 13 * 3; // gx+gy+gz per stored pose
 /** Packed map header: 12 counts + 2 type pads + 6 spawn + 4 mesh lens. */
 export const MAP_HDR_BYTES = 24;
 
-// Keep in sync with tools/genenemies.py (clip-local fire + role names).
-const FIRE_FRAME = [1, 1, 1, 1];
+// Keep in sync with tools/genenemies.py (role names).
 const PAIN_MAX = 4;
 const ROLE_CLIPS = {
   Possessed: { stand: ["stand"], alert: ["stand"], run: ["walk"], walk: ["walk"], attack: ["missile"] },
@@ -2194,6 +2228,12 @@ const ROLE_CLIPS = {
 
 function poseClipKey(name) {
   return String(name).replace(/_+$/, "").toLowerCase();
+}
+
+export function clipIsAttackRole(enemyName, clipName) {
+  const names = ROLE_CLIPS[enemyName]?.attack || [];
+  const key = poseClipKey(clipName);
+  return names.some((n) => poseClipKey(n) === key);
 }
 
 function poseClipByName(clips, name) {
@@ -2251,21 +2291,18 @@ function findPoseRole(name, clips, role) {
   return [start, length];
 }
 
-/** Attack ROLE candidates present in clips (export order), up to PAIN_MAX. */
+/** The one attack clip for this type, in export order. */
 function findPoseAttackVariants(name, clips) {
   const names = ROLE_CLIPS[name]?.attack || [];
   const want = new Set(names.filter((n) => typeof n === "string").map(poseClipKey));
-  const out = [];
   for (const c of clips) {
     if (!want.has(poseClipKey(c.name))) continue;
-    out.push([c.start | 0, c.len | 0]);
-    if (out.length >= PAIN_MAX) break;
+    const len = c.len | 0;
+    return [[c.start | 0, len, attackFrameOrDefault(c.attackFrame, len)]];
   }
-  if (!out.length) {
-    const stand = findPoseClip(clips, "stand", "walk", "hover");
-    if (stand) out.push([stand[0], 1]);
-  }
-  return out;
+  const stand = findPoseClip(clips, "stand", "walk", "hover");
+  if (stand) return [[stand[0], 1, 0]];
+  return [];
 }
 
 function findPoseVariants(clips, kind) {
@@ -2391,13 +2428,8 @@ export function packedPoseBytes(enemy, clips, frames) {
     return { bytes: 2 + nLogical + seen.size * nv * 3, nLogical, nStored: seen.size };
   }
 
-  const typeI = Math.max(
-    0,
-    ENEMY_TYPES.findIndex((t) => t.name === name),
-  );
   const covered = Array(nLogical).fill(false);
   const keep = new Set();
-  const fireOff = FIRE_FRAME[typeI] ?? 2;
 
   const ranges = [];
   for (const role of ["stand", "alert", "run", "walk"]) {
@@ -2408,9 +2440,13 @@ export function packedPoseBytes(enemy, clips, frames) {
     length = Math.min(length, nLogical - start);
     ranges.push([role, start, length]);
   }
-  findPoseAttackVariants(name, clipList).forEach(([start, length], i) => {
+  findPoseAttackVariants(name, clipList).forEach(([start, length, fireOff], i) => {
     if (start >= nLogical || length <= 0) return;
-    ranges.push([`attack${i}`, start, Math.min(length, nLogical - start)]);
+    const ln = Math.min(length, nLogical - start);
+    let fr = fireOff ?? attackFrameOrDefault(null, ln);
+    if (fr < 0) fr = 0;
+    if (fr >= ln) fr = ln - 1;
+    ranges.push([`attack${i}`, start, ln, fr]);
   });
   for (const kind of ["pain", "death"]) {
     findPoseVariants(clipList, kind).forEach(([start, length], i) => {
@@ -2418,10 +2454,10 @@ export function packedPoseBytes(enemy, clips, frames) {
       ranges.push([`${kind}${i}`, start, Math.min(length, nLogical - start)]);
     });
   }
-  for (const [role, start, length] of ranges) {
+  for (const [role, start, length, fireOff] of ranges) {
     let extra = [];
-    if (typeof role === "string" && role.startsWith("attack")) {
-      if (fireOff >= 0 && fireOff < 255) extra = [start + fireOff];
+    if (typeof role === "string" && role.startsWith("attack") && fireOff >= 0 && fireOff < 255) {
+      extra = [start + fireOff];
     }
     for (const i of poseCadenceKeep(start, length, posePickKeys(frs, start, length, extra))) {
       keep.add(i);
@@ -3082,6 +3118,8 @@ function parseClipMeta(raw) {
       clip.sound = sound;
       clip.soundFrame = Math.max(0, c.soundFrame | 0);
     }
+    const attackFrame = clampAttackFrame(c?.attackFrame, clip.len);
+    if (attackFrame != null) clip.attackFrame = attackFrame;
     out.push(clip);
   }
   return out;
@@ -3099,6 +3137,7 @@ function persistClip(c) {
     out.sound = c.sound;
     out.soundFrame = c.soundFrame | 0;
   }
+  if (c.attackFrame != null) out.attackFrame = c.attackFrame | 0;
   return out;
 }
 
@@ -3122,6 +3161,19 @@ export function enemyFileRecords(doc) {
   return (doc.enemies || [])
     .map((e) => ({ dos: ENEMY_DOS[e.name], data: persistEnemy(e) }))
     .filter((r) => r.dos);
+}
+
+export function mapFileRecords(doc) {
+  return LEVEL_NAMES.map((name) => {
+    const map = doc.maps?.[name] || {};
+    return {
+      file: `${name.toLowerCase()}.json`,
+      data: {
+        name: clampName(map.name),
+        objects: Array.isArray(map.objects) ? map.objects : [],
+      },
+    };
+  });
 }
 
 function persistFrames(frames, fine) {
@@ -3210,7 +3262,7 @@ export function createEnemy(name = "Possessed") {
     clips: [],
     cues: {},
     mdlRig: emptyMdlRig(),
-    lodZ: defaultEnemyLodZ(name),
+    weaponVert: WEAPON_VERT,
     hp: defaultEnemyHp(name),
     painChance: defaultEnemyPainChance(name),
   };
@@ -3557,7 +3609,6 @@ export function parseEditorState(raw) {
 export function gameDocument(doc) {
   return {
     version: doc.version,
-    maps: doc.maps,
     weapons: doc.weapons,
     items: doc.items,
   };
@@ -3682,7 +3733,7 @@ export function normalizeDocument(raw) {
       }
       enemy.cues = parseEnemyCues(e.cues);
       migrateEnemyClipSounds(enemy);
-      enemy.lodZ = clampEnemyLodZ(e.lodZ, enemy.name);
+      enemy.weaponVert = clampWeaponVert(e.weaponVert, enemy.verts);
       enemy.hp = clampEnemyHp(e.hp, enemy.name);
       enemy.painChance = clampEnemyPainChance(e.painChance, enemy.name);
       const exportClips = normalizeExportClips(e.exportClips);

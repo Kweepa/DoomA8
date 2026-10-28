@@ -3,17 +3,17 @@
 ; Bodies are inverted (ink %00, clear %11) and the blit is AND, so the gun is black.
 ; Flashes are ink %11 / clear %00. Phase 1 ORs line colour; phase 2 writes %10.
 
-; Frame pointers: axe, shot, nail0, nail1, nail2, rock, pist.
+; Frame pointers: axe, shot, chain0, chain1, chain2, rock, pist.
 wpn_fr_lo
-	!byte <spr_axe_b, <spr_shot_b, <spr_nail_b0, <spr_nail_b1, <spr_nail_b2, <spr_rock_b, <spr_pist_b
+	!byte <spr_axe_b, <spr_shot_b, <spr_chain_b0, <spr_chain_b1, <spr_chain_b2, <spr_rock_b, <spr_pist_b
 wpn_fr_hi
-	!byte >spr_axe_b, >spr_shot_b, >spr_nail_b0, >spr_nail_b1, >spr_nail_b2, >spr_rock_b, >spr_pist_b
+	!byte >spr_axe_b, >spr_shot_b, >spr_chain_b0, >spr_chain_b1, >spr_chain_b2, >spr_rock_b, >spr_pist_b
 wpn_fr_base
 	!byte 0, 1, 2, 5, 6
 wpn_fl4_lo
-	!byte <spr_spark_b, <spr_muzzle_b, <spr_nail_fl_b, <spr_muzzle_b, <spr_muzzle_b
+	!byte <spr_spark_b, <spr_muzzle_b, <spr_chain_fl_b, <spr_muzzle_b, <spr_muzzle_b
 wpn_fl4_hi
-	!byte >spr_spark_b, >spr_muzzle_b, >spr_nail_fl_b, >spr_muzzle_b, >spr_muzzle_b
+	!byte >spr_spark_b, >spr_muzzle_b, >spr_chain_fl_b, >spr_muzzle_b, >spr_muzzle_b
 
 spr_axe_b
 	!byte $03,$01,$00,$04,$15,$ff,$ff,$ff,$3f,$ff,$ff,$ff,$0f,$ff,$ff,$fc
@@ -77,7 +77,7 @@ spr_pist_b
 	!byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
 	!byte $ff
 
-spr_nail_b0
+spr_chain_b0
 	!byte $04,$00,$00,$03,$15,$ff,$c0,$03,$ff,$cf,$f3,$ff,$cf,$f3,$ff,$cf
 	!byte $f3,$ff,$00,$03,$ff,$30,$f3,$ff,$30,$f3,$ff,$30,$f3,$ff,$30,$c3
 	!byte $ff,$30,$c0,$ff,$0c,$c3,$ff,$0c,$c3,$ff,$0c,$c3,$ff,$0c,$c3,$fc
@@ -96,7 +96,7 @@ spr_nail_b0
 	!byte $f3,$cc,$cc,$f0,$c0,$cf,$0c,$30,$cf,$0c,$30,$f3,$0c,$30,$f3,$0c
 	!byte $03,$f3,$00,$03,$f3,$30,$33,$f3,$3c,$0f,$f3,$3f,$ff
 
-spr_nail_b1
+spr_chain_b1
 	!byte $04,$00,$00,$03,$15,$ff,$ff,$ff,$ff,$c0,$03,$ff,$cf,$f3,$ff,$cf
 	!byte $f3,$ff,$cf,$c3,$ff,$00,$03,$ff,$30,$c3,$ff,$30,$c3,$ff,$30,$c3
 	!byte $ff,$0c,$c0,$ff,$0c,$c3,$ff,$0c,$c3,$ff,$0c,$c3,$ff,$03,$c3,$ff
@@ -115,7 +115,7 @@ spr_nail_b1
 	!byte $0c,$03,$cf,$0c,$33,$cf,$0c,$33,$cf,$0c,$33,$f3,$00,$03,$f3,$00
 	!byte $33,$f3,$30,$0f,$f3,$3f,$0f,$f3,$3f,$ff,$f3,$3f,$ff
 
-spr_nail_b2
+spr_chain_b2
 	!byte $04,$00,$00,$03,$15,$ff,$c0,$03,$ff,$cf,$f3,$ff,$cf,$f3,$ff,$c0
 	!byte $03,$ff,$c3,$33,$ff,$c3,$33,$ff,$c3,$33,$ff,$c0,$c3,$ff,$cc,$c3
 	!byte $ff,$cc,$c0,$ff,$cc,$c3,$ff,$0c,$c3,$ff,$0c,$c3,$ff,$00,$c3,$ff
@@ -150,14 +150,14 @@ spr_spark_b
 	!byte $00,$0f,$f3,$3c,$00,$0f,$33,$0c,$00,$0c,$0f,$0c,$00,$00,$0c,$00
 	!byte $00,$00,$0c,$00,$00,$00,$0c,$00,$00
 
-spr_nail_fl_b
+spr_chain_fl_b
 	!byte $01,$09,$f1,$03,$15,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
 	!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$0c,$00,$00,$3c
 	!byte $00,$00,$3c,$00,$00,$cc,$00,$03,$0c,$00,$03,$0c,$00,$0c,$0c,$00
 	!byte $3c,$03,$00,$30,$03,$00,$0c,$03,$00,$00,$03,$00,$00,$03,$00,$00
 	!byte $03,$00,$00,$0c
 
-spr_nail_fr_b
+spr_chain_fr_b
 	!byte $01,$0c,$f1,$03,$15,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
 	!byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$30,$00,$00,$3c,$00,$00
 	!byte $3c,$00,$00,$33,$00,$00,$30,$c0,$00,$30,$c0,$00,$30,$30,$00,$c0

@@ -71,7 +71,6 @@ ai_pinky_entry
 	bcs .aa_rts
 	jsr enemy_shot_clear
 	bcc .aa_rts
-	lda #0
 	jmp enemy_enter_demon_attack
 .aa_rts
 	rts

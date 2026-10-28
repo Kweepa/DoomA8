@@ -18,7 +18,7 @@ PISTOL_RECOIL_N = 2			; −4 for 300 ms, then −6 for 160 ms
 
 ; have_wpn bit per weapon id
 wpn_have_bit
-	!byte HAVE_AXE, HAVE_SHOT, HAVE_NAIL, HAVE_GREN, HAVE_PIST
+	!byte HAVE_AXE, HAVE_SHOT, HAVE_CHAIN, HAVE_GREN, HAVE_PIST
 
 wpn_fire_ms_lo
 	!byte <0, <600, <100, <1000, <PISTOL_FIRE_MS
@@ -31,15 +31,15 @@ wpn_sound
 wpn_idle_x
 	!byte WPN_X0, WPN_X0, WPN_X0, WPN_X0, WPN_X0
 wpn_idle_y
-	!byte WPN_Y_AXEIDLE, WPN_Y_SHOTIDLE, WPN_Y_NAILIDLE, WPN_Y_FLUSH, WPN_Y_PISTIDLE
+	!byte WPN_Y_AXEIDLE, WPN_Y_SHOTIDLE, WPN_Y_CHAINIDLE, WPN_Y_FLUSH, WPN_Y_PISTIDLE
 
 wpn_fr		!byte 0
 
 ; added to wpn_y (signed)
 wpn_flashdy
-	!byte -FLASH_DY, -FLASH_DY_GUN, FLASH_DY_NAIL, -FLASH_DY_GUN, -FLASH_DY_GUN
+	!byte -FLASH_DY, -FLASH_DY_GUN, FLASH_DY_CHAIN, -FLASH_DY_GUN, -FLASH_DY_GUN
 
-nail_flash_en
+chain_flash_en
 	!byte FLASH_EN_L, FLASH_EN_R	; sprite 4 left, sprite 5 right
 
 WS_EMUZ		= 0
@@ -193,12 +193,12 @@ reset_loadout
 	lda #AMMO_BULLETS_START
 	sta ammo_bullets
 	lda #0
-	sta ammo_nails
 	sta ammo_grenades
 	lda #PLAYER_HP_START
 	sta player_hp
 	lda #PLAYER_ARMOUR_START
 	sta player_armour
+	sta combat_armor
 	lda #0
 	sta have_keys
 	sta have_pack
@@ -282,7 +282,7 @@ start_flash
 	lda #COL_FLASH_Y
 	sta flash4_col
 	ldx cur_weapon
-	cpx #WPN_NAIL
+	cpx #WPN_CHAIN
 	beq .sf_xy
 	lda #0
 	sta flash5_phase
@@ -355,7 +355,7 @@ update_weapon
 	ora fire_rpt_h
 	bne .uw_done
 	ldx cur_weapon
-	cpx #WPN_NAIL
+	cpx #WPN_CHAIN
 	beq .uw_shot
 	lda wpn_pose
 	bne .uw_done
@@ -377,12 +377,12 @@ update_weapon
 	rts
 .uw_up
 	lda cur_weapon
-	cmp #WPN_NAIL
+	cmp #WPN_CHAIN
 	bne .uw_up_rts
 	lda wpn_pose
 	cmp #POSE_FIRE
 	bne .uw_up_rts
-	jmp nail_idle
+	jmp chain_idle
 .uw_up_rts
 	rts
 
@@ -403,8 +403,8 @@ fire_shot
 	jsr shotgun_hitscan
 	ldx cur_weapon
 .fs_notshot
-	cpx #WPN_NAIL
-	beq .fs_nail
+	cpx #WPN_CHAIN
+	beq .fs_chain
 	cpx #WPN_PIST
 	bne .fs_gren
 	jsr pistol_hitscan
@@ -418,15 +418,15 @@ fire_shot
 	jsr start_flash
 	jmp start_recoil
 
-.fs_nail
-	jsr nailgun_hitscan
+.fs_chain
+	jsr chaingun_hitscan
 	lda #POSE_FIRE
 	sta wpn_pose
 	ldx mg_frame
 	inx
 	stx wpn_fr
 	ldx mg_frame
-	lda nail_flash_en,x
+	lda chain_flash_en,x
 	jsr start_flash
 	lda mg_frame
 	eor #1
@@ -441,8 +441,8 @@ try_spend_ammo
 }
 	cpx #WPN_SHOT
 	beq .ts_shell
-	cpx #WPN_NAIL
-	beq .ts_nail
+	cpx #WPN_CHAIN
+	beq .ts_bull
 	cpx #WPN_GREN
 	beq .ts_gren
 	cpx #WPN_PIST
@@ -461,12 +461,6 @@ try_spend_ammo
 	dec ammo_shells
 	sec
 	rts
-.ts_nail
-	lda ammo_nails
-	beq .ts_no
-	dec ammo_nails
-	sec
-	rts
 .ts_gren
 	lda ammo_grenades
 	beq .ts_no
@@ -477,12 +471,12 @@ try_spend_ammo
 	clc
 	rts
 
-nail_idle
+chain_idle
 	lda #POSE_IDLE
 	sta wpn_pose
 	lda #0
 	sta mg_frame
-	ldx #WPN_NAIL
+	ldx #WPN_CHAIN
 	lda #0
 	sta wpn_fr
 	lda wpn_idle_x,x
@@ -550,7 +544,7 @@ wpn_to_idle
 	sta wpn_x
 	lda wpn_idle_y,x
 	sta wpn_y
-	cpx #WPN_NAIL
+	cpx #WPN_CHAIN
 	bne .ti_xy
 	lda #0
 	sta wpn_fr

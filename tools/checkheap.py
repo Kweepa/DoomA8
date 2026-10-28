@@ -29,10 +29,10 @@ from perroom import ROOM_MAX_TYPES, packed_payload, per_room_types
 
 ROOT = Path(__file__).resolve().parents[1]
 MAP_DIR = ROOT / "maps"
+EDITOR_MAPS = ROOT / "editor" / "maps"
 ENEMY_DIR = ROOT / "enemies"
 ENEMY_SIZES = ROOT / "src" / "enemy_sizes.asm"
 PREFIX_ASM = ROOT / "src" / "level_prefix.asm"
-DOC = ROOT / "editor" / "doom64.json"
 
 LEVEL_NAMES = [f"E1M{i}" for i in range(1, 9)]
 DOS_NAME = ["poss", "baron", "pinky", "imp"]
@@ -87,11 +87,14 @@ def enemy_sizes() -> list[int]:
 
 def level_room_names() -> dict[str, list[str]]:
     """Room names in packed-index order. Blank when the editor left the room unnamed."""
-    if not DOC.is_file():
-        return {}
-    doc = json.loads(DOC.read_text(encoding="utf-8"))
     out: dict[str, list[str]] = {}
-    for key, level in (doc.get("maps") or {}).items():
+    for key in LEVEL_NAMES:
+        path = EDITOR_MAPS / f"{key.lower()}.json"
+        if not path.is_file():
+            raise SystemExit(f"missing {path}")
+        level = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(level, dict):
+            raise SystemExit(f"{path}: expected object")
         names: list[str] = []
         for obj in level.get("objects") or []:
             if obj.get("kind") != "room":

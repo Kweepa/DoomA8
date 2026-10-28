@@ -71,13 +71,11 @@ init_hud
 	bcc .imap
 .imap_done
 
-	lda #HUD_CH_P
-	sta HUD_SCR + HUD_OFF_SHELL + HUD_BULL_ICON
-	lda #HUD_CH_SHELL
+	lda #HUD_CH_BULLET
 	sta HUD_SCR + HUD_OFF_SHELL + HUD_AMMO_ICON
-	lda #HUD_CH_NAIL
-	sta HUD_SCR + HUD_OFF_NAIL + HUD_AMMO_ICON
-	lda #HUD_CH_GREN
+	lda #HUD_CH_SHELL
+	sta HUD_SCR + HUD_OFF_SHELLS + HUD_AMMO_ICON
+	lda #HUD_CH_ROCKET
 	sta HUD_SCR + HUD_OFF_GREN + HUD_AMMO_ICON
 	lda #COL_HUD_DIM
 
@@ -247,28 +245,22 @@ hud_print
 }
 	rts
 
-; Ammo + health + armour. Call on init, spend, backpack, damage — not every frame.
+; Bullets, shells, rockets + health + armour.
+; Call on init, spend, backpack, damage — not every frame.
 hud_ammo
 	lda #<HUD_SCR + HUD_OFF_SHELL
 	sta dst_ptr
 	lda #>HUD_SCR + HUD_OFF_SHELL
 	sta dst_ptr+1
-	ldx #HUD_BULL_NUM
+	ldx #HUD_AMMO_NUM
 	lda ammo_bullets
 	jsr .u8_3at
-	lda #<HUD_SCR + HUD_OFF_SHELL
+	lda #<HUD_SCR + HUD_OFF_SHELLS
 	sta dst_ptr
-	lda #>HUD_SCR + HUD_OFF_SHELL
+	lda #>HUD_SCR + HUD_OFF_SHELLS
 	sta dst_ptr+1
 	ldx #HUD_AMMO_NUM
 	lda ammo_shells
-	jsr .u8_3at
-	lda #<HUD_SCR + HUD_OFF_NAIL
-	sta dst_ptr
-	lda #>HUD_SCR + HUD_OFF_NAIL
-	sta dst_ptr+1
-	ldx #HUD_AMMO_NUM
-	lda ammo_nails
 	jsr .u8_3at
 	lda #<HUD_SCR + HUD_OFF_GREN
 	sta dst_ptr
@@ -659,7 +651,7 @@ hud_msg_center
 .hm_done
 	rts
 
-; Name at HUD_OFF_GREN + HUD_PU_LABEL (row below 2×2 icon on SHELL/NAIL).
+; Name at HUD_OFF_GREN + HUD_PU_LABEL (row below the 2×2 icon on SHELL/SHELLS).
 hud_powerup
 	lda pu_kind
 	cmp #BP_RADSUIT
@@ -681,8 +673,8 @@ hud_powerup
 	bpl .hpu_clab
 	sta HUD_SCR + HUD_OFF_SHELL + HUD_PU_COL
 	sta HUD_SCR + HUD_OFF_SHELL + HUD_PU_COL + 1
-	sta HUD_SCR + HUD_OFF_NAIL + HUD_PU_COL
-	sta HUD_SCR + HUD_OFF_NAIL + HUD_PU_COL + 1
+	sta HUD_SCR + HUD_OFF_SHELLS + HUD_PU_COL
+	sta HUD_SCR + HUD_OFF_SHELLS + HUD_PU_COL + 1
 	rts
 .hpu_quad
 	ldx #0
@@ -701,9 +693,9 @@ hud_powerup
 	adc #1
 	sta HUD_SCR + HUD_OFF_SHELL + HUD_PU_COL + 1
 	adc #1
-	sta HUD_SCR + HUD_OFF_NAIL + HUD_PU_COL
+	sta HUD_SCR + HUD_OFF_SHELLS + HUD_PU_COL
 	adc #1
-	sta HUD_SCR + HUD_OFF_NAIL + HUD_PU_COL + 1
+	sta HUD_SCR + HUD_OFF_SHELLS + HUD_PU_COL + 1
 	ldy #0
 
 	lda #<HUD_SCR + HUD_OFF_GREN + HUD_PU_LABEL

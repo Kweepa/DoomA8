@@ -97,10 +97,11 @@ import {
   emptyMdlRig,
   DEFAULT_MDL_SCALE,
   clampMdlScale,
-  clampEnemyLodZ,
-  defaultEnemyLodZ,
   clampEnemyHp,
   clampEnemyPainChance,
+  clampWeaponVert,
+  JOINT_NAMES,
+  WEAPON_VERT,
   WEAPON_KEYS,
   WEAPON_LABELS,
   clampWeaponScale,
@@ -115,9 +116,12 @@ import {
   parseEditorState,
   gameDocument,
   withClipSound,
+  clipIsAttackRole,
+  attackFrameOrDefault,
   ENEMY_CUE_LABELS,
   ENEMY_ATTACK_CUES,
   enemyFileRecords,
+  mapFileRecords,
   enemyHasSprites,
   DOOM_SPRITE_PREFIX,
   SPRITE_MAX_VERTS,
@@ -143,6 +147,8 @@ import {
   loadSharewarePakBuffers,
   readEnemyFiles,
   writeEnemyFiles,
+  readMapFiles,
+  writeMapFiles,
   readProjectBytes,
   ensureWeaponsPngDirectory,
   writePngFile,
@@ -282,6 +288,7 @@ const layoutView = new LayoutView(document.getElementById("view-canvas"), {
   beginUndo,
   endUndo,
   getLayoutSearch: () => layoutSearch,
+  onTick: () => previewView.draw(),
 });
 
 document.getElementById("layout-search")?.addEventListener("input", (e) => {
@@ -333,7 +340,7 @@ const previewView = new PreviewView(document.getElementById("preview-canvas"), {
   getSpawn: () => previewSpawn(),
   getEditSpawn: () => selectedSpawn(),
   getRoomsOnlyMode: () => roomsOnlyDraw,
-  nailImg: document.getElementById("preview-nail-png"),
+  chainImg: document.getElementById("preview-chain-png"),
   onRotate: (yaw) => {
     const spawn = selectedSpawn();
     if (!spawn) return;
@@ -873,6 +880,7 @@ async function saveNow(okMsg = "Saved") {
       return;
     }
     await writeEnemyFiles(enemyFileRecords(doc));
+    await writeMapFiles(mapFileRecords(doc));
     markClean();
     persistMdlRigBackup();
     setStatus(`${okMsg} ${docFileName()}`);
@@ -1023,6 +1031,22 @@ function renderClipSoundFields(root, e, clip) {
     refreshAll();
   });
   root.appendChild(field("Sound frame", fr));
+  if (!clipIsAttackRole(e.name, stick.name)) return;
+  const atk = document.createElement("input");
+  atk.type = "number";
+  atk.min = "0";
+  atk.max = String(Math.max(0, stick.len - 1));
+  atk.step = "1";
+  atk.value = String(attackFrameOrDefault(stick.attackFrame, stick.len));
+  atk.addEventListener("change", () => {
+    pushUndo();
+    const next = attackFrameOrDefault(atk.value, stick.len);
+    stick.attackFrame = next;
+    atk.value = String(next);
+    markDirty();
+    refreshAll();
+  });
+  root.appendChild(field("Attack frame", atk));
 }
 
 function clipIsExported(e, name) {
@@ -1362,7 +1386,7 @@ function buildPalette() {
   paintEnemyPaletteIcons();
 }
 
-/** Front-3/4 of editor +Z, a little above — same stick pose the layout view places. */
+/** Front-3/4 of editor +Z, a little above — rest pose, not the layout walk cycle. */
 const ENEMY_ICON_YAW = Math.PI - 0.45;
 const ENEMY_ICON_PITCH = -0.3;
 
@@ -2911,22 +2935,6 @@ function renderInspector() {
   statRow.append(field("Hit points", hpInp), field("Pain chance", painInp));
   root.appendChild(statRow);
 
-  const lodInp = document.createElement("input");
-  lodInp.type = "number";
-  lodInp.min = "0";
-  lodInp.max = "255";
-  lodInp.step = "1";
-  lodInp.value = String(clampEnemyLodZ(e.lodZ, e.name));
-  lodInp.title = "Full stick project while view Z < this (cheap LOD beyond)";
-  lodInp.addEventListener("change", () => {
-    pushUndo();
-    e.lodZ = clampEnemyLodZ(lodInp.value, e.name);
-    lodInp.value = String(e.lodZ);
-    markDirty();
-    refreshAll();
-  });
-  root.appendChild(field("LOD Z", lodInp));
-
   const timeline = getTimeline(e);
   const spriteEnemy = enemyHasSprites(e);
   const hasStick = !!stickClipFor(e, activeTimelineClip());
@@ -3090,7 +3098,8 @@ function renderInspector() {
   const stickFrame = stick ? stick.start + frameLocal : 0;
   const height = frameHeight(e.frames[stickFrame] || e.frames[0]);
   const nvShow = stickCount(e);
-  counts.textContent = `${nvShow} verts · ${e.lines.length} lines · height ${height}`;
+  const weapon = clampWeaponVert(e.weaponVert ?? WEAPON_VERT, nvShow);
+  counts.textContent = `${nvShow} verts · ${e.lines.length} lines · height ${height} · weapon ${weapon}`;
   root.appendChild(counts);
 
   if (hasStick && selectedVerts.length === 1) {
@@ -3106,13 +3115,27 @@ function renderInspector() {
       markDirty();
       refreshAll();
     };
-    const xyz = vec3Field("XYZ", [
+    const name = !e.customSkeleton && JOINT_NAMES[vi] ? ` ${JOINT_NAMES[vi]}` : "";
+    const xyz = vec3Field(`Vertex ${vi}${name}`, [
       { axis: "x", value: v.x, onChange: (n) => setC("x", n), min: lo, max: lim, step: enemyHasSprites(e) ? 0.25 : undefined },
       { axis: "y", value: v.y, onChange: (n) => setC("y", n), min: lo, max: lim, step: enemyHasSprites(e) ? 0.25 : undefined },
       { axis: "z", value: v.z, onChange: (n) => setC("z", n), min: lo, max: lim, step: enemyHasSprites(e) ? 0.25 : undefined },
     ]);
     xyz.classList.add("vert-xyz");
     root.appendChild(xyz);
+    const wbtn = document.createElement("button");
+    wbtn.type = "button";
+    wbtn.textContent = "Weapon tip";
+    wbtn.title = "Muzzle sprite tracks this vertex";
+    wbtn.classList.toggle("active", weapon === vi);
+    wbtn.addEventListener("click", () => {
+      if ((e.weaponVert | 0) === vi) return;
+      pushUndo();
+      e.weaponVert = vi;
+      markDirty();
+      refreshAll();
+    });
+    root.appendChild(wbtn);
   }
 
   if (!enemyHasSprites(e)) renderDoomSource(root, e);
@@ -3538,6 +3561,7 @@ function mergeCustomVerts(e) {
   }
   e.lines = lines;
   e.verts = nv - 1;
+  e.weaponVert = remap(e.weaponVert ?? WEAPON_VERT);
   if (bindJoint === drop) bindJoint = surv;
   else if (bindJoint > drop) bindJoint--;
   selectedVerts = [surv];
@@ -3569,6 +3593,8 @@ function deleteCustomVerts(e) {
     .filter(([a, b]) => a >= 0 && b >= 0 && a !== b)
     .map(([a, b]) => (a < b ? [a, b] : [b, a]));
   e.verts = n;
+  const mappedWeapon = map[e.weaponVert ?? WEAPON_VERT];
+  e.weaponVert = mappedWeapon == null || mappedWeapon < 0 ? 0 : mappedWeapon;
   if (bindJoint >= 0) bindJoint = map[bindJoint] ?? -1;
   selectedVerts = [];
   selectedLines = [];
@@ -4140,6 +4166,8 @@ document.addEventListener("visibilitychange", () => {
 async function applyLoadedDoc(loaded) {
   const side = await readEnemyFiles();
   if (side?.length) loaded = { ...loaded, enemies: side };
+  const sideMaps = await readMapFiles();
+  if (sideMaps) loaded = { ...loaded, maps: { ...(loaded.maps || {}), ...sideMaps } };
   doc = normalizeDocument(loaded);
   deriveAllEnemyFrames();
   persistMdlRigBackup();

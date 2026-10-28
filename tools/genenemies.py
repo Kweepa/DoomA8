@@ -29,19 +29,12 @@ TYPES = ["Possessed", "Baron", "Pinky", "Imp"]
 DOS_NAME = ["poss", "baron", "pinky", "imp"]
 ENEMY_POSE_MAX = 7680
 ENEMY_DATA_BASE = 0x0701  # mem.asm asserts its ENEMY_DATA_BASE == $0701
-META_ROW = 41  # mem.asm META_ROW; prepended to every .pose
+META_ROW = 33  # mem.asm META_ROW; prepended to every .pose
 PAIN_MAX = 4
 PAIN_KEY = re.compile(r"^pain[a-z]?$")
 DEATH_KEY = re.compile(r"^(bdeath|death[a-z]?)$")
-# Clip-local fire frames (matches the pose-row fire byte).
-FIRE_FRAME = [1, 1, 1, 1]
-# Mid-distance stick LOD threshold (CAM_ZH).
-DEFAULT_LOD_Z = {
-    "Possessed": 4,
-    "Baron": 8,
-    "Pinky": 4,
-    "Imp": 4,
-}
+# Clip-local hit when the attack clip has no attackFrame.
+DEFAULT_ATTACK_FRAME = 1
 
 # Game byte (Doom health / 5). editor/doom64.json "hp" overrides this.
 DEFAULT_HP = {
@@ -56,15 +49,15 @@ RANGE = {
     "Possessed": 30,
     "Baron": 12,
     "Pinky": 4,
-    "Imp": 12,
+    "Imp": 32,
 }
 # Used when the enemy record has no painChance. Editor value wins.
 DEFAULT_PAIN_CHANCE = 0x80
 PAIN_CHANCE = {"Imp": 0xFF, "Pinky": 0xFF, "Baron": 0}
 ENEMY_CLASS = {}
 
-# Single roles: (clip_name, len_override|None). Attack: list of candidate names
-# present after exportClips — all matching clips become variants (like pain/death).
+# Single roles: (clip_name, len_override|None). Attack: first matching clip name.
+# Imp and Baron share that one clip between claw and fireball.
 ROLE_CLIPS = {
     "Possessed": {
         "stand": ("stand", None),
@@ -108,18 +101,43 @@ def clip_sound_stem(raw) -> str:
     return stem
 
 
-def clip_with_sound(dst: dict, src: dict) -> dict:
-    stem = clip_sound_stem(src.get("sound"))
-    if not stem:
-        return dst
-    length = max(1, int(dst["len"]))
-    frame = int(src.get("soundFrame") or 0)
+def clip_attack_frame(src: dict, length: int, default: int | None = None) -> int | None:
+    """Clip-local attack frame. Missing stays missing unless default is set, then clamped."""
+    length = max(1, int(length))
+    raw = src.get("attackFrame") if isinstance(src, dict) else None
+    if raw is None or raw == "":
+        if default is None:
+            return None
+        frame = default
+    else:
+        try:
+            frame = int(raw)
+        except (TypeError, ValueError):
+            if default is None:
+                return None
+            frame = default
     if frame < 0:
         frame = 0
     if frame >= length:
         frame = length - 1
+    return frame
+
+
+def clip_with_sound(dst: dict, src: dict) -> dict:
+    frame = clip_attack_frame(src, int(dst["len"]))
+    if frame is not None:
+        dst["attackFrame"] = frame
+    stem = clip_sound_stem(src.get("sound"))
+    if not stem:
+        return dst
+    length = max(1, int(dst["len"]))
+    sound_frame = int(src.get("soundFrame") or 0)
+    if sound_frame < 0:
+        sound_frame = 0
+    if sound_frame >= length:
+        sound_frame = length - 1
     dst["sound"] = stem
-    dst["soundFrame"] = frame
+    dst["soundFrame"] = sound_frame
     return dst
 
 
@@ -241,7 +259,7 @@ def find_clip(enemy: dict, *names: str) -> tuple[int, int] | None:
 
 
 def find_role(enemy: dict, role: str) -> tuple[int, int] | None:
-    """Single-window roles only (stand/alert/run/walk). Attack uses find_attack_clips."""
+    """Single-window roles only (stand/alert/run/walk). Attack uses attack_window."""
     if role == "attack":
         return None
     spec = ROLE_CLIPS.get(enemy["name"], {}).get(role)
@@ -270,27 +288,23 @@ def require_role(enemy: dict, role: str) -> tuple[int, int]:
     raise SystemExit(f"{enemy['name']}: no {role} clip (and no fallback)")
 
 
-def find_attack_clips(enemy: dict) -> list[tuple[int, int]]:
-    """All ROLE attack candidate names present in clips (export order), up to PAIN_MAX."""
+def attack_window(enemy: dict) -> tuple[int, int, int]:
+    """The one attack clip: start, len, clip-local hit frame."""
     names = ROLE_CLIPS.get(enemy["name"], {}).get("attack") or []
     want = {clip_key(n) for n in names if isinstance(n, str)}
-    out: list[tuple[int, int]] = []
     for c in enemy.get("clips") or []:
         if clip_key(c.get("name", "")) not in want:
             continue
-        out.append((int(c["start"]), int(c["len"])))
-        if len(out) >= PAIN_MAX:
-            break
-    if not out:
-        stand = find_clip(enemy, "stand", "walk", "hover")
-        if stand is None:
-            clips = enemy.get("clips") or []
-            if not clips:
-                raise SystemExit(f"{enemy['name']}: no attack clip")
-            out.append((int(clips[0]["start"]), 1))
-        else:
-            out.append((stand[0], 1))
-    return out
+        length = int(c["len"])
+        return int(c["start"]), length, clip_attack_frame(c, length, DEFAULT_ATTACK_FRAME)
+    stand = find_clip(enemy, "stand", "walk", "hover")
+    if stand is None:
+        clips = enemy.get("clips") or []
+        if not clips:
+            raise SystemExit(f"{enemy['name']}: no attack clip")
+        src = clips[0]
+        return int(src["start"]), 1, clip_attack_frame(src, 1, DEFAULT_ATTACK_FRAME)
+    return stand[0], 1, clip_attack_frame({}, 1, DEFAULT_ATTACK_FRAME)
 
 
 def apply_export_clips(enemy: dict) -> None:
@@ -356,8 +370,8 @@ def pad_variants(clips: list[tuple[int, int]]) -> tuple[int, list[int], list[int
     return len(clips), starts, lens
 
 
-def build_meta_row(name: str, enemy: dict, nframes: int, n_stored: int, lod: int) -> bytes:
-    """41-byte pose prefix. Offsets match copy_meta_row in loader.asm."""
+def build_meta_row(name: str, enemy: dict, nframes: int, n_stored: int) -> bytes:
+    """33-byte pose prefix. Offsets match copy_meta_row in loader.asm."""
     row = bytearray(META_ROW)
     o = 0
     for role in ("stand", "alert", "run", "walk"):
@@ -367,19 +381,19 @@ def build_meta_row(name: str, enemy: dict, nframes: int, n_stored: int, lod: int
         row[o] = start & 0xFF
         row[o + 1] = length & 0xFF
         o += 2
-    atk: list[tuple[int, int]] = []
-    for s, ln in find_attack_clips(enemy):
-        if s >= nframes or ln <= 0:
-            continue
-        atk.append((s, min(ln, nframes - s)))
-    if not atk:
-        atk = [(0, 1)]
-    n, starts, lens = pad_variants(atk)
-    row[o] = n
-    o += 1
-    for b in starts + lens:
-        row[o] = b & 0xFF
-        o += 1
+    s, ln, fr = attack_window(enemy)
+    if s >= nframes or ln <= 0:
+        s, ln, fr = 0, 1, 0
+    else:
+        ln = min(ln, nframes - s)
+        if fr < 0:
+            fr = 0
+        if fr >= ln:
+            fr = ln - 1
+    row[o] = s & 0xFF
+    row[o + 1] = ln & 0xFF
+    o += 2
+    attack_frame = fr & 0xFF
     for what in ("pain", "death"):
         n, starts, lens = pad_variants(find_variant_clips(enemy, variant_key(what), what))
         row[o] = n
@@ -391,11 +405,9 @@ def build_meta_row(name: str, enemy: dict, nframes: int, n_stored: int, lod: int
     o += 1
     row[o] = enemy_pain_chance_byte(enemy, name)
     o += 1
-    row[o] = FIRE_FRAME[TYPES.index(name)] & 0xFF
+    row[o] = attack_frame
     o += 1
     row[o] = ENEMY_CLASS.get(name, 0)
-    o += 1
-    row[o] = lod & 0xFF
     o += 1
     row[o] = n_stored & 0xFF
     o += 1
@@ -554,25 +566,28 @@ def cluster_edges(lines: list[list[int]]) -> tuple[list[list[int]], int, int]:
     return best, cost[0], cost[1]
 
 
-def pin_feet_slot(body: bytearray, feet: int) -> bool:
-    """One batch of 12..16 slots: put the feet vertex in slot 11 and remap pairs.
-    Slot 11 is the far-LOD anchor (ent_far_project)."""
+WEAPON_SLOT = 12  # cube.asm try_enemy_muzzle
+
+
+def pin_vert_slot(body: bytearray, vert: int, anchor: int) -> bool:
+    """One batch of 12..16 slots: put vert in slot `anchor` and remap edge pairs."""
     if not body or body[0] < 12 or body[0] > MESH_BATCH_VERTS:
         return False
     nslot = body[0]
     nedge = body[1]
+    if anchor < 0 or anchor >= nslot:
+        return False
     end = 2 + nslot + nedge * 2
     if end >= len(body) or body[end] != 0:
         return False
-    slots = bytearray(body[2:2 + nslot])
+    slots = bytearray(body[2 : 2 + nslot])
     try:
-        src = slots.index(feet)
+        src = slots.index(vert)
     except ValueError:
         return False
-    anchor = 11
     if src != anchor:
         slots[src], slots[anchor] = slots[anchor], slots[src]
-        body[2:2 + nslot] = slots
+        body[2 : 2 + nslot] = slots
         pair_at = 2 + nslot
         for i in range(nedge * 2):
             p = body[pair_at + i]
@@ -583,13 +598,15 @@ def pin_feet_slot(body: bytearray, feet: int) -> bool:
     return True
 
 
-def skel_prefix(nv: int, lines: list[list[int]], shift: int, name: str, feet: int = 0) -> bytes:
+def skel_prefix(nv: int, lines: list[list[int]], shift: int, name: str, weapon: int = WEAPON_SLOT) -> bytes:
     ne = len(lines)
     lines, batches, slots = cluster_edges(lines)
     print(f"{name}: edge order {batches} batches, {slots} vert slots")
     body = bytearray(baked_batches(lines))
-    if shift == 0 and pin_feet_slot(body, feet):
-        print(f"{name}: feet vert {feet} in slot 11")
+    if shift == 0 and pin_vert_slot(body, weapon, WEAPON_SLOT):
+        print(f"{name}: weapon vert {weapon} in slot {WEAPON_SLOT}")
+    elif shift == 0:
+        print(f"{name}: weapon vert {weapon} not in slot {WEAPON_SLOT}")
     size = SKEL_PFX + len(body)
     out = bytearray(size)
     out[0] = size & 0xFF
@@ -755,21 +772,19 @@ def main() -> None:
         dos = DOS_NAME[ti]
         custom = bool(enemy.get("customSkeleton"))
         if nv and lines:
-            feet = min(range(nv), key=lambda i: ((gy[i] - 256) if gy[i] >= 128 else gy[i], i))
-            prefix = skel_prefix(nv, lines, shift, name, feet)
+            raw_weapon = enemy.get("weaponVert", WEAPON_SLOT)
+            try:
+                weapon = int(raw_weapon)
+            except (TypeError, ValueError):
+                weapon = WEAPON_SLOT
+            prefix = skel_prefix(nv, lines, shift, name, weapon)
         else:
             prefix = b""
-        raw_lod = enemy.get("lodZ", DEFAULT_LOD_Z.get(name, 4))
-        try:
-            lod = int(raw_lod)
-        except (TypeError, ValueError):
-            lod = DEFAULT_LOD_Z.get(name, 4)
-        lod = max(0, min(255, lod))
         while True:
             pgx, pgy, pgz, pose_map, n_stored = pack_poses(
                 gx, gy, gz, enemy, nframes, nv
             )
-            row = build_meta_row(name, enemy, nframes, n_stored, lod)
+            row = build_meta_row(name, enemy, nframes, n_stored)
             payload = (
                 prefix
                 + row
@@ -794,8 +809,8 @@ def main() -> None:
         n_lerp = sum(1 for v in pose_map if v == 0xFF)
         shift_note = f" shift={shift}" if custom else ""
         print(
-            f"{name}: logical={nframes} stored={n_stored} lerp={n_lerp} bytes={len(payload)} "
-            f"lodZ={lod}{shift_note}"
+            f"{name}: logical={nframes} stored={n_stored} lerp={n_lerp} bytes={len(payload)}"
+            f"{shift_note}"
         )
         if nframes > max_nframes:
             max_nframes = nframes
@@ -816,11 +831,10 @@ def main() -> None:
         "enemy_run_len",
         "enemy_walk_start",
         "enemy_walk_len",
-        "enemy_attack_n",
+        "enemy_attack_start",
+        "enemy_attack_len",
     ):
         parts.append(f"{label}\t!byte {slot2}")
-    parts.append(f"enemy_attack_start\t!byte {slot8}")
-    parts.append(f"enemy_attack_len\t!byte {slot8}")
     parts.append(f"enemy_pain_n\t!byte {slot2}")
     parts.append(f"enemy_pain_start\t!byte {slot8}")
     parts.append(f"enemy_pain_len\t!byte {slot8}")
@@ -830,9 +844,11 @@ def main() -> None:
     for label in (
         "enemy_range",
         "enemy_pain_chance",
-        "enemy_fire_frame",
+    ):
+        parts.append(f"{label}\t!byte {slot2}")
+    parts.append(f"enemy_fire_frame\t!byte {slot2}")
+    for label in (
         "enemy_class",
-        "enemy_lod_z",
         "enemy_nframes",
     ):
         parts.append(f"{label}\t!byte {slot2}")

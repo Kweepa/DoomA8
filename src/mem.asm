@@ -76,9 +76,9 @@ UI_FONT_PAGES	= 8			; 256 glyphs, ASCII-indexed from doomfont.png
 ;  0FFF              Doom64          orange
 ;  1          The Slipgate Complex   orange
 ;    (8 blank lines)
-;  2        S000   Health  Armour  PU
-;  3        N000                   PU
-;  4        G000    100     000  Damage
+;  2        B000   Health  Armour  PU   bullets
+;  3        S000                   PU   shells
+;  4        R000    100     000  Damage   rockets
 ;    (8 blank lines)
 ;  5                  trigger message   brighter yellow
 ;  6 seam
@@ -86,7 +86,7 @@ HUD_ROW		= 0			; frame ms FFF
 HUD_ROW_TITLE	= 0			; "Doom64" (same row as FFF)
 HUD_ROW_MAP	= 1			; map display name
 HUD_ROW_SHELL	= 2
-HUD_ROW_NAIL	= 3
+HUD_ROW_SHELLS	= 3			; shells
 HUD_ROW_GREN	= 4			; grenades + health / armour values
 HUD_ROW4	= 5			; trigger message
 HUD_ROW_SEAM	= 6
@@ -103,15 +103,13 @@ HUD_OFF_TITLE	= HUD_ROW_TITLE * 40 + HUD_COL
 HUD_OFF_MAP	= HUD_ROW_MAP * 40 + HUD_COL
 HUD_OFF2	= HUD_ROW2 * 40 + HUD_COL
 HUD_OFF_SHELL	= HUD_ROW_SHELL * 40 + HUD_COL
-HUD_OFF_NAIL	= HUD_ROW_NAIL * 40 + HUD_COL
+HUD_OFF_SHELLS	= HUD_ROW_SHELLS * 40 + HUD_COL
 HUD_OFF_GREN	= HUD_ROW_GREN * 40 + HUD_COL
 HUD_OFF3	= HUD_OFF_MAP		; PROFILE vertex counts, on the map line
 HUD_OFF4	= HUD_ROW4 * 40 + HUD_COL
 HUD_TITLE_COL	= 17			; (40 - len "DoomA8") / 2
 HUD_AMMO_ICON	= 8
 HUD_AMMO_NUM	= 9
-HUD_BULL_ICON	= 0			; pistol count, left of the shell icon
-HUD_BULL_NUM	= 1
 HUD_HP_LABEL	= 13
 HUD_AR_LABEL	= 21
 HUD_HP_NUM	= 15
@@ -131,9 +129,9 @@ HUD_CH_H	= $48
 HUD_CH_X	= $58
 HUD_CH_Y	= $59
 HUD_CH_Z	= $5a
-HUD_CH_SHELL	= $7b			; { → shell icon
-HUD_CH_NAIL	= $7c			; | → nail icon
-HUD_CH_GREN	= $7d			; } → grenade icon
+HUD_CH_BULLET	= $7b			; glyph after 'z'
+HUD_CH_SHELL	= $7c
+HUD_CH_ROCKET	= $7d
 HUD_CH_QUAD	= $00			; 2×2 powerup tiles in $00–$1E (quad/pent/ring)
 HUD_CH_PENT	= $04
 HUD_CH_RING	= $08
@@ -213,7 +211,7 @@ ENEMY_DATA_BASE	= $0701			; boot-loaded enemy_data_blob.asm
 }
 ; Pose prefix copied into one of two resident rows. Offsets match genenemies.py.
 META_STAND_START	= 0
-META_ROW		= 41
+META_ROW		= 33
 AI_ENTRY_LO	= $0850			; streamed AI entry pointer per enemy type
 AI_ENTRY_HI	= AI_ENTRY_LO + ENEMY_PTR_N
 ENEMY_DATA_LIMIT	= AI_ENTRY_LO
@@ -270,7 +268,7 @@ QS_OVL		= $C300
 ; Cheat FSM + god_mode. Outside the quicksave image ($CB70–$D000) and not
 ; cleared by game_zp_init / LoadLevel, so god mode survives idmap and death.
 ; Cleared once from start. Hole ends at RB_CELL.
-god_mode	= QS_LATCH_END		; 1 = idgod, take_damage returns
+god_mode	= QS_LATCH_END		; 1 = iddqd, take_damage returns
 cheat_phase	= god_mode + 1
 cheat_god	= cheat_phase + 1	; table offset; cheat_kfa, cheat_map follow
 cheat_kfa	= cheat_god + 1
@@ -330,8 +328,7 @@ AI_CMD_APPROACH_ENTER	= 6
 AI_CMD_IDLE		= 7
 AI_CMD_DRAW		= 8
 AI_CMD_PAIN		= 9
-AI_CMD_ANIM_FIRE	= 11		; 10, 12, 13, 15–17 unused; do not renumber
-AI_CMD_DEATH		= 14		; corpse finished: death drop
+AI_CMD_ANIM_FIRE	= 11		; 10, 12–17 unused; do not renumber
 AI_AP_MOVE		= 0
 AI_AP_STAND		= 1
 AI_AP_NEXT		= 2
@@ -437,27 +434,24 @@ EN_APPROACH		= 3
 EN_ATTACK		= 4
 EN_PAIN		= 5
 EN_DYING		= 6
-EN_DEAD		= 7			; last death frame hold
+EN_DEAD		= 7			; last death frame; stays until level reload
 EN_GONE		= 8
-ENEMY_DETECT	= 20		; Chebyshev XZ wake distance
+ENEMY_DETECT	= 32		; Chebyshev XZ wake distance
 ENEMY_STEP_MS	= 200		; approach cell cadence (dt acc + remainder)
 ENEMY_STEP_JIT	= $7f		; approach entry step phase mask, < ENEMY_STEP_MS
-DEATH_HOLD_MS	= 1600		; EN_DEAD last-frame hold before EN_GONE
 GRUNT_BACKOFF	= 8		; Chebyshev ≤ this → weight dodge away from player
 GRUNT_ATK_MS	= 1500		; min time in approach before the next attack
 DOOM_STEP_MS	= 300		; Poss / Imp / Pinky / Baron cell cadence
-DOOM_ATK_MS	= 256		; reattack after a claw or flesh throw
+DOOM_ATK_MS	= 256		; reattack after a claw or fireball
+IMP_ATK_MS	= 2500		; imp reattack; ~4 s between throws with the clip tail
 DEMON_MELEE_R	= 4		; claw Chebyshev
-FLESH_DMG		= 10		; flesh chunk (player HP 100)
-AXE_DMG		= 4			; Doom axe 20 ÷ 5
 AXE_HIT_R		= 3			; XZ chebyshev radius for axe hit test
-SHOT_DMG_MAX	= 11		; Doom SSG 14×4=56 ÷ 5
-SHOT_HIT_X	= 20		; |sx − SCREEN_CX| ≤ this (pixels)
-SHOT_Z_MAX	= 32		; view-Z high max range; SSG ceiling = SHOT_DMG_MAX − (z>>1), min 1
+SHOT_FAN_X	= 12			; pellet fan half-width; cols 18..22
+SHOT_PELLET_X	= 2			; |sx − column| for one pellet
+SHOT_Z_MAX	= 32			; view-Z high max range
 SHOT_MID_H	= 3			; mid-body Y above feet (≈ ENEMY_CULL_H/2)
-NAIL_DMG_MAX	= 2			; Doom nail 9 ÷ 5; ceiling = this − (z>>2), min 1
-NAIL_HIT_X	= 6			; |sx − SCREEN_CX| ≤ this (pixels)
-PISTOL_DMG_MAX	= 4			; SquareDoom rolls 1..16; HP here is ~÷4
+CHAIN_HIT_X	= 6			; |sx − SCREEN_CX| ≤ this (pixels)
+PISTOL_DMG_MAX	= 16			; (rnd >> 4) + 1
 PISTOL_HIT_X	= 12			; SquareDoom aim cols 18..22 on a 40-col view
 PISTOL_FIRE_MS	= 600			; 30 ticks × 20 ms
 
@@ -587,16 +581,16 @@ WPN_X0		= 160			; 2×2 top-left, visual centre 184
 WPN_Y_FLUSH	= 208			; 42px tall, viewport bottom ~250
 WPN_Y_SHOTIDLE	= 218		; shotgun: 10px below WPN_Y_FLUSH
 WPN_Y_AXEIDLE	= 229		; half off: top pair only
-WPN_Y_NAILIDLE	= 214
+WPN_Y_CHAINIDLE	= 214
 WPN_Y_PISTIDLE	= 224		; 32px art; −6 kick still meets the viewport bottom
 WPN_COL		= 24			; native sprite width
 WPN_ROW		= 21			; native sprite height
 FLASH_X_C	= 172			; 24px flash centred on visual 184
-FLASH_X_NL	= 160			; nail left
-FLASH_X_NR	= 184			; nail right
+FLASH_X_NL	= 160			; chaingun left
+FLASH_X_NR	= 184			; chaingun right
 FLASH_DY	= 10			; axe spark vs body top
 FLASH_DY_GUN	= 20			; shotgun / grenade muzzle
-FLASH_DY_NAIL	= -15			; nail vs weapon top
+FLASH_DY_CHAIN	= -15			; chaingun vs weapon top
 FLASH_YEL_MS	= 60
 FLASH_RED_MS	= 60
 SPLAT_MS		= FLASH_YEL_MS + FLASH_RED_MS	; same total as muzzle flash
@@ -609,7 +603,8 @@ GREN_OWN_PL		= 0
 GREN_OWN_EN		= 1
 GREN_F_BOUNCE		= 1			; fuse running
 GREN_F_PEND		= 2			; waiting on fx_on
-GREN_F_FLESH		= 4			; flesh chunk: no bounce/explode
+GREN_F_FIREBALL		= 4			; fireball: no bounce/explode
+GREN_F_BARON		= 8			; baron fireball (base 30, else 10)
 GREN_TICK_MS		= 32
 GREN_FLOOR_XZ_ASR	= 1			; /2 XZ per floor hop
 GREN_GRAV		= $01EC			; 60 u/s² × 32ms as 8.8
@@ -618,8 +613,8 @@ GREN_SPEED_PL		= 64			; player outward; loft stays GREN_SPEED_Y
 GREN_SPEED_Y		= 10		; upward (was 20; ~22° not 45°)
 GREN_FUSE_MS		= 2000
 GREN_LIFE_MS		= 5000
-GREN_DMG_MAX		= 24		; Doom 120 ÷ 5
-GREN_RAD		= 6
+GREN_DMG_BASE		= 16			; splash 16 + (rnd & 31)
+GREN_RAD		= 8
 GREN_HIT_R		= 1
 GREN_WRIST_L		= 5			; skeleton "Wrist L"
 GREN_WRIST_R		= 7			; skeleton "Wrist R"
@@ -638,14 +633,14 @@ EMUZ_Z1		= 16
 
 ; Weapon BSS (after unique-XZ products)
 in_fire		= $CC2A + A8_OFF
-in_wpn_axe	= $CC2B + A8_OFF			; 4 bytes: axe shot nail gren
+in_wpn_axe	= $CC2B + A8_OFF			; 4 bytes: axe shot chain gren
 in_wpn_shot	= $CC2C + A8_OFF
-in_wpn_nail	= $CC2D + A8_OFF
+in_wpn_chain	= $CC2D + A8_OFF
 in_wpn_gren	= $CC2E + A8_OFF
 key_fire	= $CC2F + A8_OFF
 key_wpn_axe	= $CC30 + A8_OFF			; 4 bytes
 key_wpn_shot	= $CC31 + A8_OFF
-key_wpn_nail	= $CC32 + A8_OFF
+key_wpn_chain	= $CC32 + A8_OFF
 key_wpn_gren	= $CC33 + A8_OFF
 cur_weapon	= $CC34 + A8_OFF
 wpn_pose	= $CC35 + A8_OFF			; POSE_*
@@ -716,12 +711,10 @@ COL_PXH		= $CCF0 + A8_OFF
 
 ; Player inventory + backpack taken flags (after project cache)
 AMMO_SHELLS_MAX		= 100
-AMMO_NAILS_MAX		= 200
 AMMO_GRENADES_MAX	= 100
 AMMO_SHELLS_BOX		= 20
-AMMO_NAILS_BOX		= 25
 AMMO_GRENADES_BOX	= 5
-AMMO_NAILS_GUN		= 30
+AMMO_CHAINGUN		= 30			; bullets granted with the chaingun
 AMMO_GRENADES_GUN	= 5
 AMMO_SHELLS_START	= 25
 AMMO_BULLETS_MAX	= 200
@@ -745,19 +738,19 @@ BP_MAX			= 32		; MAP_NBACKPACKS ≤ this
 
 HAVE_AXE	= 1
 HAVE_SHOT	= 2
-HAVE_NAIL	= 4
+HAVE_CHAIN	= 4
 HAVE_GREN	= 8
 HAVE_PIST	= 16
 HAVE_START	= HAVE_AXE | HAVE_SHOT | HAVE_PIST
 
 WPN_AXE		= 0
 WPN_SHOT	= 1
-WPN_NAIL	= 2
+WPN_CHAIN	= 2
 WPN_GREN	= 3
 WPN_PIST	= 4
 
 ammo_shells	= $CD00 + A8_OFF
-ammo_nails	= $CD01 + A8_OFF
+combat_armor	= $CD01 + A8_OFF			; 1 = blue (saves 1/2); 0 = green
 ammo_grenades	= $CD02 + A8_OFF
 have_wpn	= $CD03 + A8_OFF			; bitfield HAVE_*
 bp_taken	= $CD04 + A8_OFF			; MAP_NBACKPACKS (≤ BP_MAX)
@@ -804,8 +797,12 @@ status_ms_h	= $CE91 + A8_OFF
 door_i0		= $CE92 + A8_OFF			; room door slice start
 door_i1		= $CE93 + A8_OFF			; exclusive end
 sw_match	= $CE94 + A8_OFF			; cooked door/enable-tag id while unlocking/arming
-; $CE95–$CEAC reserved (was en_pat_n, 24). Do not slide en_pain_i.
-en_pain_i	= $CEAD + A8_OFF			; ENEMY_MAX: pain/death/attack variant index
+; $CE95–$CEAC is atk_kind (ENEMY_MAX). Do not slide en_pain_i.
+atk_kind	= $CE95 + A8_OFF			; ENEMY_MAX: 0 melee, 1 missile
+en_pain_i	= $CEAD + A8_OFF			; ENEMY_MAX: pain/death variant index
+!if atk_kind + ENEMY_MAX != en_pain_i {
+	!error "atk_kind must fill the hole under en_pain_i"
+}
 have_keys	= $CEC5 + A8_OFF			; HAVE_YELLOW / HAVE_BLUE / HAVE_RED
 pu_kind		= $CEC6 + A8_OFF			; 0 or BP_RADSUIT
 pu_ms_l		= $CEC7 + A8_OFF
@@ -839,7 +836,8 @@ gr_fuse_l	= $CF11 + A8_OFF
 gr_fuse_h	= $CF15 + A8_OFF
 gr_life_l	= $CF19 + A8_OFF
 gr_life_h	= $CF1D + A8_OFF
-; $CF21 reserved (was sham_alert_ph). Do not slide hit_dmg.
+; $CF21 signed pellet aim (sx − SCREEN_CX − scan_aim). 0 for pistol / chaingun.
+scan_aim	= $CF21 + A8_OFF
 hit_dmg		= $CF22 + A8_OFF			; applied damage for the current damage_enemy call
 dodge_dx	= $CF23 + A8_OFF			; select_dodge_dir: signed dx toward player
 dodge_dz	= $CF24 + A8_OFF			; signed dz toward player
@@ -847,11 +845,12 @@ dodge_i		= $CF25 + A8_OFF			; 0..4 probe index, live across enemy_probe_dir
 ; Hitscan params (live during gun_hitscan / splat_aim_jitter)
 scan_hit_x	= $CF26 + A8_OFF			; |sx−CX| max (inclusive)
 scan_hit_y	= $CF27 + A8_OFF			; |sy−64| max, $ff = no Y gate (both guns)
-scan_dmg_max	= $CF28 + A8_OFF			; SSG ceiling = this − (z>>1); nail = this − (z>>2)
-scan_dmg_all	= $CF29 + A8_OFF			; SCAN_CLOSEST / SCAN_CONE / SCAN_FLAT
-SCAN_CLOSEST	= 0			; nail: closest, ceiling − (z>>2)
-SCAN_CONE	= 1			; shotgun: every cone hit, ceiling − (z>>1)
-SCAN_FLAT	= 2			; pistol: closest, flat 1..scan_dmg_max
+scan_dmg_max	= $CF28 + A8_OFF			; flat roll ceiling (1..this)
+scan_dmg_all	= $CF29 + A8_OFF			; SCAN_CLOSEST / SCAN_CONE / SCAN_FLAT / SCAN_PELLET
+SCAN_CLOSEST	= 0			; closest, ceiling − (z>>2)
+SCAN_CONE	= 1			; every cone hit, ceiling − (z>>1)
+SCAN_FLAT	= 2			; closest, flat 1..scan_dmg_max
+SCAN_PELLET	= 3			; shotgun pellet: flat damage, no switch, no splat
 scan_jx_mask	= $CF2A + A8_OFF			; splat rnd X mask
 scan_jx_bias	= $CF2B + A8_OFF
 scan_jy_mask	= $CF2C + A8_OFF
@@ -868,7 +867,7 @@ flash_skip	= fxh_flash4 + FXH_SKIP
 flash_ms_l	= fxh_flash4 + FXH_MS_L
 flash_ms_h	= fxh_flash4 + FXH_MS_H
 fxh_flash5	= $CF32 + A8_OFF
-flash5_phase	= fxh_flash5 + FXH_ON	; sprite 5 (nail right)
+flash5_phase	= fxh_flash5 + FXH_ON	; sprite 5 (chaingun right)
 flash5_skip	= fxh_flash5 + FXH_SKIP
 flash5_ms_l	= fxh_flash5 + FXH_MS_L
 flash5_ms_h	= fxh_flash5 + FXH_MS_H
@@ -942,7 +941,6 @@ col_bg		= $CFB0 + A8_OFF			; active room paper: Atari colour byte (editor-made) 
 doom_anim_ph	= $CFB1 + A8_OFF			; flips each ANIM_MS; 0 = fine enemies hold this step
 ; $CFB2, $CFB5 were col_line, col_wpn
 palette_room	= $CFB3 + A8_OFF			; last room_idx palette ($ff = none)
-far_scale	= $CFB4 + A8_OFF			; FOCAL/z integer, far enemy project
 sfx_ch		= $CFB6 + A8_OFF			; current channel 0..2
 sfx_id		= $CFB7 + A8_OFF			; sound id / freq scratch
 sample_ms	= $CFB8 + A8_OFF			; PAL 20 / NTSC 17 — set at init

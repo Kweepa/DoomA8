@@ -215,6 +215,11 @@ def enemy_json() -> list[Path]:
     return [folder, *(folder / f"{dos}.json" for dos in DOS)]
 
 
+def map_json() -> list[Path]:
+    folder = ROOT / "editor" / "maps"
+    return [folder, *(folder / f"e1m{i}.json" for i in range(1, 9))]
+
+
 def weapon_pngs() -> list[Path]:
     folder = ROOT / "assets" / "weapons"
     if not folder.is_dir():
@@ -348,7 +353,7 @@ def steps(exe: str) -> list[Step]:
         ),
         Step(
             "genmap",
-            lambda: [TOOLS / "genmap.py", TOOLS / "roomgeom.py", doc],
+            lambda: [TOOLS / "genmap.py", TOOLS / "roomgeom.py", *map_json()],
             # Map PRGs are rewritten by mkreloc. Counts/sizes are not.
             lambda: [SRC / "map_counts.asm", SRC / "map_sizes.asm", *map_prgs()],
             lambda: tool("genmap.py"),

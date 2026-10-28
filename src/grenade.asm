@@ -1,6 +1,6 @@
-; Bouncing grenades: player GL + ogre. Faction owner (contact skips allies;
-; splash does not). One explosion at a time via fx_on.
-; Ogre spawn: Wrist L world 8.8. Compact bounce/splash/view-dart.
+; Bouncing grenades: player grenade launcher. Faction owner (contact skips
+; allies; splash does not). One explosion at a time via fx_on.
+; Fireballs are imp and baron shots: no bounce, direct hit only.
 !zone grenade
 
 init_grenades
@@ -157,7 +157,7 @@ gren_tick
 	sta proc_tmp1
 	ldx obj_i
 	lda gr_flags,x
-	and #GREN_F_FLESH
+	and #GREN_F_FIREBALL
 	bne .gt_move
 	sec
 	lda gr_vyl,x
@@ -250,7 +250,7 @@ gren_bounce
 	pha
 	ldx obj_i
 	lda gr_flags,x
-	and #GREN_F_FLESH
+	and #GREN_F_FIREBALL
 	beq .gb_n
 	pla
 	jmp gren_clear
@@ -555,14 +555,27 @@ gren_hit_player
 	bcc .ghp_rts
 	ldx obj_i
 	lda gr_flags,x
-	and #GREN_F_FLESH
-	bne gren_flesh_hit
+	and #GREN_F_FIREBALL
+	bne gren_fireball_hit
 	jmp gren_explode
 .ghp_rts
 	rts
 
-gren_flesh_hit
-	lda #FLESH_DMG
+gren_fireball_hit
+	ldx obj_i
+	lda gr_flags,x
+	and #GREN_F_BARON
+	beq +
+	lda #30
+	bne ++
++
+	lda #10
+++
+	sta rot0
+	jsr rnd8
+	and #15
+	clc
+	adc rot0
 	jsr take_damage
 	jmp gren_clear
 
@@ -618,7 +631,7 @@ gren_abs
 gren_explode
 	ldx obj_i
 	lda gr_flags,x
-	and #GREN_F_FLESH
+	and #GREN_F_FIREBALL
 	beq +
 	jmp gren_clear
 +
@@ -685,18 +698,6 @@ gren_cheby
 	rts
 
 gren_splash
-	lda cam_xh
-	sta pv0
-	lda cam_yh
-	sta pv1
-	lda cam_zh
-	sta pv2
-	jsr gren_cheby
-	cmp #GREN_RAD
-	bcs .gsp_en
-	jsr gren_falloff
-	jsr take_damage
-.gsp_en
 	ldx #0
 .gsp_lp
 	cpx	map_nenemies
@@ -714,7 +715,10 @@ gren_splash
 	jsr gren_cheby
 	cmp #GREN_RAD
 	bcs .gsp_n
-	jsr gren_falloff
+	jsr rnd8
+	and #31
+	clc
+	adc #GREN_DMG_BASE
 	ldx enemy_idx
 	jsr damage_enemy
 .gsp_n
@@ -722,15 +726,6 @@ gren_splash
 	inx
 	bne .gsp_lp
 .gsp_rts
-	rts
-
-gren_falloff
-	sta nlo
-	lda #GREN_RAD
-	sec
-	sbc nlo
-	asl
-	asl
 	rts
 
 draw_grenades

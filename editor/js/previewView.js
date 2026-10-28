@@ -39,11 +39,11 @@ const PREVIEW_SY = PREVIEW_H / GAME_VIEW_H;
 const PREVIEW_FX = GAME_FOCAL * PREVIEW_SX;
 const PREVIEW_FY = GAME_FOCAL * PREVIEW_SY;
 
-const NAIL_W = 48;
-const NAIL_H = 42;
+const CHAIN_W = 48;
+const CHAIN_H = 42;
 /** Viewport-relative top-left in game pixels: sprite (160,214). */
-const NAIL_VX = 72;
-const NAIL_VY = 92;
+const CHAIN_VX = 72;
+const CHAIN_VY = 92;
 
 /** FACE_PZ/MZ/PX/MX â†’ yaw so local +Z points out of the door face (door_face_rot). */
 const PV_DOOR_YAW = {
@@ -235,7 +235,7 @@ export class PreviewView {
    *   onEditStart?: () => void,
    *   onEditEnd?: () => void,
    *   onChange?: () => void,
-   *   nailImg?: HTMLImageElement | null,
+   *   chainImg?: HTMLImageElement | null,
    * }} opts
    */
   constructor(canvas, opts) {
@@ -252,7 +252,7 @@ export class PreviewView {
     this.lastY = 0;
     this.live = null;
     this.stickyCam = null;
-    this.nailTints = new Map();
+    this.chainTints = new Map();
     pvDisableSmoothing(this.ctx);
     pvDisableSmoothing(this.dctx);
 
@@ -264,10 +264,10 @@ export class PreviewView {
     this._ro = new ResizeObserver(() => this.draw());
     if (this.frame) this._ro.observe(this.frame);
 
-    const nail = opts.nailImg;
-    if (nail && !nail.complete) {
-      nail.addEventListener("load", () => {
-        this.nailTints.clear();
+    const chain = opts.chainImg;
+    if (chain && !chain.complete) {
+      chain.addEventListener("load", () => {
+        this.chainTints.clear();
         this.draw();
       });
     }
@@ -434,18 +434,18 @@ export class PreviewView {
     }
   }
 
-  #nailTint(hex) {
-    const img = this.opts.nailImg;
+  #chainTint(hex) {
+    const img = this.opts.chainImg;
     if (!img?.complete || !img.naturalWidth) return null;
-    let tint = this.nailTints.get(hex);
+    let tint = this.chainTints.get(hex);
     if (tint) return tint;
     const c = document.createElement("canvas");
-    c.width = NAIL_W;
-    c.height = NAIL_H;
+    c.width = CHAIN_W;
+    c.height = CHAIN_H;
     const ctx = c.getContext("2d");
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(img, 0, 0);
-    const data = ctx.getImageData(0, 0, NAIL_W, NAIL_H);
+    const data = ctx.getImageData(0, 0, CHAIN_W, CHAIN_H);
     const px = data.data;
     const { r, g, b } = pvParseHex(hex);
     for (let i = 0; i < px.length; i += 4) {
@@ -459,24 +459,24 @@ export class PreviewView {
       }
     }
     ctx.putImageData(data, 0, 0);
-    this.nailTints.set(hex, c);
+    this.chainTints.set(hex, c);
     return c;
   }
 
-  #drawNail(ctx, room) {
+  #drawChain(ctx, room) {
     const hex = a8InkHex(room.a8Bg ?? ROOM_BG_DEFAULT);
-    const tint = this.#nailTint(hex);
+    const tint = this.#chainTint(hex);
     if (!tint) return;
-    const dx = NAIL_VX * PREVIEW_SX;
-    const dy = NAIL_VY * PREVIEW_SY;
-    const dw = NAIL_W * PREVIEW_SX;
-    const dh = NAIL_H * PREVIEW_SY;
+    const dx = CHAIN_VX * PREVIEW_SX;
+    const dy = CHAIN_VY * PREVIEW_SY;
+    const dw = CHAIN_W * PREVIEW_SX;
+    const dh = CHAIN_H * PREVIEW_SY;
     const clipH = Math.min(dh, PREVIEW_H - dy);
     if (clipH <= 0) return;
-    const srcH = NAIL_H * (clipH / dh);
+    const srcH = CHAIN_H * (clipH / dh);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(tint, 0, 0, NAIL_W, srcH, dx, dy, dw, clipH);
+    ctx.drawImage(tint, 0, 0, CHAIN_W, srcH, dx, dy, dw, clipH);
   }
 
   #present() {
@@ -534,7 +534,7 @@ export class PreviewView {
         }
         this.#drawObject(ctx, doc, obj, cam, line);
       }
-      this.#drawNail(ctx, room);
+      this.#drawChain(ctx, room);
     }
 
     this.#present();

@@ -282,6 +282,7 @@ export class LayoutView {
     }
     if (moved) this.opts.onViewChanged?.();
     this.draw();
+    this.opts.onTick?.();
   }
 
   #eventPos(e) {

@@ -225,63 +225,9 @@ eu_dying
 	jmp eu_next
 
 ; ------------------------------------------------------------------
-; Last death frame: countdown hold, then EN_GONE + drop.
+; Last death frame. Stays until the level reloads.
 eu_dead
-	ldx enemy_idx
-	lda en_timer,x
-	ora en_timer_h,x
-	beq .eu_dead_done
-	sec
-	lda en_timer,x
-	sbc dt_ms
-	sta en_timer,x
-	lda en_timer_h,x
-	sbc dt_msh
-	sta en_timer_h,x
-	bcs eu_next
-	lda #0
-	sta en_timer,x
-	sta en_timer_h,x
-.eu_dead_done
-	jsr finish_enemy_death
 	jmp eu_next
-
-; X = enemy finishing death. EN_GONE, then the type bank.
-finish_enemy_death
-	lda #EN_GONE
-	sta en_state,x
-	+lda_mx en_type
-	tay
-	lda #AI_CMD_DEATH
-	jmp ai_invoke
-
-; A = BP_*. Corpse is enemy_idx. Clobbers X, Y, rot2.
-spawn_death_drop
-	sta rot2
-	ldx #0
-.ddp_lp
-	cpx	map_nenemies
-	bcs .ddp_rts
-	lda drop_taken,x
-	beq .ddp_n
-	ldy enemy_idx
-	+lda_my en_x
-	sta drop_x,x
-	+lda_my en_y
-	sta drop_y,x
-	+lda_my en_z
-	sta drop_z,x
-	+lda_my en_room
-	sta drop_room,x
-	lda rot2
-	sta drop_type,x
-	dec drop_taken,x
-	beq .ddp_rts
-.ddp_n
-	inx
-	bne .ddp_lp
-.ddp_rts
-	rts
 
 eu_next
 	ldx enemy_idx
@@ -418,24 +364,8 @@ enemy_anim_step
 	jsr enemy_enter_approach
 	jmp .eas_n
 .eas_atlen
-	; Variant fire frames live in the type bank. A unchanged → enemy_fire_frame.
-	lda AI_ENTRY_HI,y
-	beq .eas_ff_tbl
-	lda #AI_CMD_ANIM_FIRE
-	jsr ai_invoke
-	cmp #AI_CMD_ANIM_FIRE
-	beq .eas_ff_tbl
-	jmp .eas_atk_rest
-.eas_ff_tbl
-	tya
-	pha
 	jsr ldy_slot
 	lda enemy_fire_frame,y
-	sta rot1
-	pla
-	tay
-	lda rot1
-.eas_ff
 	bmi .eas_atlen_go			; $ff = none
 	cmp en_sfx_old
 	beq .eas_atlen_go			; already were on fire frame
@@ -445,18 +375,13 @@ enemy_anim_step
 	pha
 	cmp rot1
 	bcc .eas_atlen_go			; new < fire → not yet
-.eas_ff_go
 	+ldy_mx en_type
 	lda #AI_CMD_FIRE
 	jsr ai_invoke
-	jmp .eas_atk_rest
-.eas_atk_rest
-	ldx enemy_idx
-	+ldy_mx en_type
-	jmp .eas_atlen_go
 .eas_atlen_go
 	pla
-	jsr pain_var_off
+	ldx enemy_idx
+	jsr ldy_slot
 	cmp enemy_attack_len,y
 	bcs +
 	jmp .eas_n
@@ -482,17 +407,13 @@ enemy_anim_step
 	bcs +
 	jmp .eas_n
 +
-	; past end → hold last frame in EN_DEAD
+	; past end → last frame stays in EN_DEAD
 	lda enemy_death_len,y
 	sec
 	sbc #1
 	sta en_frame,x
 	lda #EN_DEAD
 	sta en_state,x
-	lda #<DEATH_HOLD_MS
-	sta en_timer,x
-	lda #>DEATH_HOLD_MS
-	sta en_timer_h,x
 	jmp .eas_n
 
 ; ------------------------------------------------------------------
@@ -941,10 +862,9 @@ enemy_shoot_cue
 .esc_rts
 	rts
 
-; A = attack variant. Zero step so a leap doesn't inherit chase cadence.
+; Zero step so a leap doesn't inherit chase cadence.
 enemy_enter_demon_attack
 	ldx enemy_idx
-	sta en_pain_i,x
 	lda #EN_ATTACK
 	sta en_state,x
 	lda #0
@@ -962,7 +882,6 @@ enemy_enter_attack
 	sta en_state,x
 	lda #0
 	sta en_frame,x
-	jsr pick_attack_var
 	jmp enemy_face_player
 
 ; Enter approach. The type's AI owns the timer and dodge.
@@ -1030,9 +949,13 @@ enemy_same_floor
 take_damage
 	sta rot0
 	lda god_mode
-	bne .td_rts
+	beq +
+	rts
++
 	lda player_hp
-	beq .td_rts
+	bne +
+	rts
++
 	lda difficulty
 	beq .td_half
 	cmp #2
@@ -1056,16 +979,39 @@ take_damage
 .td_live
 	lda player_armour
 	beq .td_hp
+	lda combat_armor
+	bne .td_blue
 	lda rot0
 	lsr
+	lsr				; /4
+	sta td_saved
+	lda rot0
+	lsr
+	lsr
+	lsr
+	lsr				; /16
+	clc
+	adc td_saved
+	jmp .td_saved
+.td_blue
+	lda rot0
+	lsr				; /2
+.td_saved
+	beq .td_hp			; tiny hit, nothing absorbed
+	sta td_saved
+	lda rot0
+	sec
+	sbc td_saved
 	sta rot0
 	lda player_armour
 	sec
-	sbc rot0
-	bcs +
-	lda #0
-+
+	sbc td_saved
 	sta player_armour
+	cmp #201			; underflow past the 200 cap
+	bcc .td_hp
+	lda #0
+	sta player_armour
+	sta combat_armor
 .td_hp
 	lda player_hp
 	sec
@@ -1092,6 +1038,8 @@ take_damage
 	jmp death_restart
 .td_rts
 	rts
+td_saved	!byte 0
+sg_hit		!byte 0
 
 ; Tick red border; IRQ publishes vic_border.
 update_hurt_flash
@@ -1645,15 +1593,9 @@ pick_death_var
 	lda enemy_death_n,y
 	jmp pick_var_n
 
-; X = enemy. Pick en_pain_i = rnd8 % enemy_attack_n[slot].
-pick_attack_var
-	jsr ldy_slot
-	lda enemy_attack_n,y
-	jmp pick_var_n
-
 ; ------------------------------------------------------------------
 ; X = enemy. A = damage. Pain chance if survives.
-; Flesh and Bone (difficulty 0) then x3/2, cap 255.
+; I'm too young to die (difficulty 0) then x3/2, cap 255.
 damage_enemy
 	stx enemy_idx
 	sta hit_dmg
@@ -1751,7 +1693,13 @@ axe_try_kill
 	jsr player_overlaps_y
 	ldx obj_i
 	bcc .atk_n
-	lda #AXE_DMG
+	jsr rnd8
+	lsr
+	lsr
+	lsr
+	lsr
+	clc
+	adc #1
 	jsr damage_enemy
 	sec
 	rts
@@ -1782,21 +1730,53 @@ roll_upto
 	rts
 
 ; ------------------------------------------------------------------
-; Hitscan: mid-body project → |sx−CX|≤scan_hit_x (no screen-Y gate;
-; height auto-aims). Ceiling min 1, then roll_upto → 1..ceiling.
-; SSG: SCAN_CONE, ceiling = scan_dmg_max − (z>>1), every cone hit.
-; Nail: SCAN_CLOSEST, ceiling = scan_dmg_max − (z>>2), closest only.
-; Pistol: SCAN_FLAT, roll 1..scan_dmg_max, no falloff, closest only.
-; z in 0..SHOT_Z_MAX-1. Blood splat on closest hit; wall splat on miss.
+; Hitscan: mid-body project → |sx−(CX+aim)|≤scan_hit_x (no screen-Y gate;
+; height auto-aims). Flat guns roll 1..scan_dmg_max on the closest body.
+; Shotgun is five pellets, one column each. Pistol and chaingun are one.
+; z in 0..SHOT_Z_MAX-1. Blood splat on a hit; wall splat on a miss.
 shotgun_hitscan
-	lda #SHOT_HIT_X
+	lda #$ff
+	sta sg_hit
+	ldy #5
+.sg_pel
+	tya
+	pha
+	jsr rnd8
+	and #15
+.sg_red
+	cmp #5
+	bcc .sg_col
+	sbc #5
+	jmp .sg_red
+.sg_col
+	sec
+	sbc #2				; −2..+2
+	sta rot0
+	asl
+	asl
+	clc
+	adc rot0			; ×5 → −10..+10
+	sta scan_aim
+	lda #SHOT_PELLET_X
 	sta scan_hit_x
 	lda #$ff
 	sta scan_hit_y
-	lda #SHOT_DMG_MAX
+	lda #PISTOL_DMG_MAX
 	sta scan_dmg_max
-	lda #SCAN_CONE
+	lda #SCAN_PELLET
 	sta scan_dmg_all
+	jsr gun_hitscan
+	lda shot_hit_i
+	cmp #$ff
+	beq .sg_pn
+	sta sg_hit
+.sg_pn
+	pla
+	tay
+	dey
+	bne .sg_pel
+	lda #0
+	sta scan_aim
 	lda #15
 	sta scan_jx_mask
 	lda #8
@@ -1805,16 +1785,35 @@ shotgun_hitscan
 	sta scan_jy_mask
 	lda #4
 	sta scan_jy_bias
-	jmp gun_hitscan
+	lda sg_hit
+	cmp #$ff
+	beq .sg_miss
+	sta shot_hit_i
+	jsr shotgun_hit_splat
+	jmp .sg_sw
+.sg_miss
+	jsr shotgun_miss_splat
+.sg_sw
+	lda #SHOT_FAN_X
+	sta scan_hit_x
+	jsr scan_shoot_switches
+	cmp #$ff
+	beq .sg_rts
+	tax
+	jsr fire_switch
+.sg_rts
+	rts
 
-nailgun_hitscan
-	lda #NAIL_HIT_X
+chaingun_hitscan
+	lda #0
+	sta scan_aim
+	lda #CHAIN_HIT_X
 	sta scan_hit_x
 	lda #$ff
 	sta scan_hit_y
-	lda #NAIL_DMG_MAX
+	lda #PISTOL_DMG_MAX
 	sta scan_dmg_max
-	lda #SCAN_CLOSEST
+	lda #SCAN_FLAT
 	sta scan_dmg_all
 	lda #3
 	sta scan_jx_mask
@@ -1826,8 +1825,10 @@ nailgun_hitscan
 	sta scan_jy_bias
 	jmp gun_hitscan
 
-; SquareDoom pistol: one bullet, nearest body in the center band, flat roll.
+; One bullet, nearest body in the center band, flat 1..16.
 pistol_hitscan
+	lda #0
+	sta scan_aim
 	lda #PISTOL_HIT_X
 	sta scan_hit_x
 	lda #$ff
@@ -1924,9 +1925,11 @@ gun_hitscan
 	jmp .sh_n
 .sh_on
 	sty rot1				; sy
-	; |sx − SCREEN_CX| ≤ scan_hit_x
+	; |sx − (SCREEN_CX + scan_aim)| ≤ scan_hit_x
 	sec
 	sbc #SCREEN_CX
+	sec
+	sbc scan_aim
 	bpl .sh_xabs
 	eor #$ff
 	clc
@@ -1990,6 +1993,20 @@ gun_hitscan
 	inx
 	jmp .sh_lp
 .sh_done
+	lda scan_dmg_all
+	cmp #SCAN_PELLET
+	bne .sh_sw
+	lda shot_hit_i
+	cmp #$ff
+	beq .sh_pel_rts
+	lda scan_dmg_max
+	jsr roll_upto
+	ldx shot_hit_i
+	stx enemy_idx
+	jmp damage_enemy
+.sh_pel_rts
+	rts
+.sh_sw
 	jsr scan_shoot_switches		; A = index ($ff none), Y = CAM_ZH
 	pha
 	cmp #$ff
@@ -1999,12 +2016,12 @@ gun_hitscan
 	beq .sh_splats			; shotgun: switch and enemies both count
 	ldx shot_hit_i
 	cpx #$ff
-	beq .sh_splats			; nail miss: switch takes the shot
+	beq .sh_splats			; chaingun miss: switch takes the shot
 	cpy shot_hit_z
 	bcc .sh_sup			; switch strictly closer
 	pla
 	lda #$ff
-	pha				; closer enemy keeps the nail
+	pha				; closer enemy keeps the hit
 	jmp .sh_splats
 .sh_sup
 	lda #$ff

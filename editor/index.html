@@ -1496,7 +1496,7 @@ button:disabled {
           <canvas id="preview-canvas"></canvas>
         </div>
         <p class="muted" id="preview-hint">Drag L/R to rotate · U/D to walk</p>
-      <img id="preview-nail-png" width="48" height="42" hidden alt="" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAqCAMAAADCkShIAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAGUExURQAAAOjk2LCMVNkAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAZdEVYdFNvZnR3YXJlAFBhaW50Lk5FVCA1LjEuMTITAUd0AAAAuGVYSWZJSSoACAAAAAUAGgEFAAEAAABKAAAAGwEFAAEAAABSAAAAKAEDAAEAAAACAAAAMQECABEAAABaAAAAaYcEAAEAAABsAAAAAAAAAGAAAAABAAAAYAAAAAEAAABQYWludC5ORVQgNS4xLjEyAAADAACQBwAEAAAAMDIzMAGgAwABAAAAAQAAAAWgBAABAAAAlgAAAAAAAAACAAEAAgAEAAAAUjk4AAIABwAEAAAAMDEwMAAAAADZp5qVybcLXwAAAQpJREFUSEuVkgcOwzAMA5P/f7pwJFLUcNwQRWuN03B9XaGbmsxBDDjQA1ktoRRo2gMzESO3HeYtlvO2WgDo+QT4p0tCFdiO5AB3MPc/gOxqLWry0uP2RYB9A3SJmlxXYOYLERfORq/AGuBFnRhcqn6x3ZPUwocGnah2U0k4NqhEvZRRmn9ukHN271HVgKMEkEeQSsH/fNPw85rJqA1QCoHZADYTAlzZ3n8HaiWenl+Zle8cI0UaTmRgawkQsa40EcAxArFMxgG417fGlHAMAJwMOafNO+BHHzhdRgVQ0z8CODMA2gTzzIDnzIB5cz6cAHgv66+GJgAZCMGKwTIQGYxEvxlgm4jA2AGhHyvhAjQZxho5AAAAAElFTkSuQmCC" />
+      <img id="preview-chain-png" width="48" height="42" hidden alt="" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAqCAMAAADCkShIAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAGUExURQAAAOjk2LCMVNkAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAZdEVYdFNvZnR3YXJlAFBhaW50Lk5FVCA1LjEuMTITAUd0AAAAuGVYSWZJSSoACAAAAAUAGgEFAAEAAABKAAAAGwEFAAEAAABSAAAAKAEDAAEAAAACAAAAMQECABEAAABaAAAAaYcEAAEAAABsAAAAAAAAAGAAAAABAAAAYAAAAAEAAABQYWludC5ORVQgNS4xLjEyAAADAACQBwAEAAAAMDIzMAGgAwABAAAAAQAAAAWgBAABAAAAlgAAAAAAAAACAAEAAgAEAAAAUjk4AAIABwAEAAAAMDEwMAAAAADZp5qVybcLXwAAAQpJREFUSEuVkgcOwzAMA5P/f7pwJFLUcNwQRWuN03B9XaGbmsxBDDjQA1ktoRRo2gMzESO3HeYtlvO2WgDo+QT4p0tCFdiO5AB3MPc/gOxqLWry0uP2RYB9A3SJmlxXYOYLERfORq/AGuBFnRhcqn6x3ZPUwocGnah2U0k4NqhEvZRRmn9ukHN271HVgKMEkEeQSsH/fNPw85rJqA1QCoHZADYTAlzZ3n8HaiWenl+Zle8cI0UaTmRgawkQsa40EcAxArFMxgG417fGlHAMAJwMOafNO+BHHzhdRgVQ0z8CODMA2gTzzIDnzIB5cz6cAHgv66+GJgAZCMGKwTIQGYxEvxlgm4jA2AGhHyvhAjQZxho5AAAAAElFTkSuQmCC" />
       </div>
       <div id="overhead-panel" class="preview-panel panel">
         <div class="toolbar-actions ortho-tabs" role="group" aria-label="Ortho view">
@@ -3074,6 +3074,16 @@ const DOOM_SPRITE_PREFIX = {
   Baron: "BOSS",
 };
 const WEAPON_VERT = 12;
+
+/** Game muzzle reads batch slot 12. Export parks this vertex there. */
+function clampWeaponVert(n, nv) {
+  const count = Math.max(0, nv | 0);
+  if (!count) return 0;
+  const fallback = Math.min(WEAPON_VERT, count - 1);
+  const v = Number(n);
+  if (!Number.isFinite(v)) return fallback;
+  return Math.max(0, Math.min(count - 1, v | 0));
+}
 const WRIST_R = 7;
 const JOINT_NAMES = [
   "Hip L",
@@ -3102,16 +3112,8 @@ const ANIM_ORBIT_DIST_MAX = 400;
 const ITEM_ORBIT_DIST_MIN = 8;
 const ITEM_ORBIT_DIST_MAX = 80;
 const DOC_VERSION = 10;
-/** Mid-distance stick LOD: full project while CAM_ZH < lodZ (world units). */
-const DEFAULT_ENEMY_LOD_Z = 4;
-const ENEMY_LOD_Z_BY_NAME = {
-  Possessed: 4,
-  Baron: 8,
-  Pinky: 4,
-  Imp: 4,
-};
 const DEFAULT_WEAPON_SCALE = 0.4;
-const WEAPON_KEYS = ["axe", "shot2", "nail", "rock"];
+const WEAPON_KEYS = ["axe", "shot2", "chain", "rock"];
 const WEAPON_LABELS = {
   axe: "Axe",
   shot2: "Super shotgun",
@@ -3155,16 +3157,6 @@ function clampMdlScale(n) {
   const v = Number(n);
   if (!Number.isFinite(v)) return DEFAULT_MDL_SCALE;
   return Math.max(0.1, Math.min(2, v));
-}
-
-function defaultEnemyLodZ(name) {
-  return ENEMY_LOD_Z_BY_NAME[name] ?? DEFAULT_ENEMY_LOD_Z;
-}
-
-function clampEnemyLodZ(n, name) {
-  const v = Number(n);
-  if (!Number.isFinite(v)) return defaultEnemyLodZ(name);
-  return Math.max(0, Math.min(255, v | 0));
 }
 
 /**
@@ -4160,9 +4152,7 @@ function parseItemMeshes(raw) {
   const src = { ...raw };
   const meshAlias = {
     "health 25%": "small health",
-    "health 50%": "large health",
-    armour: "green armor",
-    nails: "ammo box",
+    grenades: "box of rockets",
     grenades: "box of rockets",
     nailgun: "chaingun",
     "grenade launcher": "rocket launcher",
@@ -4358,10 +4348,33 @@ function normalizeClipSound(raw, len) {
   return { sound: cue, soundFrame: Math.max(0, Math.min(raw.soundFrame | 0, n - 1)) };
 }
 
+/** Present attackFrame clamped to 0..len-1. Missing stays missing. */
+function clampAttackFrame(raw, len) {
+  const n = Math.max(1, len | 0);
+  if (raw == null || raw === "") return null;
+  let frame = Number(raw);
+  if (!Number.isFinite(frame)) return null;
+  frame = frame | 0;
+  if (frame < 0) frame = 0;
+  if (frame > n - 1) frame = n - 1;
+  return frame;
+}
+
+/** Missing attackFrame is clip-local frame 1, then clamped. */
+function attackFrameOrDefault(raw, len) {
+  const set = clampAttackFrame(raw, len);
+  if (set != null) return set;
+  return clampAttackFrame(1, len);
+}
+
 function withClipSound(clip, src) {
-  const extra = normalizeClipSound(src || clip, clip.len);
-  if (!extra.sound) return { name: clip.name, start: clip.start, len: clip.len };
-  return { name: clip.name, start: clip.start, len: clip.len, ...extra };
+  const from = src || clip;
+  const extra = normalizeClipSound(from, clip.len);
+  const out = { name: clip.name, start: clip.start, len: clip.len, ...extra };
+  const attackRaw = from.attackFrame != null ? from.attackFrame : clip.attackFrame;
+  const attackFrame = clampAttackFrame(attackRaw, clip.len);
+  if (attackFrame != null) out.attackFrame = attackFrame;
+  return out;
 }
 
 function normalizeClips(raw, frameCount) {
@@ -4380,7 +4393,7 @@ function normalizeClips(raw, frameCount) {
 }
 
 /**
- * Placeable types. Index is the game type id (FIRE_FRAME / ENT_*).
+ * Placeable types. Index is the game type id (ENT_*).
  * hp is the default game byte (Doom health / 5). Edited values live on the
  * enemy record; lists sort by that.
  */
@@ -5084,7 +5097,7 @@ function figureTemplateName(obj) {
   return obj.kind === "spawn" ? "Possessed" : obj.enemy || "Possessed";
 }
 
-/** World-space first-frame stick verts for a placed enemy (1/4 scale, feet on floor center). */
+/** Rest pose. Palette icons and the spawn marker stay here. */
 function enemyPreviewFrame(template) {
   const frames = template?.frames;
   if (!frames?.length) return null;
@@ -5097,8 +5110,30 @@ function enemyPreviewFrame(template) {
   return frames[0];
 }
 
-function enemyPlacementWorldVerts(obj, template) {
-  const frame = enemyPreviewFrame(template);
+/** src/mem.asm ANIM_MS. Doom types in enemy.asm advance every other tick. */
+const ANIM_MS = 100;
+const DOOM_SLOW_WALK = new Set(["Possessed", "Baron", "Pinky", "Imp"]);
+
+function walkStepMs(name) {
+  return DOOM_SLOW_WALK.has(name) ? ANIM_MS * 2 : ANIM_MS;
+}
+
+/** Run/walk clip frame at the game step clock. All placed enemies share one phase. */
+function walkCycleFrame(template, now) {
+  const frames = template?.frames;
+  if (!frames?.length) return null;
+  const role = findPoseRole(template?.name, template?.clips || [], "run");
+  if (!role) return enemyPreviewFrame(template);
+  const [start, len] = role;
+  if (len < 1) return enemyPreviewFrame(template);
+  const fi = (start | 0) + (Math.floor(now / walkStepMs(template.name)) % len);
+  if (fi < 0 || fi >= frames.length) return enemyPreviewFrame(template);
+  return frames[fi];
+}
+
+/** World-space stick verts (1/4 scale, feet on floor center). Enemies loop walk. */
+function enemyPlacementWorldVerts(obj, template, now = performance.now()) {
+  const frame = obj?.kind === "enemy" ? walkCycleFrame(template, now) : enemyPreviewFrame(template);
   if (!frame) return [];
   const ox = obj.x + obj.sx / 2;
   const oy = obj.y;
@@ -5152,8 +5187,7 @@ const STICK_POSE_BYTES = 13 * 3; // gx+gy+gz per stored pose
 /** Packed map header: 12 counts + 2 type pads + 6 spawn + 4 mesh lens. */
 const MAP_HDR_BYTES = 24;
 
-// Keep in sync with tools/genenemies.py (clip-local fire + role names).
-const FIRE_FRAME = [1, 1, 1, 1];
+// Keep in sync with tools/genenemies.py (role names).
 const PAIN_MAX = 4;
 const ROLE_CLIPS = {
   Possessed: { stand: ["stand"], alert: ["stand"], run: ["walk"], walk: ["walk"], attack: ["missile"] },
@@ -5182,6 +5216,12 @@ const ROLE_CLIPS = {
 
 function poseClipKey(name) {
   return String(name).replace(/_+$/, "").toLowerCase();
+}
+
+function clipIsAttackRole(enemyName, clipName) {
+  const names = ROLE_CLIPS[enemyName]?.attack || [];
+  const key = poseClipKey(clipName);
+  return names.some((n) => poseClipKey(n) === key);
 }
 
 function poseClipByName(clips, name) {
@@ -5239,21 +5279,18 @@ function findPoseRole(name, clips, role) {
   return [start, length];
 }
 
-/** Attack ROLE candidates present in clips (export order), up to PAIN_MAX. */
+/** The one attack clip for this type, in export order. */
 function findPoseAttackVariants(name, clips) {
   const names = ROLE_CLIPS[name]?.attack || [];
   const want = new Set(names.filter((n) => typeof n === "string").map(poseClipKey));
-  const out = [];
   for (const c of clips) {
     if (!want.has(poseClipKey(c.name))) continue;
-    out.push([c.start | 0, c.len | 0]);
-    if (out.length >= PAIN_MAX) break;
+    const len = c.len | 0;
+    return [[c.start | 0, len, attackFrameOrDefault(c.attackFrame, len)]];
   }
-  if (!out.length) {
-    const stand = findPoseClip(clips, "stand", "walk", "hover");
-    if (stand) out.push([stand[0], 1]);
-  }
-  return out;
+  const stand = findPoseClip(clips, "stand", "walk", "hover");
+  if (stand) return [[stand[0], 1, 0]];
+  return [];
 }
 
 function findPoseVariants(clips, kind) {
@@ -5379,13 +5416,8 @@ function packedPoseBytes(enemy, clips, frames) {
     return { bytes: 2 + nLogical + seen.size * nv * 3, nLogical, nStored: seen.size };
   }
 
-  const typeI = Math.max(
-    0,
-    ENEMY_TYPES.findIndex((t) => t.name === name),
-  );
   const covered = Array(nLogical).fill(false);
   const keep = new Set();
-  const fireOff = FIRE_FRAME[typeI] ?? 2;
 
   const ranges = [];
   for (const role of ["stand", "alert", "run", "walk"]) {
@@ -5396,9 +5428,13 @@ function packedPoseBytes(enemy, clips, frames) {
     length = Math.min(length, nLogical - start);
     ranges.push([role, start, length]);
   }
-  findPoseAttackVariants(name, clipList).forEach(([start, length], i) => {
+  findPoseAttackVariants(name, clipList).forEach(([start, length, fireOff], i) => {
     if (start >= nLogical || length <= 0) return;
-    ranges.push([`attack${i}`, start, Math.min(length, nLogical - start)]);
+    const ln = Math.min(length, nLogical - start);
+    let fr = fireOff ?? attackFrameOrDefault(null, ln);
+    if (fr < 0) fr = 0;
+    if (fr >= ln) fr = ln - 1;
+    ranges.push([`attack${i}`, start, ln, fr]);
   });
   for (const kind of ["pain", "death"]) {
     findPoseVariants(clipList, kind).forEach(([start, length], i) => {
@@ -5406,10 +5442,10 @@ function packedPoseBytes(enemy, clips, frames) {
       ranges.push([`${kind}${i}`, start, Math.min(length, nLogical - start)]);
     });
   }
-  for (const [role, start, length] of ranges) {
+  for (const [role, start, length, fireOff] of ranges) {
     let extra = [];
-    if (typeof role === "string" && role.startsWith("attack")) {
-      if (fireOff >= 0 && fireOff < 255) extra = [start + fireOff];
+    if (typeof role === "string" && role.startsWith("attack") && fireOff >= 0 && fireOff < 255) {
+      extra = [start + fireOff];
     }
     for (const i of poseCadenceKeep(start, length, posePickKeys(frs, start, length, extra))) {
       keep.add(i);
@@ -6070,6 +6106,8 @@ function parseClipMeta(raw) {
       clip.sound = sound;
       clip.soundFrame = Math.max(0, c.soundFrame | 0);
     }
+    const attackFrame = clampAttackFrame(c?.attackFrame, clip.len);
+    if (attackFrame != null) clip.attackFrame = attackFrame;
     out.push(clip);
   }
   return out;
@@ -6087,6 +6125,7 @@ function persistClip(c) {
     out.sound = c.sound;
     out.soundFrame = c.soundFrame | 0;
   }
+  if (c.attackFrame != null) out.attackFrame = c.attackFrame | 0;
   return out;
 }
 
@@ -6110,6 +6149,19 @@ function enemyFileRecords(doc) {
   return (doc.enemies || [])
     .map((e) => ({ dos: ENEMY_DOS[e.name], data: persistEnemy(e) }))
     .filter((r) => r.dos);
+}
+
+function mapFileRecords(doc) {
+  return LEVEL_NAMES.map((name) => {
+    const map = doc.maps?.[name] || {};
+    return {
+      file: `${name.toLowerCase()}.json`,
+      data: {
+        name: clampName(map.name),
+        objects: Array.isArray(map.objects) ? map.objects : [],
+      },
+    };
+  });
 }
 
 function persistFrames(frames, fine) {
@@ -6198,7 +6250,7 @@ function createEnemy(name = "Possessed") {
     clips: [],
     cues: {},
     mdlRig: emptyMdlRig(),
-    lodZ: defaultEnemyLodZ(name),
+    weaponVert: WEAPON_VERT,
     hp: defaultEnemyHp(name),
     painChance: defaultEnemyPainChance(name),
   };
@@ -6545,7 +6597,6 @@ function parseEditorState(raw) {
 function gameDocument(doc) {
   return {
     version: doc.version,
-    maps: doc.maps,
     weapons: doc.weapons,
     items: doc.items,
   };
@@ -6670,7 +6721,7 @@ function normalizeDocument(raw) {
       }
       enemy.cues = parseEnemyCues(e.cues);
       migrateEnemyClipSounds(enemy);
-      enemy.lodZ = clampEnemyLodZ(e.lodZ, enemy.name);
+      enemy.weaponVert = clampWeaponVert(e.weaponVert, enemy.verts);
       enemy.hp = clampEnemyHp(e.hp, enemy.name);
       enemy.painChance = clampEnemyPainChance(e.painChance, enemy.name);
       const exportClips = normalizeExportClips(e.exportClips);
@@ -7362,6 +7413,53 @@ async function writeEnemyFiles(records) {
   }
 }
 
+const MAP_FILE_KEYS = ["e1m1", "e1m2", "e1m3", "e1m4", "e1m5", "e1m6", "e1m7", "e1m8"];
+
+async function mapDir(create) {
+  if (!projectDirHandle) return null;
+  const editor = await projectDirHandle.getDirectoryHandle("editor");
+  return editor.getDirectoryHandle("maps", create ? { create: true } : undefined);
+}
+
+/** Per-map records keyed by E1M1..E1M8. Null when editor/maps is not there yet. */
+async function readMapFiles() {
+  let dir;
+  try {
+    dir = await mapDir(false);
+  } catch {
+    return null;
+  }
+  if (!dir) return null;
+  const out = {};
+  let any = false;
+  for (const key of MAP_FILE_KEYS) {
+    try {
+      const fh = await dir.getFileHandle(`${key}.json`);
+      const text = await (await fh.getFile()).text();
+      out[key.toUpperCase()] = JSON.parse(text);
+      any = true;
+    } catch {
+      /* missing file */
+    }
+  }
+  return any ? out : null;
+}
+
+async function writeMapFiles(records) {
+  const dir = await mapDir(true);
+  if (!dir) return;
+  const byFile = new Map(records.map((rec) => [rec.file, rec.data]));
+  for (const key of MAP_FILE_KEYS) {
+    const file = `${key}.json`;
+    const data = byFile.get(file);
+    if (!data) continue;
+    const fh = await dir.getFileHandle(file, { create: true });
+    const w = await fh.createWritable();
+    await w.write(JSON.stringify(data, null, 2));
+    await w.close();
+  }
+}
+
 async function getStoredProjectDir() {
   return loadStoredHandle(PROJECT_KEY);
 }
@@ -8021,7 +8119,7 @@ function loadEnemyMdls(lumps) {
 const WEAPON_MDL_PATHS = {
   axe: "progs/v_axe.mdl",
   shot2: "progs/v_shot2.mdl",
-  nail: "progs/v_nail.mdl",
+  chain: "progs/v_nail.mdl",
   rock: "progs/v_rock.mdl",
 };
 
@@ -9003,6 +9101,7 @@ class LayoutView {
     }
     if (moved) this.opts.onViewChanged?.();
     this.draw();
+    this.opts.onTick?.();
   }
 
   #eventPos(e) {
@@ -10457,11 +10556,11 @@ const PREVIEW_SY = PREVIEW_H / GAME_VIEW_H;
 const PREVIEW_FX = GAME_FOCAL * PREVIEW_SX;
 const PREVIEW_FY = GAME_FOCAL * PREVIEW_SY;
 
-const NAIL_W = 48;
-const NAIL_H = 42;
+const CHAIN_W = 48;
+const CHAIN_H = 42;
 /** Viewport-relative top-left in game pixels: sprite (160,214). */
-const NAIL_VX = 72;
-const NAIL_VY = 92;
+const CHAIN_VX = 72;
+const CHAIN_VY = 92;
 
 /** FACE_PZ/MZ/PX/MX â†’ yaw so local +Z points out of the door face (door_face_rot). */
 const PV_DOOR_YAW = {
@@ -10653,7 +10752,7 @@ class PreviewView {
    *   onEditStart?: () => void,
    *   onEditEnd?: () => void,
    *   onChange?: () => void,
-   *   nailImg?: HTMLImageElement | null,
+   *   chainImg?: HTMLImageElement | null,
    * }} opts
    */
   constructor(canvas, opts) {
@@ -10670,7 +10769,7 @@ class PreviewView {
     this.lastY = 0;
     this.live = null;
     this.stickyCam = null;
-    this.nailTints = new Map();
+    this.chainTints = new Map();
     pvDisableSmoothing(this.ctx);
     pvDisableSmoothing(this.dctx);
 
@@ -10682,10 +10781,10 @@ class PreviewView {
     this._ro = new ResizeObserver(() => this.draw());
     if (this.frame) this._ro.observe(this.frame);
 
-    const nail = opts.nailImg;
-    if (nail && !nail.complete) {
-      nail.addEventListener("load", () => {
-        this.nailTints.clear();
+    const chain = opts.chainImg;
+    if (chain && !chain.complete) {
+      chain.addEventListener("load", () => {
+        this.chainTints.clear();
         this.draw();
       });
     }
@@ -10852,18 +10951,18 @@ class PreviewView {
     }
   }
 
-  #nailTint(hex) {
-    const img = this.opts.nailImg;
+  #chainTint(hex) {
+    const img = this.opts.chainImg;
     if (!img?.complete || !img.naturalWidth) return null;
-    let tint = this.nailTints.get(hex);
+    let tint = this.chainTints.get(hex);
     if (tint) return tint;
     const c = document.createElement("canvas");
-    c.width = NAIL_W;
-    c.height = NAIL_H;
+    c.width = CHAIN_W;
+    c.height = CHAIN_H;
     const ctx = c.getContext("2d");
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(img, 0, 0);
-    const data = ctx.getImageData(0, 0, NAIL_W, NAIL_H);
+    const data = ctx.getImageData(0, 0, CHAIN_W, CHAIN_H);
     const px = data.data;
     const { r, g, b } = pvParseHex(hex);
     for (let i = 0; i < px.length; i += 4) {
@@ -10877,24 +10976,24 @@ class PreviewView {
       }
     }
     ctx.putImageData(data, 0, 0);
-    this.nailTints.set(hex, c);
+    this.chainTints.set(hex, c);
     return c;
   }
 
-  #drawNail(ctx, room) {
+  #drawChain(ctx, room) {
     const hex = a8InkHex(room.a8Bg ?? ROOM_BG_DEFAULT);
-    const tint = this.#nailTint(hex);
+    const tint = this.#chainTint(hex);
     if (!tint) return;
-    const dx = NAIL_VX * PREVIEW_SX;
-    const dy = NAIL_VY * PREVIEW_SY;
-    const dw = NAIL_W * PREVIEW_SX;
-    const dh = NAIL_H * PREVIEW_SY;
+    const dx = CHAIN_VX * PREVIEW_SX;
+    const dy = CHAIN_VY * PREVIEW_SY;
+    const dw = CHAIN_W * PREVIEW_SX;
+    const dh = CHAIN_H * PREVIEW_SY;
     const clipH = Math.min(dh, PREVIEW_H - dy);
     if (clipH <= 0) return;
-    const srcH = NAIL_H * (clipH / dh);
+    const srcH = CHAIN_H * (clipH / dh);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(tint, 0, 0, NAIL_W, srcH, dx, dy, dw, clipH);
+    ctx.drawImage(tint, 0, 0, CHAIN_W, srcH, dx, dy, dw, clipH);
   }
 
   #present() {
@@ -10952,7 +11051,7 @@ class PreviewView {
         }
         this.#drawObject(ctx, doc, obj, cam, line);
       }
-      this.#drawNail(ctx, room);
+      this.#drawChain(ctx, room);
     }
 
     this.#present();
@@ -14009,6 +14108,7 @@ const layoutView = new LayoutView(document.getElementById("view-canvas"), {
   beginUndo,
   endUndo,
   getLayoutSearch: () => layoutSearch,
+  onTick: () => previewView.draw(),
 });
 
 document.getElementById("layout-search")?.addEventListener("input", (e) => {
@@ -14060,7 +14160,7 @@ const previewView = new PreviewView(document.getElementById("preview-canvas"), {
   getSpawn: () => previewSpawn(),
   getEditSpawn: () => selectedSpawn(),
   getRoomsOnlyMode: () => roomsOnlyDraw,
-  nailImg: document.getElementById("preview-nail-png"),
+  chainImg: document.getElementById("preview-chain-png"),
   onRotate: (yaw) => {
     const spawn = selectedSpawn();
     if (!spawn) return;
@@ -14600,6 +14700,7 @@ async function saveNow(okMsg = "Saved") {
       return;
     }
     await writeEnemyFiles(enemyFileRecords(doc));
+    await writeMapFiles(mapFileRecords(doc));
     markClean();
     persistMdlRigBackup();
     setStatus(`${okMsg} ${docFileName()}`);
@@ -14750,6 +14851,22 @@ function renderClipSoundFields(root, e, clip) {
     refreshAll();
   });
   root.appendChild(field("Sound frame", fr));
+  if (!clipIsAttackRole(e.name, stick.name)) return;
+  const atk = document.createElement("input");
+  atk.type = "number";
+  atk.min = "0";
+  atk.max = String(Math.max(0, stick.len - 1));
+  atk.step = "1";
+  atk.value = String(attackFrameOrDefault(stick.attackFrame, stick.len));
+  atk.addEventListener("change", () => {
+    pushUndo();
+    const next = attackFrameOrDefault(atk.value, stick.len);
+    stick.attackFrame = next;
+    atk.value = String(next);
+    markDirty();
+    refreshAll();
+  });
+  root.appendChild(field("Attack frame", atk));
 }
 
 function clipIsExported(e, name) {
@@ -15089,7 +15206,7 @@ function buildPalette() {
   paintEnemyPaletteIcons();
 }
 
-/** Front-3/4 of editor +Z, a little above — same stick pose the layout view places. */
+/** Front-3/4 of editor +Z, a little above — rest pose, not the layout walk cycle. */
 const ENEMY_ICON_YAW = Math.PI - 0.45;
 const ENEMY_ICON_PITCH = -0.3;
 
@@ -16638,22 +16755,6 @@ function renderInspector() {
   statRow.append(field("Hit points", hpInp), field("Pain chance", painInp));
   root.appendChild(statRow);
 
-  const lodInp = document.createElement("input");
-  lodInp.type = "number";
-  lodInp.min = "0";
-  lodInp.max = "255";
-  lodInp.step = "1";
-  lodInp.value = String(clampEnemyLodZ(e.lodZ, e.name));
-  lodInp.title = "Full stick project while view Z < this (cheap LOD beyond)";
-  lodInp.addEventListener("change", () => {
-    pushUndo();
-    e.lodZ = clampEnemyLodZ(lodInp.value, e.name);
-    lodInp.value = String(e.lodZ);
-    markDirty();
-    refreshAll();
-  });
-  root.appendChild(field("LOD Z", lodInp));
-
   const timeline = getTimeline(e);
   const spriteEnemy = enemyHasSprites(e);
   const hasStick = !!stickClipFor(e, activeTimelineClip());
@@ -16817,7 +16918,8 @@ function renderInspector() {
   const stickFrame = stick ? stick.start + frameLocal : 0;
   const height = frameHeight(e.frames[stickFrame] || e.frames[0]);
   const nvShow = stickCount(e);
-  counts.textContent = `${nvShow} verts · ${e.lines.length} lines · height ${height}`;
+  const weapon = clampWeaponVert(e.weaponVert ?? WEAPON_VERT, nvShow);
+  counts.textContent = `${nvShow} verts · ${e.lines.length} lines · height ${height} · weapon ${weapon}`;
   root.appendChild(counts);
 
   if (hasStick && selectedVerts.length === 1) {
@@ -16833,13 +16935,27 @@ function renderInspector() {
       markDirty();
       refreshAll();
     };
-    const xyz = vec3Field("XYZ", [
+    const name = !e.customSkeleton && JOINT_NAMES[vi] ? ` ${JOINT_NAMES[vi]}` : "";
+    const xyz = vec3Field(`Vertex ${vi}${name}`, [
       { axis: "x", value: v.x, onChange: (n) => setC("x", n), min: lo, max: lim, step: enemyHasSprites(e) ? 0.25 : undefined },
       { axis: "y", value: v.y, onChange: (n) => setC("y", n), min: lo, max: lim, step: enemyHasSprites(e) ? 0.25 : undefined },
       { axis: "z", value: v.z, onChange: (n) => setC("z", n), min: lo, max: lim, step: enemyHasSprites(e) ? 0.25 : undefined },
     ]);
     xyz.classList.add("vert-xyz");
     root.appendChild(xyz);
+    const wbtn = document.createElement("button");
+    wbtn.type = "button";
+    wbtn.textContent = "Weapon tip";
+    wbtn.title = "Muzzle sprite tracks this vertex";
+    wbtn.classList.toggle("active", weapon === vi);
+    wbtn.addEventListener("click", () => {
+      if ((e.weaponVert | 0) === vi) return;
+      pushUndo();
+      e.weaponVert = vi;
+      markDirty();
+      refreshAll();
+    });
+    root.appendChild(wbtn);
   }
 
   if (!enemyHasSprites(e)) renderDoomSource(root, e);
@@ -17265,6 +17381,7 @@ function mergeCustomVerts(e) {
   }
   e.lines = lines;
   e.verts = nv - 1;
+  e.weaponVert = remap(e.weaponVert ?? WEAPON_VERT);
   if (bindJoint === drop) bindJoint = surv;
   else if (bindJoint > drop) bindJoint--;
   selectedVerts = [surv];
@@ -17296,6 +17413,8 @@ function deleteCustomVerts(e) {
     .filter(([a, b]) => a >= 0 && b >= 0 && a !== b)
     .map(([a, b]) => (a < b ? [a, b] : [b, a]));
   e.verts = n;
+  const mappedWeapon = map[e.weaponVert ?? WEAPON_VERT];
+  e.weaponVert = mappedWeapon == null || mappedWeapon < 0 ? 0 : mappedWeapon;
   if (bindJoint >= 0) bindJoint = map[bindJoint] ?? -1;
   selectedVerts = [];
   selectedLines = [];
@@ -17867,6 +17986,8 @@ document.addEventListener("visibilitychange", () => {
 async function applyLoadedDoc(loaded) {
   const side = await readEnemyFiles();
   if (side?.length) loaded = { ...loaded, enemies: side };
+  const sideMaps = await readMapFiles();
+  if (sideMaps) loaded = { ...loaded, maps: { ...(loaded.maps || {}), ...sideMaps } };
   doc = normalizeDocument(loaded);
   deriveAllEnemyFrames();
   persistMdlRigBackup();

@@ -197,7 +197,7 @@ a8_nmi_out
 	cmp #1
 	beq .nm_msg
 .nm_samp
-	; Mouse sample only (top blank, nail row, bitmap). Top and nail exist with the mouse on.
+	; Mouse sample only (top blank, shells row, bitmap). Top and shells exist with the mouse on.
 	inc dli_phase
 	sta $d40f				; ack
 	txa
@@ -473,10 +473,10 @@ a8_keys
 	sta in_wpn_shot
 	rts
 .k4
-	cmp #$18				; 4 nail
+	cmp #$18				; 4 chaingun
 	bne .k5
 	lda #1
-	sta in_wpn_nail
+	sta in_wpn_chain
 	rts
 .k5
 	cmp #$1d				; 5 grenade

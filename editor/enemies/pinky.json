@@ -1393,7 +1393,8 @@
         "E",
         "F",
         "G"
-      ]
+      ],
+      "attackFrame": 1
     },
     {
       "name": "pain",
@@ -1435,7 +1436,7 @@
       []
     ]
   },
-  "lodZ": 10,
+  "weaponVert": 9,
   "hp": 60,
   "painChance": 255,
   "customSkeleton": true,

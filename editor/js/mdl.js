@@ -328,7 +328,7 @@ export function loadEnemyMdls(lumps) {
 export const WEAPON_MDL_PATHS = {
   axe: "progs/v_axe.mdl",
   shot2: "progs/v_shot2.mdl",
-  nail: "progs/v_nail.mdl",
+  chain: "progs/v_nail.mdl",
   rock: "progs/v_rock.mdl",
 };
 

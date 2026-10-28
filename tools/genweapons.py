@@ -48,11 +48,11 @@ EDIT_RE = re.compile(r"^([a-z0-9]+)_(\d+)_edit\.png$", re.I)
 FLASHES = [
     ("spr_muzzle_b", "muzzle_flash.png", 172 - 88, -20),
     ("spr_spark_b", "axe_flash.png", 172 - 88, -10),
-    ("spr_nail_fl_b", "nail_flash_left.png", 160 - 88, -15),
-    ("spr_nail_fr_b", "nail_flash_right.png", 184 - 88, -15),
+    ("spr_chain_fl_b", "chain_flash_left.png", 160 - 88, -15),
+    ("spr_chain_fr_b", "chain_flash_right.png", 184 - 88, -15),
 ]
 
-# Weapon order in tables: axe, shot, nail, gren, pistol.
+# Weapon order in tables: axe, shot, chain, gren, pistol.
 # pistol_lines.png is 2×1 pixels. Even origin, so the bake's >>1
 # turns each pair into one mode-E pixel. Columns 12–13 land on the
 # muzzle stem (clock 47).
@@ -60,7 +60,7 @@ PISTOL_OX = 10
 WINDOWS = {
     "axe": [(14, 0), (13, 21), (24, 8)],
     "shot2": [(13, 0), (13, 21)],
-    "nail": [(0, 0), (24, 0), (0, 21), (24, 21)],
+    "chain": [(0, 0), (24, 0), (0, 21), (24, 21)],
     "rock": [(12, 0), (0, 21), (24, 21)],
     "pist": [(PISTOL_OX, 0), (PISTOL_OX, 21)],
 }
@@ -278,30 +278,30 @@ def main() -> None:
     weapons = doc.get("weapons") or {}
 
     shot_frames = item_frames(weapons, "shot2")
-    nail_frames = item_frames(weapons, "nail")
+    chain_frames = item_frames(weapons, "chain")
     rock_frames = item_frames(weapons, "rock")
     axe_frames = item_frames(weapons, AXE_KEY)
 
     shot_pix = load_pix("shot2", shot_frames[0], "spr_shot2")
     rock_pix = load_pix("rock", rock_frames[0], "spr_rock")
     axe_pix = load_pix("axe", axe_frames[0], "spr_axe_0")
-    nail_pix = [load_pix("nail", f, f"spr_nail_{f}") for f in nail_frames]
-    if len(nail_pix) != 3:
-        raise SystemExit(f"nail needs 3 frames, got {len(nail_pix)}")
+    chain_pix = [load_pix("chain", f, f"spr_chain_{f}") for f in chain_frames]
+    if len(chain_pix) != 3:
+        raise SystemExit(f"chain needs 3 frames, got {len(chain_pix)}")
 
     pist_pix = pistol_canvas()
     shot = cut_cells("shot2", shot_pix)
     rock = cut_cells("rock", rock_pix)
     axe = cut_cells("axe", axe_pix)
     pist = cut_cells("pist", pist_pix)
-    nail = [cut_cells("nail", pix) for pix in nail_pix]
+    chain = [cut_cells("chain", pix) for pix in chain_pix]
 
     # The blit uses the baked x_byte / y, phase included.
     axe_b = bake_windows(axe_pix, WINDOWS["axe"])
     shot_b = bake_windows(shot_pix, WINDOWS["shot2"])
     rock_b = bake_windows(rock_pix, WINDOWS["rock"])
     pist_b = bake_windows(pist_pix, WINDOWS["pist"])
-    nail_b = [bake_windows(pix, WINDOWS["nail"]) for pix in nail_pix]
+    chain_b = [bake_windows(pix, WINDOWS["chain"]) for pix in chain_pix]
     flashes = [
         (label, bake_flash(flash_pix(png), ox, dy))
         for label, png, ox, dy in FLASHES
@@ -313,32 +313,32 @@ def main() -> None:
         "; Bodies are inverted (ink %00, clear %11) and the blit is AND, so the gun is black.",
         "; Flashes are ink %11 / clear %00. Phase 1 ORs line colour; phase 2 writes %10.",
         "",
-        "; Frame pointers: axe, shot, nail0, nail1, nail2, rock, pist.",
+        "; Frame pointers: axe, shot, chain0, chain1, chain2, rock, pist.",
         "wpn_fr_lo",
-        "\t!byte <spr_axe_b, <spr_shot_b, <spr_nail_b0, <spr_nail_b1, <spr_nail_b2, <spr_rock_b, <spr_pist_b",
+        "\t!byte <spr_axe_b, <spr_shot_b, <spr_chain_b0, <spr_chain_b1, <spr_chain_b2, <spr_rock_b, <spr_pist_b",
         "wpn_fr_hi",
-        "\t!byte >spr_axe_b, >spr_shot_b, >spr_nail_b0, >spr_nail_b1, >spr_nail_b2, >spr_rock_b, >spr_pist_b",
+        "\t!byte >spr_axe_b, >spr_shot_b, >spr_chain_b0, >spr_chain_b1, >spr_chain_b2, >spr_rock_b, >spr_pist_b",
         "wpn_fr_base",
         "\t!byte 0, 1, 2, 5, 6",
         "wpn_fl4_lo",
-        "\t!byte <spr_spark_b, <spr_muzzle_b, <spr_nail_fl_b, <spr_muzzle_b, <spr_muzzle_b",
+        "\t!byte <spr_spark_b, <spr_muzzle_b, <spr_chain_fl_b, <spr_muzzle_b, <spr_muzzle_b",
         "wpn_fl4_hi",
-        "\t!byte >spr_spark_b, >spr_muzzle_b, >spr_nail_fl_b, >spr_muzzle_b, >spr_muzzle_b",
+        "\t!byte >spr_spark_b, >spr_muzzle_b, >spr_chain_fl_b, >spr_muzzle_b, >spr_muzzle_b",
         "",
     ]
     parts += emit_bytes("spr_axe_b", axe_b)
     parts += emit_bytes("spr_shot_b", shot_b)
     parts += emit_bytes("spr_rock_b", rock_b)
     parts += emit_bytes("spr_pist_b", pist_b)
-    for i, data in enumerate(nail_b):
-        parts += emit_bytes(f"spr_nail_b{i}", data)
+    for i, data in enumerate(chain_b):
+        parts += emit_bytes(f"spr_chain_b{i}", data)
     for label, data in flashes:
         parts += emit_bytes(label, data)
 
     OUT.write_text("\n".join(parts) + "\n", encoding="utf-8")
     print(f"Wrote {OUT.relative_to(ROOT)}")
     print(f"  axe {len(axe_b)}B  shot {len(shot_b)}B  rock {len(rock_b)}B  pist {len(pist_b)}B")
-    print(f"  nail: {len(nail_b)} frames, {len(nail_b[0]) if nail_b else 0}B")
+    print(f"  chain: {len(chain_b)} frames, {len(chain_b[0]) if chain_b else 0}B")
     for label, data in flashes:
         print(f"  {label}: {len(data)}B")
 
@@ -350,7 +350,7 @@ def main() -> None:
                 ("rock", rock, WINDOWS["rock"]),
                 ("pist", pist, WINDOWS["pist"]),
             ],
-            [(f"nail {i}", cells, WINDOWS["nail"]) for i, cells in enumerate(nail)],
+            [(f"chain {i}", cells, WINDOWS["chain"]) for i, cells in enumerate(chain)],
         ]
     )
 

@@ -3,7 +3,7 @@
 ; inactive while IRQEN is 0, so it cannot be polled. A changed KBCODE
 ; counts as a new press when the release fell between samples.
 ; apply_cheats on main does HUD, sound, and restart_level.
-; Shared "id" prefix, then god / kfa / mapNN.
+; Shared "id" prefix, then dqd / kfa / mapNN.
 !zone cheats
 
 CHEAT_IDLE	= 0
@@ -17,7 +17,7 @@ CHEAT_REQ_MAP	= 3
 ; bound it. Digits are a separate 1..9 pair.
 
 ; POKEY KBCODE & $3F. Same positions a8_keys uses for 1..4.
-cheat_kc	!byte $3d, $08, $3a			; G O D
+cheat_kc	!byte $3a, $2f, $3a			; D Q D
 		!byte $05, $38, $3f			; K F A
 		!byte $25, $3f, $0a			; M A P
 cheat_kc_dig	!byte $1f, $1e, $1a, $18, $1d, $1b, $33, $35, $30
@@ -238,18 +238,18 @@ apply_god
 	jmp play_sound
 
 apply_kfa
-	lda #HAVE_AXE | HAVE_SHOT | HAVE_NAIL | HAVE_GREN | HAVE_PIST
+	lda #HAVE_AXE | HAVE_SHOT | HAVE_CHAIN | HAVE_GREN | HAVE_PIST
 	sta have_wpn
 	lda #AMMO_SHELLS_MAX
 	sta ammo_shells
 	lda #AMMO_BULLETS_MAX
 	sta ammo_bullets
-	lda #AMMO_NAILS_MAX
-	sta ammo_nails
 	lda #AMMO_GRENADES_MAX
 	sta ammo_grenades
 	lda #PLAYER_ARMOUR_MAX
 	sta player_armour
+	lda #1
+	sta combat_armor
 	lda have_keys
 	ora #HAVE_YELLOW | HAVE_BLUE | HAVE_RED
 	sta have_keys

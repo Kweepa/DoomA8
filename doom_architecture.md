@@ -80,9 +80,9 @@
 * **Fixed-Point Rotation Matrix Simulation:** To calculate arbitrary 3D rotation, the engine sidesteps native multiplication loops. 8-bit Log and Anti-log lookup tables evaluate vector transformations via fast addition: `AntiLog(Log(|X|) + Log(|cos(θ)|))`.
 * **Generational Advancements:** Employs true multi-axis 3D coordinates allowing room-over-room overlapping map geometries, and complex, cascading 3D ragdoll spin trajectories on dead or tumbling entities. Player view stays yaw-only (no pitch rotate).
 
-### Projectiles (Nine Inch Nails)
+### Projectiles
 * **Collision Routine:** Tracked as single-point vectors shifting through active local spaces.
-* **Spatial Optimization:** Nails filter impact checks exclusively inside the current room's boundary array, preventing multi-sector traversal parsing bottlenecks and using fast structural wall/box containment tests.
+* **Spatial Optimization:** Projectiles filter impact checks exclusively inside the current room's boundary array, preventing multi-sector traversal parsing bottlenecks and using fast structural wall/box containment tests.
 
 ---
 

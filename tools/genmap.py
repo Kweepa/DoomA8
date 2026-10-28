@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Cook editor maps → packed PRGs (maps/e1mN.prg) + map_counts.asm + map_sizes.asm."""
+"""Cook editor/maps/e1mN.json → packed PRGs (maps/e1mN.prg) + map_counts.asm + map_sizes.asm."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from roomgeom import clamp_room_shape, nudge_door_outside, room_geometry
 
 ROOT = Path(__file__).resolve().parents[1]
-DOC = ROOT / "editor" / "doom64.json"
+EDITOR_MAPS = ROOT / "editor" / "maps"
 MAP_DIR = ROOT / "maps"
 COUNTS_OUT = ROOT / "src" / "map_counts.asm"
 SIZES_OUT = ROOT / "src" / "map_sizes.asm"
@@ -380,9 +380,7 @@ def cook_one(level: dict, map_key: str) -> bytes:
         "health 25%": 0,
         "health 50%": 1,
         "armour": 2,
-        "nails": 4,
         "grenades": 6,
-        "nailgun": 8,
         "grenade launcher": 10,
         "quad damage": 16,
         "pentagram of protection": 15,
@@ -1223,16 +1221,24 @@ ENEMY_CLASS_HUM	= 0
 """
 
 
+def load_level(key: str) -> dict:
+    path = EDITOR_MAPS / f"{key.lower()}.json"
+    if not path.is_file():
+        raise SystemExit(f"missing {path}")
+    level = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(level, dict):
+        raise SystemExit(f"{path}: expected object")
+    return level
+
+
 def main() -> None:
     import struct
 
-    doc = json.loads(DOC.read_text(encoding="utf-8"))
-    maps = doc.get("maps") or {}
     MAP_DIR.mkdir(exist_ok=True)
     sizes: list[int] = []
     cooked: list[str] = []
     for key in LEVEL_NAMES:
-        level = maps.get(key) or {"name": "", "objects": []}
+        level = load_level(key)
         objs = level.get("objects") or []
         has_spawn = any(o.get("kind") == "spawn" for o in objs)
         out = MAP_DIR / f"{key.lower()}.prg"

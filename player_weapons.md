@@ -3,7 +3,7 @@ We'll limit the game to these 4 weapons:
 Key Weapon
 1.  Axe (with several anim frames)
 2.  Super shotgun
-3.  Nailgun
+3.  Chaingun
 4.  Grenade Launcher
 
 This covers the broad strokes (a melee, a hitscan, a projectile, an arcing projectile)

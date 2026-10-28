@@ -18,9 +18,8 @@ enemy_run_start	!byte 0, 0
 enemy_run_len	!byte 0, 0
 enemy_walk_start	!byte 0, 0
 enemy_walk_len	!byte 0, 0
-enemy_attack_n	!byte 0, 0
-enemy_attack_start	!byte 0, 0, 0, 0, 0, 0, 0, 0
-enemy_attack_len	!byte 0, 0, 0, 0, 0, 0, 0, 0
+enemy_attack_start	!byte 0, 0
+enemy_attack_len	!byte 0, 0
 enemy_pain_n	!byte 0, 0
 enemy_pain_start	!byte 0, 0, 0, 0, 0, 0, 0, 0
 enemy_pain_len	!byte 0, 0, 0, 0, 0, 0, 0, 0
@@ -31,7 +30,6 @@ enemy_range	!byte 0, 0
 enemy_pain_chance	!byte 0, 0
 enemy_fire_frame	!byte 0, 0
 enemy_class	!byte 0, 0
-enemy_lod_z	!byte 0, 0
 enemy_nframes	!byte 0, 0
 meta_slot_type	!byte $ff, $ff
 meta_scratch	!byte 0

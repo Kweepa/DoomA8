@@ -45,19 +45,26 @@ credits1_text
 	!byte 0
 
 credits2_text
-	!scr "Doom was created by",0
-	!scr "john carmack, michael abrash,",0
-	!scr "john cash, john romero,",0
-	!scr "american mcgee, sandy petersen,",0
-	!scr "tim willits, adrian carmack,",0
-	!scr "kevin cloud, paul steed,",0
-	!scr "trent reznor & nine inch nails.",0
+	!scr "Doom was created by john carmack,",0
+	!scr "john romero, dave taylor,",0
+	!scr "adrian carmack, kevin cloud,",0
+	!scr "sandy peterson, jay wilbur, and",0
+	!scr "shawn green, with additional support",0
+	!scr "from tom hall, bobby prince, paul",0
+	!scr "radek, gregor punchatz, american",0
+	!scr "mcgee and donna jackson.",0
 	!byte 0
 
 credits3_text
 	!scr "Music by benjamin dibbert,",0
 	!scr "butchered by an automatic sid to",0
 	!scr "pokey translation.",0
+	!scr " ",0
+	!scr "Developed using the acme assembler",0
+	!scr "by marco baye.",0
+	!scr " ",0
+	!scr "Tested using the Altirra emulator",0
+	!scr "by avery lee.",0
 	!scr " ",0
 	!scr "Thanks y'all!",0
 	!scr " ",0

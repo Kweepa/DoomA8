@@ -11,10 +11,6 @@
 
 *= AI_LINK_BASE
 ai_poss_entry
-	cmp #AI_CMD_DEATH
-	bne +
-	jmp .death
-+
 	cmp #AI_CMD_FIRE
 	beq .fire
 	cmp #AI_CMD_ATTACK_END
@@ -45,7 +41,7 @@ ai_poss_entry
 	sta en_timer_h,x
 	jmp select_dodge_dir
 
-; LOS, then miss if rnd8 < dist*4. Hit is 8–15. Muzzle is this same call.
+; LOS, then hit when (rnd & 31) > min(dist, 28). Damage 6, 9, 12, or 15.
 .fire
 	lda enemy_idx
 	sta emuz_pending
@@ -53,26 +49,30 @@ ai_poss_entry
 	bcc .fire_rts
 	ldx enemy_idx
 	jsr enemy_chebyshev
-	asl
-	asl
-	bcs .fire_rts		; dist ≥ 64
-	sta rot1
+	cmp #29
+	bcc +
+	lda #28
++
+	sta rot0
 	jsr rnd8
-	cmp rot1
+	and #31
+	cmp rot0
+	beq .fire_rts
 	bcc .fire_rts
-	and #7
+	jsr rnd8
+	and #3
 	clc
-	adc #8
+	adc #2
+	sta rot0
+	asl
+	clc
+	adc rot0
 	jmp take_damage
 .fire_rts
 	rts
 
 .attack_end
 	jmp enemy_enter_approach
-
-.death
-	lda #BP_SHELLS
-	jmp spawn_death_drop
 
 .step
 	ldx enemy_idx

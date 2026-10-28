@@ -1,6 +1,6 @@
 # Todo
 
-- [x] Nailgun shots
+- [x] Chaingun shots
 - [x] Grenade projectile - needs tweaking (stronger gravity, less shot upward)
 - [x] Grenade FX: billboard particles (bake view-local vels; project root + scale offsets).
 - [x] Ogre behaviour

@@ -9,17 +9,24 @@ by id software or zenimax.
 
 For non-commercial/fan use only.
 ^
-Doom was created by
-john carmack, michael abrash,
-john cash, john romero,
-american mcgee, sandy petersen,
-tim willits, adrian carmack,
-kevin cloud, paul steed,
-trent reznor & nine inch nails.
+Doom was created by john carmack,
+john romero, dave taylor,
+adrian carmack, kevin cloud,
+sandy peterson, jay wilbur, and
+shawn green, with additional support
+from tom hall, bobby prince, paul
+radek, gregor punchatz, american
+mcgee and donna jackson.
 ^
 Music by benjamin dibbert,
 butchered by an automatic sid to
 pokey translation.
+
+Developed using the acme assembler
+by marco baye.
+
+Tested using the Altirra emulator
+by avery lee.
 
 Thanks y'all!
 

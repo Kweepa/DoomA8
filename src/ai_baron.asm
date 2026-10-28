@@ -1,4 +1,4 @@
-; Streamed Baron. Claw in melee, flesh chunk in missile. Linked at AI_LINK_BASE.
+; Streamed Baron. Claw in melee, fireball in missile. Linked at AI_LINK_BASE.
 !cpu 6502
 !to "../enemies/ai_baron.bin", plain
 !source "mem.asm"
@@ -64,7 +64,7 @@ ai_baron_entry
 	rts
 
 .approach_attack
-	jsr .flesh_live
+	jsr .fireball_live
 	bcs .aa_rts
 	jsr enemy_shot_clear
 	bcc .aa_rts
@@ -83,7 +83,6 @@ ai_baron_entry
 	ldx enemy_idx
 	lda #1
 	sta atk_kind,x
-	lda #0
 	jmp enemy_enter_demon_attack
 .aa_rts
 	rts
@@ -125,7 +124,7 @@ ai_baron_entry
 	sta en_timer_h,x
 	jmp select_dodge_dir
 
-; Melee variant claws. Missile variant throws one flesh chunk.
+; Melee claws. Missile throws one fireball. Same attack clip.
 .fire
 	ldx enemy_idx
 	lda atk_kind,x
@@ -150,7 +149,7 @@ ai_baron_entry
 	rts
 
 .throw
-	jsr .flesh_live
+	jsr .fireball_live
 	bcs .throw_rts
 	ldx enemy_idx
 	stx obj_i
@@ -186,7 +185,7 @@ ai_baron_entry
 	lda #GREN_OWN_EN
 	jsr gren_fill_slot
 	ldx obj_i
-	lda #GREN_F_FLESH
+	lda #GREN_F_FIREBALL | GREN_F_BARON
 	sta gr_flags,x
 	jmp .z_aim
 .throw_rts
@@ -297,13 +296,13 @@ ai_baron_entry
 +
 	rts
 
-.flesh_live
+.fireball_live
 	ldx #0
 .fl
 	lda gr_on,x
 	beq .fl_n
 	lda gr_flags,x
-	and #GREN_F_FLESH
+	and #GREN_F_FIREBALL
 	beq .fl_n
 	sec
 	rts
@@ -323,4 +322,3 @@ zc_sg	!byte 0, 0, 0
 zc_ad	!byte 0, 0, 0
 zc_t	!byte 0
 zc_mx	!byte 0
-atk_kind	!fill ENEMY_MAX, 0

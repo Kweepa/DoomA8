@@ -1774,24 +1774,24 @@ gb_mode
 
 gb_ptr_lo
 	!byte <player_hp, <player_hp, 0, 0, <ammo_bullets
-	!byte <ammo_shells, <ammo_grenades, <ammo_shells, <ammo_nails, 0
+	!byte <ammo_shells, <ammo_grenades, <ammo_shells, <ammo_bullets, 0
 	!byte <ammo_grenades, 0, 0, 0, 0
 	!byte <player_hp, 0, 0, 0
 gb_ptr_hi
 	!byte >player_hp, >player_hp, 0, 0, >ammo_bullets
-	!byte >ammo_shells, >ammo_grenades, >ammo_shells, >ammo_nails, 0
+	!byte >ammo_shells, >ammo_grenades, >ammo_shells, >ammo_bullets, 0
 	!byte >ammo_grenades, 0, 0, 0, 0
 	!byte >player_hp, 0, 0, 0
 
 gb_add
 	!byte HP_STIM, HP_MEDIKIT, 0, 0, AMMO_BULLETS_BOX
-	!byte AMMO_SHELLS_BOX, AMMO_GRENADES_BOX, AMMO_SHELLS_BOX, AMMO_NAILS_GUN, 0
+	!byte AMMO_SHELLS_BOX, AMMO_GRENADES_BOX, AMMO_SHELLS_BOX, AMMO_CHAINGUN, 0
 	!byte AMMO_GRENADES_GUN, 0, 0, 0, 0
 	!byte HP_SOUL, 0, 0, 0
 
 gb_max
 	!byte PLAYER_HP_MAX, PLAYER_HP_MAX, ARMOR_GREEN, ARMOR_BLUE, AMMO_BULLETS_MAX
-	!byte AMMO_SHELLS_MAX, AMMO_GRENADES_MAX, AMMO_SHELLS_MAX, AMMO_NAILS_MAX, 0
+	!byte AMMO_SHELLS_MAX, AMMO_GRENADES_MAX, AMMO_SHELLS_MAX, AMMO_BULLETS_MAX, 0
 	!byte AMMO_GRENADES_MAX, 0, 0, 0, 0
 	!byte HP_SOUL_MAX, 0, 0, 0
 
@@ -1803,13 +1803,13 @@ gb_dbl
 
 gb_bits
 	!byte 0, 0, 0, 0, 0
-	!byte 0, 0, HAVE_SHOT, HAVE_NAIL, HAVE_AXE
+	!byte 0, 0, HAVE_SHOT, HAVE_CHAIN, HAVE_AXE
 	!byte HAVE_GREN, 0, HAVE_RED, HAVE_YELLOW, HAVE_BLUE
 	!byte 0, 0, 0, 0
 
 gb_wpn
 	!byte 0, 0, 0, 0, 0
-	!byte 0, 0, WPN_SHOT, WPN_NAIL, WPN_AXE
+	!byte 0, 0, WPN_SHOT, WPN_CHAIN, WPN_AXE
 	!byte WPN_GREN, 0, 0, 0, 0
 	!byte 0, 0, 0, 0
 
@@ -1904,6 +1904,13 @@ gb_do_arm
 .gar_ok
 	lda gb_max,y
 	sta player_armour
+	lda #0
+	sta combat_armor
+	cpy #BP_ARMOR_B
+	bne +
+	lda #1
+	sta combat_armor
++
 	sec
 	rts
 
