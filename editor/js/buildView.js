@@ -251,15 +251,10 @@ function levelRows(data) {
   }
   const rows = [...names].map((name) => {
     const cells = {};
-    let slack = Infinity;
-    for (const key of keys) {
-      const lv = data.variants[key].levels?.[name] || null;
-      cells[key] = lv;
-      if (lv && Number.isFinite(Number(lv.slack))) slack = Math.min(slack, Number(lv.slack));
-    }
-    return { name, cells, slack };
+    for (const key of keys) cells[key] = data.variants[key].levels?.[name] || null;
+    return { name, cells };
   });
-  rows.sort((a, b) => a.slack - b.slack || a.name.localeCompare(b.name));
+  rows.sort((a, b) => a.name.localeCompare(b.name));
   return rows;
 }
 
