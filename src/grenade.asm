@@ -502,6 +502,10 @@ gren_contact
 	bne gren_hit_player
 
 gren_hit_enemies
+	jsr gren_touch_barrel
+	ldx obj_i
+	lda gr_on,x
+	beq .ghe_rts
 	ldx #0
 .ghe
 	cpx	map_nenemies
@@ -642,7 +646,7 @@ gren_explode
 	sta gr_flags,x
 	rts
 .gex_go
-	jsr .gex_place
+	jsr gren_place
 	jsr gren_splash
 	jsr start_explosion
 	lda #SOUND_RXPLOD
@@ -652,7 +656,7 @@ gren_explode
 	sta gr_on,x
 	rts
 
-.gex_place
+gren_place
 	ldx obj_i
 	lda gr_xl,x
 	sta fx_oxl
@@ -727,6 +731,268 @@ gren_splash
 	bne .gsp_lp
 .gsp_rts
 	rts
+
+; Player grenade only (caller is gren_hit_enemies). Overlap consumes the
+; grenade with its own splash, then detonates the barrel. Not gren_explode:
+; that pends on fx_on and would wait out the chain.
+gren_touch_barrel
+	ldx #0
+.gtb
+	cpx	map_nbackpacks
+	bcs .gtb_rts
+	lda bp_taken,x
+	bne .gtb_n
+	+lda_mx bp_type
+	cmp #BP_BARREL
+	bne .gtb_n
+	+lda_mx bp_x
+	sta box_x
+	+lda_mx bp_y
+	sta box_y
+	+lda_mx bp_z
+	sta box_z
+	lda #BP_FOOT_SX
+	sta box_sx
+	lda #BP_FOOT_SY
+	sta box_sy
+	lda #BP_FOOT_SZ
+	sta box_sz
+	ldy obj_i
+	lda gr_xh,y
+	sta col_x
+	lda gr_zh,y
+	sta col_z
+	lda #GREN_HIT_R
+	jsr near_box_xz
+	bcc .gtb_n
+	+lda_mx bp_y
+	sta pv0
+	clc
+	adc #BP_FOOT_SY
+	sta pv1
+	txa
+	pha
+	jsr gren_in_y
+	pla
+	tax
+	bcc .gtb_n
+	txa
+	pha
+	jsr gren_place
+	jsr gren_clear
+	lda obj_i
+	pha
+	jsr gren_splash
+	pla
+	sta obj_i
+	pla
+	tax
+	lda obj_i
+	pha
+	jsr barrel_explode
+	pla
+	sta obj_i
+	rts
+.gtb_n
+	inx
+	jmp .gtb
+.gtb_rts
+	rts
+
+; X = backpack index. Splash now, graphic restarts here. Neighbours wait
+; BARREL_CHAIN_MS. A taken barrel only drops its pending bit.
+barrel_explode
+	lda bp_taken,x
+	beq .bx_go
+	jsr barrel_clr_bit
+	jmp barrel_arm
+.bx_go
+	lda #1
+	sta bp_taken,x
+	jsr barrel_clr_bit
+	jsr barrel_place
+	jsr gren_splash
+	jsr barrel_queue
+	jsr start_explosion
+	lda #SOUND_RXPLOD
+	jsr play_sound
+	jmp barrel_arm
+
+; X = backpack. Mesh centre → fx origin and ent_w* (splash / graphic).
+barrel_place
+	lda #0
+	sta fx_oxl
+	sta fx_oyl
+	sta fx_ozl
+	+lda_mx bp_x
+	clc
+	adc #ITEM_BIAS
+	sta fx_ox
+	sta ent_wx
+	+lda_mx bp_y
+	clc
+	adc #1
+	sta fx_oy
+	sta ent_wy
+	+lda_mx bp_z
+	clc
+	adc #ITEM_BIAS
+	sta fx_oz
+	sta ent_wz
+	rts
+
+; X = backpack. Centre → pv0/1/2. Preserves X.
+barrel_pv
+	+lda_mx bp_x
+	clc
+	adc #ITEM_BIAS
+	sta pv0
+	+lda_mx bp_y
+	clc
+	adc #1
+	sta pv1
+	+lda_mx bp_z
+	clc
+	adc #ITEM_BIAS
+	sta pv2
+	rts
+
+; Live barrels whose centres are inside GREN_RAD of ent_w*.
+barrel_queue
+	ldx #0
+.bq
+	cpx	map_nbackpacks
+	bcs .bq_rts
+	lda bp_taken,x
+	bne .bq_n
+	+lda_mx bp_type
+	cmp #BP_BARREL
+	bne .bq_n
+	jsr barrel_pv
+	jsr gren_cheby
+	cmp #GREN_RAD
+	bcs .bq_n
+	jsr barrel_set_bit
+.bq_n
+	inx
+	bne .bq
+.bq_rts
+	rts
+
+; Full delay if any bit is still set. Direct hits reset a countdown already running.
+barrel_arm
+	ldx #0
+.ba
+	lda barrel_pend,x
+	bne .ba_set
+	inx
+	cpx #4
+	bcc .ba
+	rts
+.ba_set
+	lda #<BARREL_CHAIN_MS
+	sta barrel_ch_l
+	lda #>BARREL_CHAIN_MS
+	sta barrel_ch_h
+	rts
+
+update_barrel_chain
+	lda barrel_ch_l
+	ora barrel_ch_h
+	bne .ubc_go
+	rts
+.ubc_go
+	sec
+	lda barrel_ch_l
+	sbc dt_ms
+	sta barrel_ch_l
+	lda barrel_ch_h
+	sbc dt_msh
+	sta barrel_ch_h
+	bcs .ubc_rts
+	lda #0
+	sta barrel_ch_l
+	sta barrel_ch_h
+	jsr barrel_pop
+	bcc .ubc_rts
+	jmp barrel_explode
+.ubc_rts
+	rts
+
+; C=1, X = lowest set backpack index. C=0 none.
+barrel_pop
+	ldx #0
+.bpop_b
+	lda barrel_pend,x
+	bne .bpop_f
+	inx
+	cpx #4
+	bcc .bpop_b
+	clc
+	rts
+.bpop_f
+	lda barrel_pend,x
+	ldy #0
+.bpop_bit
+	lsr
+	bcs .bpop_got
+	iny
+	jmp .bpop_bit
+.bpop_got
+	txa
+	asl
+	asl
+	asl
+	pha
+	tya
+	clc
+	tsx
+	adc $0101,x
+	tax
+	pla
+	sec
+	rts
+
+; X = backpack index. Preserves X.
+barrel_set_bit
+	txa
+	pha
+	and #7
+	tay
+	pla
+	pha
+	lsr
+	lsr
+	lsr
+	tax
+	lda barrel_bit,y
+	ora barrel_pend,x
+	sta barrel_pend,x
+	pla
+	tax
+	rts
+
+barrel_clr_bit
+	txa
+	pha
+	and #7
+	tay
+	pla
+	pha
+	lsr
+	lsr
+	lsr
+	tax
+	lda barrel_bit,y
+	eor #$ff
+	and barrel_pend,x
+	sta barrel_pend,x
+	pla
+	tax
+	rts
+
+barrel_bit
+	!byte $01, $02, $04, $08, $10, $20, $40, $80
 
 draw_grenades
 	jsr draw_grenades_red

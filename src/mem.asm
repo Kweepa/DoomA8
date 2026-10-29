@@ -616,6 +616,7 @@ GREN_LIFE_MS		= 5000
 GREN_DMG_BASE		= 16			; splash 16 + (rnd & 31)
 GREN_RAD		= 8
 GREN_HIT_R		= 1
+BARREL_CHAIN_MS		= 256		; gap so the previous burst is visible
 GREN_WRIST_L		= 5			; skeleton "Wrist L"
 GREN_WRIST_R		= 7			; skeleton "Wrist R"
 GREN_R			= $60			; screen-triangle half-extent 0.375
@@ -891,8 +892,19 @@ stream_room	= $CF42 + A8_OFF
 ; Explosion particle vel — FX_N × vx/vy s8 (integrated at draw)
 fx_vx		= $CF43 + A8_OFF			; 24
 fx_vy		= $CF5B + A8_OFF			; 24
-; $CF73–$CF82 reserved (was scrag spit). Do not slide splat_src.
+; Barrel chain. Was scrag spit ($CF73–$CF82). Do not slide splat_src.
+barrel_pend	= $CF73 + A8_OFF		; 4 bytes, bit = backpack index
+barrel_ch_l	= $CF77 + A8_OFF
+barrel_ch_h	= $CF78 + A8_OFF
+shot_bp		= $CF79 + A8_OFF		; hitscan barrel winner, $ff = none
+shot_abs	= $CF7A + A8_OFF		; shotgun pellet detonated a barrel
 splat_src	= $CF83 + A8_OFF			; mode-E splat rows (21×3)
+!if barrel_pend != fx_vy + FX_N {
+	!error "barrel_pend must follow fx_vy"
+}
+!if shot_abs >= splat_src {
+	!error "barrel chain state overlaps splat_src"
+}
 ; Evicted from KERNAL ZP ($90–$bf / SETNAM $b7–$bc). Abs OK — not (ptr),y.
 wish_dx		= $CF85 + A8_OFF			; signed move intent X
 wish_dz		= $CF86 + A8_OFF

@@ -70,6 +70,14 @@ init_backpacks
 	lda #0
 	sta rune_taken
 	sta doom_anim_ph
+	sta barrel_ch_l
+	sta barrel_ch_h
+	sta shot_abs
+	ldx #3
+.ib_pend
+	sta barrel_pend,x
+	dex
+	bpl .ib_pend
 	ldx #0
 .ib_lp
 	cpx	map_nbackpacks
@@ -1546,7 +1554,9 @@ neg_a
 	rts
 
 ; ------------------------------------------------------------------
-; Proximity: a blocked move fires a use switch. Backpacks every frame.
+; Proximity: a blocked move into a use switch. Backpacks every frame.
+; The blocked axis has to be the one that meets the switch from outside
+; its AABB, so a door transit or an enemy beside the pad does not throw it.
 ; ------------------------------------------------------------------
 SW_USE_RANGE	= 4			; max XZ distance to switch AABB
 
@@ -1578,6 +1588,8 @@ try_proximity
 	bcs .tp_go			; $ff: no dest
 	jmp .tp_sn			; shootable: bump does not fire it
 .tp_go
+	jsr .sw_push
+	bcc .tp_sn
 	jsr fire_switch
 	jmp .tp_el			; one switch per press
 .tp_sn
@@ -1972,6 +1984,55 @@ pickup_sound
 .ps_hp
 	lda #SOUND_ITEMUP
 	jmp play_sound
+
+; C=1 if door_blk is pushing into the switch AABB from outside on that axis.
+; box_* is the switch (left by .prox_switch). wish_* is this frame's wish.
+.sw_push
+	lda door_blk
+	lsr
+	bcc .sp_z
+	lda wish_dx
+	ora wish_dxh
+	beq .sp_z
+	lda wish_dxh
+	bmi .sp_xm
+	lda cam_xh			; +X: switch strictly east
+	cmp box_x
+	bcc .sp_yes
+	bcs .sp_z
+.sp_xm
+	clc				; -X: switch entirely west of the player
+	lda box_x
+	adc box_sx
+	cmp cam_xh
+	bcc .sp_yes
+	beq .sp_yes
+.sp_z
+	lda door_blk
+	and #2
+	beq .sp_no
+	lda wish_dz
+	ora wish_dzh
+	beq .sp_no
+	lda wish_dzh
+	bmi .sp_zm
+	lda cam_zh			; +Z: switch strictly north
+	cmp box_z
+	bcc .sp_yes
+	bcs .sp_no
+.sp_zm
+	clc				; -Z: switch entirely south of the player
+	lda box_z
+	adc box_sz
+	cmp cam_zh
+	bcc .sp_yes
+	beq .sp_yes
+.sp_no
+	clc
+	rts
+.sp_yes
+	sec
+	rts
 
 ; X=switch; C=1 if within SW_USE_RANGE of pad XZ, Y overlaps, facing the face
 .prox_switch

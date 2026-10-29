@@ -242,6 +242,8 @@ try_door_wish
 	jsr .tdw_snap
 	jsr door_other_room
 	jsr set_room_idx
+	lda #0
+	sta door_blk		; transit ate the bump; not a switch use
 	sec
 	rts
 .tdw_lock

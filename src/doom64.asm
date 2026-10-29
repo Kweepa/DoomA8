@@ -100,6 +100,7 @@ main
 	jsr update_floor
 	jsr update_fall
 	jsr update_grenades
+	jsr update_barrel_chain
 	jsr update_status
 	jsr update_triggers
 	jsr enemies_update

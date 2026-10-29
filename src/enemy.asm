@@ -1737,6 +1737,8 @@ roll_upto
 shotgun_hitscan
 	lda #$ff
 	sta sg_hit
+	lda #0
+	sta shot_abs
 	ldy #5
 .sg_pel
 	tya
@@ -1792,6 +1794,8 @@ shotgun_hitscan
 	jsr shotgun_hit_splat
 	jmp .sg_sw
 .sg_miss
+	lda shot_abs
+	bne .sg_sw
 	jsr shotgun_miss_splat
 .sg_sw
 	lda #SHOT_FAN_X
@@ -1851,6 +1855,7 @@ gun_hitscan
 	lda #$ff
 	sta shot_hit_i
 	sta shot_hit_z
+	sta shot_bp
 	jsr load_view_trig
 	ldx #0
 .sh_lp
@@ -1995,7 +2000,24 @@ gun_hitscan
 .sh_done
 	lda scan_dmg_all
 	cmp #SCAN_PELLET
-	bne .sh_sw
+	bne .sh_notpel
+	jsr scan_shoot_barrels
+	cmp #$ff
+	beq .sh_pel_en
+	ldx shot_hit_i
+	cpx #$ff
+	beq .sh_pel_bp
+	cpy shot_hit_z
+	bcs .sh_pel_en			; enemy closer or tie
+.sh_pel_bp
+	tax
+	lda #$ff
+	sta shot_hit_i
+	lda #1
+	sta shot_abs
+	jsr barrel_explode
+	rts
+.sh_pel_en
 	lda shot_hit_i
 	cmp #$ff
 	beq .sh_pel_rts
@@ -2006,6 +2028,22 @@ gun_hitscan
 	jmp damage_enemy
 .sh_pel_rts
 	rts
+.sh_notpel
+	cmp #SCAN_FLAT
+	bne .sh_sw
+	jsr scan_shoot_barrels
+	cmp #$ff
+	beq .sh_sw
+	ldx shot_hit_i
+	cpx #$ff
+	beq .sh_bp_win
+	cpy shot_hit_z
+	bcs .sh_sw			; enemy closer or tie
+.sh_bp_win
+	sta shot_bp
+	sty shot_hit_z
+	lda #$ff
+	sta shot_hit_i
 .sh_sw
 	jsr scan_shoot_switches		; A = index ($ff none), Y = CAM_ZH
 	pha
@@ -2016,7 +2054,21 @@ gun_hitscan
 	beq .sh_splats			; shotgun: switch and enemies both count
 	ldx shot_hit_i
 	cpx #$ff
-	beq .sh_splats			; chaingun miss: switch takes the shot
+	bne .sh_sw_en
+	ldx shot_bp
+	cpx #$ff
+	beq .sh_splats			; miss: switch takes the shot
+	cpy shot_hit_z
+	bcc .sh_sw_dropbp		; switch strictly closer than the barrel
+	pla
+	lda #$ff
+	pha				; barrel keeps the hit
+	jmp .sh_splats
+.sh_sw_dropbp
+	lda #$ff
+	sta shot_bp
+	jmp .sh_splats
+.sh_sw_en
 	cpy shot_hit_z
 	bcc .sh_sup			; switch strictly closer
 	pla
@@ -2057,6 +2109,12 @@ gun_hitscan
 	lda scan_dmg_max
 	jmp .sh_nroll
 .sh_miss
+	ldx shot_bp
+	cpx #$ff
+	beq .sh_miss_wall
+	jsr barrel_explode
+	jmp .sh_fired
+.sh_miss_wall
 	jsr shotgun_miss_splat
 .sh_fired
 	pla
@@ -2163,6 +2221,115 @@ shotgun_miss_splat
 	ldx rot0
 	lda rot2
 	jmp start_splat
+
+; Closest barrel in the cone. A = index ($ff none), Y = its CAM_ZH.
+; View trig already loaded. Screen X matches a body: scan_aim, scan_hit_x.
+; Best index/depth sit on the stack across the line and project calls.
+scan_shoot_barrels
+	lda #$ff
+	pha
+	pha
+	ldx #0
+.sb_lp
+	cpx	map_nbackpacks
+	bcc .sb_body
+	jmp .sb_done
+.sb_body
+	stx enemy_idx
+	lda bp_taken,x
+	beq .sb_live
+	jmp .sb_n
+.sb_live
+	+lda_mx bp_type
+	cmp #BP_BARREL
+	beq .sb_typ
+	jmp .sb_n
+.sb_typ
+	+lda_mx bp_room
+	cmp room_idx
+	beq .sb_room
+	jmp .sb_n
+.sb_room
+	+lda_mx bp_x
+	clc
+	adc #ITEM_BIAS
+	sta ln_bx
+	sta ent_wx
+	+lda_mx bp_y
+	clc
+	adc #1
+	sta ln_by
+	sta ent_wy
+	+lda_mx bp_z
+	clc
+	adc #ITEM_BIAS
+	sta ln_bz
+	sta ent_wz
+	lda cam_xh
+	sta ln_ax
+	lda cam_yh
+	sta ln_ay
+	lda cam_zh
+	sta ln_az
+	ldy room_idx
+	jsr line_solids_blocked
+	bcs .sb_n
+	lda cs_b
+	jsr mulset_a
+	lda sn_b
+	jsr mulset_b
+	ldx #0
+	jsr xform_world_vert
+	lda CAM_ZH
+	bpl .sb_zpos
+	jmp .sb_n
+.sb_zpos
+	cmp #SHOT_Z_MAX
+	bcc .sb_zok
+	jmp .sb_n
+.sb_zok
+	sta gidx
+	bne .sb_proj
+	lda CAM_Z
+	bne .sb_proj
+	jmp .sb_n
+.sb_proj
+	jsr project_cam0_screen
+	bcc .sb_n
+	sec
+	sbc #SCREEN_CX
+	sec
+	sbc scan_aim
+	bpl .sb_xabs
+	eor #$ff
+	clc
+	adc #1
+.sb_xabs
+	cmp scan_hit_x
+	beq .sb_xok
+	bcs .sb_n
+.sb_xok
+	pla
+	cmp gidx
+	bcc .sb_keep
+	beq .sb_keep
+	pla
+	lda enemy_idx
+	pha
+	lda gidx
+	pha
+	jmp .sb_n
+.sb_keep
+	pha
+.sb_n
+	ldx enemy_idx
+	inx
+	jmp .sb_lp
+.sb_done
+	pla
+	tay
+	pla
+	rts
 
 ; Closest shootable switch in the cone. A = index ($ff none), Y = its CAM_ZH.
 ; Body must overlap the switch AABB (no pitching up or down onto it).
