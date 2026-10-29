@@ -485,7 +485,6 @@ function orthoSprite(rot) {
   if (!prefix || !letter) return null;
   const hit = spriteHit(doomSprites, prefix, letter, rot);
   if (!hit) return null;
-  if (rot === 1 && clip.flipFront) return { ...hit, flip: !hit.flip };
   // Side lumps are the left-side photo. Doom stores that view as the mirror.
   if (rot === 7) return { ...hit, flip: !hit.flip };
   return hit;
@@ -3044,20 +3043,7 @@ function renderInspector() {
         spriteSel.appendChild(opt);
       }
       spriteSel.addEventListener("change", () => setFrameSprite(e, spriteSel.value));
-      const flipBtn = document.createElement("button");
-      flipBtn.type = "button";
-      flipBtn.textContent = "Flip front";
-      flipBtn.title = "Mirror this clip's front sprite";
-      if (clipForFrame(e.clips, frameIndex)?.flipFront) flipBtn.className = "active";
-      flipBtn.addEventListener("click", () => {
-        const c = clipForFrame(e.clips, frameIndex);
-        if (!c) return;
-        pushUndo();
-        c.flipFront = !c.flipFront;
-        markDirty();
-        refreshAll();
-      });
-      playRow.append(spriteSel, flipBtn);
+      playRow.append(spriteSel);
     }
     transport.appendChild(playRow);
     if (spriteEnemy) {

@@ -3112,7 +3112,6 @@ function parseClipMeta(raw) {
     seen.add(name);
     const clip = { name, start: c?.start | 0, len: Math.max(1, c?.len | 0) };
     if (Array.isArray(c?.sprites)) clip.sprites = c.sprites.map((s) => String(s || "A").slice(0, 1));
-    if (c?.flipFront) clip.flipFront = true;
     const sound = parseClipSound(c?.sound);
     if (sound) {
       clip.sound = sound;
@@ -3131,7 +3130,6 @@ function persistClip(c) {
     out.start = c.start | 0;
     out.len = c.len | 0;
     out.sprites = c.sprites.map((s) => String(s || "A").slice(0, 1));
-    if (c.flipFront) out.flipFront = true;
   }
   if (c.sound) {
     out.sound = c.sound;
