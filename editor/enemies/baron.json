@@ -1847,7 +1847,7 @@
   },
   "weaponVert": 5,
   "hp": 255,
-  "painChance": 0,
+  "painChance": 32,
   "customSkeleton": true,
   "stockGraph": null,
   "customGraph": null,
