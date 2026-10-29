@@ -81,8 +81,25 @@ box_vbit
 
 ; ------------------------------------------------------------------
 ; draw_box — box_* set, box_inside=0/1 (back-face cull)
+; A = 0: cull. A nonzero: stroke all 12 edges (crate_flags).
 ; ------------------------------------------------------------------
 draw_box
+	beq .db_cull
+	jsr load_view_trig
+	lda #$ff
+	sta mesh_vmask
+	lda #BOX_NEDGES
+	sta mesh_ne
+	lda #<box_ea
+	sta edge_ptr
+	lda #>box_ea
+	sta edge_ptr+1
+	lda #<box_eb
+	sta edge_b
+	lda #>box_eb
+	sta edge_b+1
+	jmp .db_fill
+.db_cull
 	jsr load_view_trig
 	jsr cull_box_faces
 	jsr box_pack_edges
@@ -91,9 +108,6 @@ draw_box
 	rts
 .db_go
 	jsr box_build_vert_mask
-	jsr box_fill_verts
-	lda #BOX_NVERTS
-	sta mesh_nv
 	lda #<box_vis_a
 	sta edge_ptr
 	lda #>box_vis_a
@@ -102,6 +116,10 @@ draw_box
 	sta edge_b
 	lda #>box_vis_b
 	sta edge_b+1
+.db_fill
+	jsr box_fill_verts
+	lda #BOX_NVERTS
+	sta mesh_nv
 	jmp stroke_mesh
 
 stroke_mesh
@@ -1476,6 +1494,7 @@ draw_world
 	sta box_sz
 	lda #1
 	sta box_inside
+	lda #0
 	jsr draw_box
 	; crates
 .dw_items
@@ -1503,6 +1522,8 @@ draw_world
 	bcc .dw_cr
 	lda #0
 	sta box_inside
+	ldx obj_i
+	+lda_mx crate_flags
 	jsr draw_box
 .dw_cr
 	ldx obj_i

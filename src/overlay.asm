@@ -230,6 +230,7 @@ bind_tab
 	+bind_add crate_sy, map_ncrates
 	+bind_add crate_sz, map_ncrates
 	+bind_add crate_room, map_ncrates
+	+bind_add crate_flags, map_ncrates
 	+bind_add slope_x, map_nslopes
 	+bind_add slope_y, map_nslopes
 	+bind_add slope_z, map_nslopes

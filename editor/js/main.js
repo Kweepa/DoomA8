@@ -2801,6 +2801,18 @@ function renderLayoutObjectFields(root, objs) {
   }
   root.appendChild(sizeP);
 
+  if (kind === "crate") {
+    const allEdges = objs.every((o) => !!o.allEdges);
+    root.appendChild(
+      toggleField("All edges", allEdges, () =>
+        apply((obj) => {
+          if (allEdges) delete obj.allEdges;
+          else obj.allEdges = true;
+        })
+      )
+    );
+  }
+
   if (kind === "slope") {
     root.appendChild(rotateRow(() => apply((obj) => cycleSlopeOrient(obj))));
     const allBottom = objs.every((o) => !!((o.flags | 0) & SLOPE_FLAG_BOTTOM));

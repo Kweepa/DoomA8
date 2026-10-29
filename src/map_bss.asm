@@ -96,7 +96,7 @@ crate_sx	= $048C
 crate_sy	= $048E
 crate_sz	= $0490
 crate_room	= $0492
-; (was crate_id)
+crate_flags	= $0494		; nonzero = stroke all 12 edges
 slope_x	= $0496
 slope_y	= $0498
 slope_z	= $049A

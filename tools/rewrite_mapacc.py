@@ -24,7 +24,7 @@ MAP_FIELDS = {
     "door_x", "door_y", "door_z", "door_sx", "door_sy", "door_sz",
     "door_face", "door_key", "door_type", "door_id", "door_other", "door_tag",
     "crate_x", "crate_y", "crate_z", "crate_sx", "crate_sy", "crate_sz",
-    "crate_room", "crate_id",
+    "crate_room", "crate_flags", "crate_id",
     "slope_x", "slope_y", "slope_z", "slope_sx", "slope_sy", "slope_sz",
     "slope_axis", "slope_dir", "slope_room", "slope_id", "slope_flags",
     "plat_x", "plat_y", "plat_z", "plat_sx", "plat_sz",

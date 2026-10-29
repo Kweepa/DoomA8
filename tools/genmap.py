@@ -667,6 +667,7 @@ def cook_one(level: dict, map_key: str) -> bytes:
     # Crates
     crate_x, crate_y, crate_z = [], [], []
     crate_sx, crate_sy, crate_sz, crate_room = [], [], [], []
+    crate_flags = []
     crate_id = []
     for c in crates:
         ri = room_index(rooms, c, "crate")
@@ -677,6 +678,7 @@ def cook_one(level: dict, map_key: str) -> bytes:
         crate_sy.append(c["sy"])
         crate_sz.append(c["sz"])
         crate_room.append(ri)
+        crate_flags.append(1 if c.get("allEdges") else 0)
         crate_id.append(map_id[id(c)])
 
     # Slopes
@@ -1044,6 +1046,7 @@ def cook_one(level: dict, map_key: str) -> bytes:
     add(crate_sy)
     add(crate_sz)
     add(crate_room)
+    add(crate_flags)
     add(slope_x)
     add(slope_y)
     add(slope_z)

@@ -1944,6 +1944,10 @@ export function clampObject(obj) {
     obj.sy = 1;
     obj.collide = obj.collide !== false;
   }
+  if (obj.kind === "crate") {
+    if (obj.allEdges) obj.allEdges = true;
+    else delete obj.allEdges;
+  }
   if (obj.kind === "spawn") obj.enabled = !!obj.enabled;
   return obj;
 }
@@ -1970,6 +1974,7 @@ export function createObject(kind, x, y, z, extra = {}) {
     obj.sz = 4;
     obj.flags = extra.flags;
   }
+  if (kind === "crate" && extra.allEdges) obj.allEdges = true;
   if (kind === "spawn" || kind === "enemy") {
     obj.rot = clampEnemyRot(extra.rot ?? 0);
   }
@@ -3316,6 +3321,7 @@ function parseObjects(list) {
       axis: o.axis,
       dir: o.dir,
       flags: o.flags,
+      allEdges: o.allEdges,
       enemy: o.enemy,
       shootable: o.shootable,
       rot: o.rot,
