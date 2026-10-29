@@ -36,8 +36,7 @@ MAP_FIELDS = {
     "en_x", "en_y", "en_z", "en_type", "en_rot", "en_room", "en_id",
     "tr_x", "tr_y", "tr_z", "tr_sx", "tr_sy", "tr_sz",
     "tr_room", "tr_purpose", "tr_arg", "tr_id",
-    "td_x", "td_y", "td_z", "td_rot", "td_room",
-    "bp_x", "bp_y", "bp_z", "bp_type", "bp_room", "bp_id",
+    "th_x", "th_y", "th_z", "th_type", "th_room", "th_id",
     "map_name", "map_text",
 }
 
@@ -66,8 +65,7 @@ MAP_N = {
     "MAP_NELEVS": "map_nelevs",
     "MAP_NENEMIES": "map_nenemies",
     "MAP_NTRIGS": "map_ntrigs",
-    "MAP_NDESTS": "map_ndests",
-    "MAP_NBACKPACKS": "map_nbackpacks",
+    "MAP_NTHINGS": "map_nthings",
 }
 
 CPX_N = re.compile(

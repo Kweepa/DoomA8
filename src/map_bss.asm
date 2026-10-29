@@ -4,7 +4,8 @@
 ; +cmp_mx / *_my (mapacc.asm). Never lda en_x,x (that loads the pointer word).
 !zone map_bss
 
-; Packed header bytes 0..23 — must stay contiguous (bind_map copies 24 bytes).
+; Packed header bytes 0..22 — must stay contiguous (bind_map copies 23 bytes).
+; $0417 is unused so room_x stays word-aligned at $0418.
 map_nrooms	= $0400
 map_ndoors	= $0401
 map_ncrates	= $0402
@@ -14,25 +15,24 @@ map_nswitches	= $0405
 map_nelevs	= $0406
 map_nenemies	= $0407
 map_ntrigs	= $0408
-map_ndests	= $0409
-map_nbackpacks	= $040A
+map_nthings	= $0409
 ; unused streaming type pad (was the crusher count)
-map_type0	= $040B
-map_type1	= $040C
-map_type2	= $040D
-map_nux	= $040E
-map_nuz	= $040F
-map_nvert	= $0410
-map_nedge	= $0411
+map_type0	= $040A
+map_type1	= $040B
+map_type2	= $040C
+map_nux	= $040D
+map_nuz	= $040E
+map_nvert	= $040F
+map_nedge	= $0410
 
-spawn_x	= $0412
-spawn_y	= $0413
-spawn_z	= $0414
-spawn_rot	= $0415
-spawn_room	= $0416
-spawn_id	= $0417
-!if spawn_id - map_nrooms != 23 {
-	!error "map header BSS is not 24 packed bytes"
+spawn_x	= $0411
+spawn_y	= $0412
+spawn_z	= $0413
+spawn_rot	= $0414
+spawn_room	= $0415
+spawn_id	= $0416
+!if spawn_id - map_nrooms != 22 {
+	!error "map header BSS is not 23 packed bytes"
 }
 
 ; 16-bit pointers into the packed map blob
@@ -153,24 +153,20 @@ tr_room	= $0500
 tr_purpose	= $0502
 tr_arg	= $0504
 room_trig_o	= $0506
-td_x	= $0508
-td_y	= $050A
-td_z	= $050C
-td_rot	= $050E
-td_room	= $0510
-bp_x	= $0512
-bp_y	= $0514
-bp_z	= $0516
-bp_type	= $0518
-bp_room	= $051A
-room_bp_o	= $051C
-map_name	= $051E
-map_text	= $0520
-slope_flags	= $0522
+th_x	= $0508
+th_y	= $050A
+th_z	= $050C
+th_type	= $050E
+th_room	= $0510
+room_th_o	= $0512
+map_name	= $0514
+map_text	= $0516
+slope_flags	= $0518
 !if (slope_flags - room_x) & 1 {
 	!error "map pointer table is not aligned words"
 }
 !if (slope_flags - room_x) / 2 > 255 {
 	!error "map pointer table exceeds 256 fields"
 }
-; MAP_BSS_END = $0524  size=292
+; MAP_BSS_END = $051A  size=282
+; $051A..$0523 is a gap; play BSS still starts at $0524.

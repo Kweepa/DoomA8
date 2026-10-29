@@ -155,7 +155,7 @@ a8_nmi
 	lda dli_paper
 	sta $d016				; COLPF0 paper (pixel 01). COLBK stays black
 	lda dli_ink
-	sta $d018				; COLPF2 ink (pixel 11), same hue, bright
+	sta $d018				; COLPF2 ink (pixel 11), same hue, lum C
 dli_blood
 	lda #$46				; COLPF1 blood (pixel %10). PAL init rewrites the hue.
 	sta $d017
@@ -344,7 +344,7 @@ hurt_col
 	sta dli_paper				; seam DLI colours, precomputed so the
 						; handler does nothing before WSYNC
 	and #$f0
-	ora #$0e
+	ora #$0c
 	sta dli_ink
 	lda #HUD_PF2_TOP			; orange hue, lum 0: title and map
 	sta $d018

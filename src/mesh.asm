@@ -643,10 +643,10 @@ draw_plat_mesh
 	sta edge_b+1
 	jmp stroke_mesh
 
-; Pickup mesh: type in A (BP_*). nv=0 → backpack mesh.
-draw_backpack_mesh
+; Pickup mesh: type in A (TH_*). nv=0 → backpack mesh.
+draw_thing_mesh
 	ldx obj_i
-	+lda_mx bp_type
+	+lda_mx th_type
 draw_pickup_mesh
 	pha
 	jsr load_view_trig
@@ -655,14 +655,14 @@ draw_pickup_mesh
 	jmp stroke_mesh
 
 fill_item_verts
-	cmp #BP_NTYPES
+	cmp #TH_NTYPES
 	bcc +
 	lda #0
 +
 	tay
 	lda item_nv,y
 	bne +
-	ldy #BP_BACKPACK
+	ldy #TH_BACKPACK
 +
 	lda item_nv,y
 	sta mesh_nv
@@ -763,9 +763,9 @@ fill_item_verts
 	; Props stay put. Other pickups yaw-spin about box+ITEM_BIAS.
 	ldy rot0
 	lda item_spin
-	cpy #BP_LIGHTPOST
+	cpy #TH_LIGHTPOST
 	beq .fi_still
-	cpy #BP_BARREL
+	cpy #TH_BARREL
 	bne .fi_spin
 .fi_still
 	lda #0
@@ -823,6 +823,13 @@ fill_door_type_verts
 	lda #0
 +
 	tay
+	jsr door_mesh_scale
+	jsr fill_door_slot
+	jsr fill_door_origin
+	jmp xform_item_at
+
+; Y = type slot. rot1 = scale (0 ×1, 1 ×3/2, 2 ×2). Fills mesh tables.
+fill_door_slot
 	lda door_nv,y
 	bne +
 	ldy #0
@@ -836,8 +843,6 @@ fill_door_type_verts
 	lda door_nz,y
 	sta mesh_nz
 	sty rot0
-	jsr door_mesh_scale
-	ldy rot0
 	clc
 	lda #<door_ux
 	adc door_uo,y
@@ -926,8 +931,7 @@ fill_door_type_verts
 	lda #>door_eb
 	adc #0
 	sta edge_b+1
-	jsr fill_door_origin
-	jmp xform_item_at
+	rts
 
 ; ent_wx/wy/wz = door AABB bottom-centre on the outward face; ent_rot from face.
 fill_door_origin
@@ -979,6 +983,96 @@ fill_door_origin
 	lda door_face_rot,y
 	sta ent_rot
 	rts
+
+; One bump crack. ×1 DOOR_CRACK at the stored face point. Current room only.
+draw_crack
+	lda crack_ms_l
+	ora crack_ms_h
+	beq .dc_rts
+	lda crack_room
+	cmp room_idx
+	bne .dc_rts
+	jsr crack_cull_box
+	lda crack_face
+	jsr check_face_front
+	bcc .dc_rts
+	jsr frustum_hits
+	bcc .dc_rts
+	jsr load_view_trig
+	lda #0
+	sta rot1
+	ldy #DOOR_CRACK
+	jsr fill_door_slot
+	jsr crack_xform
+	jmp stroke_mesh
+.dc_rts
+	rts
+
+; 4×5×1 cull box. Outward plane sits on the stored face point.
+; Face axis a = (face>>1) eor 1, plus-bit p = face&1.
+; Along-face: max(hi−2, 0), size 4. Face: max(hi−(p eor 1), 0), size 1.
+crack_cull_box
+	lda crack_y
+	sta box_y
+	lda #5
+	sta box_sy
+	lda crack_face
+	lsr
+	eor #1
+	sta pv0			; 0 = X is the face, 1 = Z
+	ldx #1
+.cc_i
+	lda #2
+	sta pv2
+	lda #4
+	sta pv1
+	cpx pv0
+	bne .cc_put
+	lda #1
+	sta pv1
+	lda crack_face
+	and #1
+	eor #1
+	sta pv2
+.cc_put
+	txa
+	asl
+	tay			; box_x/box_z and box_sx/box_sz are stride 2
+	sec
+	lda crack_x,x
+	sbc pv2
+	bcs .cc_ok
+	lda #0
+.cc_ok
+	sta box_x,y
+	lda pv1
+	sta box_sx,y
+	dex
+	bpl .cc_i
+	rts
+
+; 8.8 origin so +axis and −axis both sit PLAYER_R from the player, not on a grid line.
+crack_xform
+	lda crack_face
+	and #3
+	tay
+	lda door_face_rot,y
+	sta ent_rot
+	lda crack_xl
+	sta org_xl
+	lda crack_x
+	sta org_xh
+	lda #0
+	sta org_yl
+	lda crack_y
+	sta org_yh
+	lda crack_zl
+	sta org_zl
+	lda crack_z
+	sta org_zh
+	ldx #0
+	jsr xform_world_vert88
+	jmp xform_item_cam
 
 ; dt<<4 as 8.8 → ~1 rev / 4s
 update_item_spin
@@ -1450,6 +1544,7 @@ draw_world
 	beq .dw_sw
 	jmp .dw_door
 .dw_sw
+	jsr draw_crack
 	ldx #0
 .dw_s
 	cpx	map_nswitches
@@ -1583,31 +1678,26 @@ draw_world
 .dw_pln
 	inx
 	jmp .dw_plat
-	; backpacks
+	; things
 .dw_bp
 	ldy room_idx
-	+slice_x room_bp_o
+	+slice_x room_th_o
 .dw_bpl
 	cpx sl_end
 	bcs .dw_drops
-	lda bp_taken,x
+	lda th_taken,x
 	bne .dw_bpn
 	stx obj_i
-	+lda_mx bp_x
+	+lda_mx th_x
 	sta box_x
-	+lda_mx bp_y
+	+lda_mx th_y
 	sta box_y
-	+lda_mx bp_z
+	+lda_mx th_z
 	sta box_z
-	lda #BP_FOOT_SX
-	sta box_sx
-	lda #BP_FOOT_SY
-	sta box_sy
-	lda #BP_FOOT_SZ
-	sta box_sz
+	jsr set_th_foot_box
 	jsr frustum_hits
 	bcc .dw_bpr
-	jsr draw_backpack_mesh
+	jsr draw_thing_mesh
 .dw_bpr
 	ldx obj_i
 .dw_bpn
@@ -1631,12 +1721,7 @@ draw_world
 	sta box_y
 	lda drop_z,x
 	sta box_z
-	lda #BP_FOOT_SX
-	sta box_sx
-	lda #BP_FOOT_SY
-	sta box_sy
-	lda #BP_FOOT_SZ
-	sta box_sz
+	jsr set_th_foot_box
 	jsr frustum_hits
 	bcc .dw_dpr
 	ldx obj_i

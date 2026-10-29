@@ -39,11 +39,11 @@
 ## 3. World Architecture & Physics Mechanics
 
 ### The Portal-Room Framework
-* **Data Definition:** The game map is discretized into an array of isolated bounding boxes rather than an expansive global coordinate layout. Runtime data is **room-first**: each room owns the objects that sit inside it (crates, elevators, switches, triggers, destinations, keys, enemies, spawn). Same grouping the editor tree uses.
+* **Data Definition:** The game map is discretized into an array of isolated bounding boxes rather than an expansive global coordinate layout. Runtime data is **room-first**: each room owns the objects that sit inside it (crates, elevators, switches, triggers, keys, enemies, spawn). Same grouping the editor tree uses.
 * **One Room Visible:** Only the room the player is in is drawn. Adjacent rooms are not projected through doorways. When the player crosses a **door threshold**, switch the active room index and start drawing that room instead.
 * **Local Boundaries:** Movement algorithms isolate collision checking explicitly to the dimensions of the player's active room index block using 8-bit `CMP` bounds operations.
 * **State Gates (Doors):** Doors operate as structural bounding boxes. In a closed state, they map as standard blocking planes. When open they allow physical entity transition; they do not punch a view into the next room. A door may be **locked** and stay closed until the player has the matching **key**. After unlock it behaves as a normal open/close door.
-* **Triggers:** Undrawn AABBs with a **purpose** (message, end of level, hurt, teleport, activate elevator). Message shows one HUD line while inside. Hurt ticks 10 HP on enter then every 2s. End of level is an on-entry stub (no HUD; transitions later). Teleport and elevator fire on entry via a **tag** → index link. Teleport entry is a trigger purpose, not a separate object type; destination is a tagged exit pose whose **room** is the arrival room. **Keep facing** on that dest (bit 7 of its rot byte) leaves the player's yaw unchanged.
+* **Triggers:** Undrawn AABBs with a **purpose** (message, end of level, hurt, activate elevator). Message shows one HUD line while inside. Hurt ticks 10 HP on enter then every 2s. End of level is an on-entry stub (no HUD; transitions later). Elevator fires on entry via a **tag** → index link.
 
 ### View (Yaw Only)
 * The projector is **yaw-only**. View Y is `world_y − cam_yh` (no pitch shear, no extra pitch trig per vertex). Look-up/down was dropped so AABB uprights stay screen-vertical.
@@ -60,7 +60,7 @@
 * **Ramps:** Rise/run come from the AABB (`sy` vs `sx` or `sz` on the slope axis). Floor height is 8.8: `Height = slope_y + (local_8.8 * sy) / run`. The mesh always strokes the two side hypotenuses; `slope_flags` bit0 / bit1 add the low-end and high-end horizontals.
 * **Dynamic Interactive Elements:** Elevators (translating Y-axis base planes), switches (proximity check targets), and crates (solid vertical obstacle boxes) utilize a singular uniform bounding-box logic routine, allowing multi-object processing under a unified assembly subroutine loops.
 * **Switch → Elevator:** In the editor, a switch is bound to its elevator(s) by a **tag** string. Export compiles tags to **indices** (switch *n* toggles elevator *m*). The game never stores or compares tag strings. Same tag/index pattern as trigger purposes.
-* **Message Triggers:** Covered by trigger purpose **message** — undrawn AABB, one HUD line while the player is inside. Hurt / end of level / teleport / elevator are other purposes on the same volume type.
+* **Message Triggers:** Covered by trigger purpose **message** — undrawn AABB, one HUD line while the player is inside. Hurt / end of level / elevator are other purposes on the same volume type.
 
 ### Cuboid Hidden Surface / Hidden Line Removal
 * Rooms, crates, and elevators are convex axis-aligned boxes. Use **back-face culling**, then drop any edge that is not on a visible face.

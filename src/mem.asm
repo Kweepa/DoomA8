@@ -697,7 +697,7 @@ ammo_bullets	= $CC77 + A8_OFF			; pistol reserve (not in the $CD00 block)
 in_wpn_pist	= $CC78 + A8_OFF
 key_wpn_pist	= $CC79 + A8_OFF
 have_pack	= $CC7A + A8_OFF			; 1 = backpack raised ammo caps
-gb_cap		= $CC7B + A8_OFF			; grant_bp_type effective max
+gb_cap		= $CC7B + A8_OFF			; grant_th_type effective max
 ; $CC7C–$CC7F free
 VSX		= $CC80 + A8_OFF			; screen X/Y (front verts with outcode 0)
 VSY		= $CC90 + A8_OFF
@@ -710,7 +710,7 @@ COL_INVK	= $CCD0 + A8_OFF
 COL_PXL		= $CCE0 + A8_OFF
 COL_PXH		= $CCF0 + A8_OFF
 
-; Player inventory + backpack taken flags (after project cache)
+; Player inventory + thing taken flags (after project cache)
 AMMO_SHELLS_MAX		= 100
 AMMO_GRENADES_MAX	= 100
 AMMO_SHELLS_BOX		= 20
@@ -731,11 +731,17 @@ HP_MEDIKIT		= 25
 HP_SOUL			= 100
 ARMOR_GREEN		= 100
 ARMOR_BLUE		= 200
-BP_FOOT_SX		= 2			; AABB around equilateral-ish base
-BP_FOOT_SZ		= 2
-BP_FOOT_SY		= 2			; ≈ 1.5 tall (C64 int)
-BP_GRAB_R		= 3			; Chebyshev pad outside that footprint
-BP_MAX			= 32		; MAP_NBACKPACKS ≤ this
+TH_FOOT_SX		= 2			; AABB around equilateral-ish base
+TH_FOOT_SZ		= 2
+TH_FOOT_SY		= 2			; ≈ 1.5 tall (C64 int)
+!if TH_FOOT_SX != TH_FOOT_SY {
+	!error "set_th_foot_box stores one extent into sx/sy/sz"
+}
+!if TH_FOOT_SX != TH_FOOT_SZ {
+	!error "set_th_foot_box stores one extent into sx/sy/sz"
+}
+TH_GRAB_R		= 3			; Chebyshev pad outside that footprint
+TH_MAX			= 32		; MAP_NTHINGS ≤ this
 
 HAVE_AXE	= 1
 HAVE_SHOT	= 2
@@ -754,7 +760,7 @@ ammo_shells	= $CD00 + A8_OFF
 combat_armor	= $CD01 + A8_OFF			; 1 = blue (saves 1/2); 0 = green
 ammo_grenades	= $CD02 + A8_OFF
 have_wpn	= $CD03 + A8_OFF			; bitfield HAVE_*
-bp_taken	= $CD04 + A8_OFF			; MAP_NBACKPACKS (≤ BP_MAX)
+th_taken	= $CD04 + A8_OFF			; MAP_NTHINGS (≤ TH_MAX)
 player_hp	= $CD24 + A8_OFF			; 0..PLAYER_HP_MAX
 player_armour	= $CD25 + A8_OFF			; 0..PLAYER_ARMOUR_MAX
 en_state	= $CD26 + A8_OFF			; ENEMY_MAX: EN_*
@@ -764,7 +770,7 @@ drop_x		= $CD6E + A8_OFF
 drop_y		= $CD86 + A8_OFF
 drop_z		= $CD9E + A8_OFF
 drop_room	= $CDB6 + A8_OFF
-drop_type	= $CDCE + A8_OFF			; BP_* when active
+drop_type	= $CDCE + A8_OFF			; TH_* when active
 en_hp		= $CDE6 + A8_OFF			; ENEMY_MAX
 en_timer	= $CDFE + A8_OFF			; ENEMY_MAX: attack pause / dog idle / death hold ms lo
 en_timer_h	= $CE16 + A8_OFF			; ENEMY_MAX: attack pause / dog idle / death hold ms hi
@@ -805,7 +811,7 @@ en_pain_i	= $CEAD + A8_OFF			; ENEMY_MAX: pain/death variant index
 	!error "atk_kind must fill the hole under en_pain_i"
 }
 have_keys	= $CEC5 + A8_OFF			; HAVE_YELLOW / HAVE_BLUE / HAVE_RED
-pu_kind		= $CEC6 + A8_OFF			; 0 or BP_RADSUIT
+pu_kind		= $CEC6 + A8_OFF			; 0 or TH_RADSUIT
 pu_ms_l		= $CEC7 + A8_OFF
 pu_ms_h		= $CEC8 + A8_OFF
 fx_oxl		= $CEC9 + A8_OFF			; world origin 8.8 (same as grenade)
@@ -893,10 +899,10 @@ stream_room	= $CF42 + A8_OFF
 fx_vx		= $CF43 + A8_OFF			; 24
 fx_vy		= $CF5B + A8_OFF			; 24
 ; Barrel chain. Was scrag spit ($CF73–$CF82). Do not slide splat_src.
-barrel_pend	= $CF73 + A8_OFF		; 4 bytes, bit = backpack index
+barrel_pend	= $CF73 + A8_OFF		; 4 bytes, bit = thing index
 barrel_ch_l	= $CF77 + A8_OFF
 barrel_ch_h	= $CF78 + A8_OFF
-shot_bp		= $CF79 + A8_OFF		; hitscan barrel winner, $ff = none
+shot_th		= $CF79 + A8_OFF		; hitscan barrel winner, $ff = none
 shot_abs	= $CF7A + A8_OFF		; shotgun pellet detonated a barrel
 splat_src	= $CF83 + A8_OFF			; mode-E splat rows (21×3)
 !if barrel_pend != fx_vy + FX_N {
@@ -977,7 +983,21 @@ ai_pose_hi	= $CFC9 + A8_OFF
 ai_cmd		= $CFCA + A8_OFF
 ai_field	= $CFCB + A8_OFF
 rune_taken	= $CFCC + A8_OFF			; reserved quicksave byte; do not drop
-; $CFCD–$CFFF reserved (was chthon/shambler). Charset A is $D000. Do not slide.
+; Bump crack — one door mesh, fixed until the timer elapses. Do not slide rune_taken.
+CRACK_MS	= 1000
+CRACK_BORN	= 1			; bit0 armed this frame (switch / transit may drop it)
+CRACK_HOLD	= 2			; bit1 suppress until this contact ends
+crack_ms_l	= $CFCD + A8_OFF		; 0 = no mark
+crack_ms_h	= $CFCE + A8_OFF
+crack_x		= $CFCF + A8_OFF		; hi X then Z, index by axis
+crack_z		= $CFD0 + A8_OFF
+crack_xl	= $CFD1 + A8_OFF		; lo X then Z
+crack_zl	= $CFD2 + A8_OFF
+crack_y		= $CFD3 + A8_OFF		; feet / crate bottom
+crack_face	= $CFD4 + A8_OFF		; FACE_*
+crack_room	= $CFD5 + A8_OFF
+crack_flags	= $CFD6 + A8_OFF
+; $CFD7–$CFFF reserved (was chthon/shambler). Charset A is $D000. Do not slide.
 HAVE_YELLOW	= 1
 HAVE_BLUE	= 2
 HAVE_RED	= 4

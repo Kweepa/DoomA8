@@ -282,19 +282,14 @@ bind_tab
 	+bind_add tr_room, map_ntrigs
 	+bind_add tr_purpose, map_ntrigs
 	+bind_add tr_arg, map_ntrigs
-	+bind_add td_x, map_ndests
-	+bind_add td_y, map_ndests
-	+bind_add td_z, map_ndests
-	+bind_add td_rot, map_ndests
-	+bind_add td_room, map_ndests
-	+bind_add bp_x, map_nbackpacks
-	+bind_add bp_y, map_nbackpacks
-	+bind_add bp_z, map_nbackpacks
-	+bind_add bp_type, map_nbackpacks
-	+bind_add bp_room, map_nbackpacks
+	+bind_add th_x, map_nthings
+	+bind_add th_y, map_nthings
+	+bind_add th_z, map_nthings
+	+bind_add th_type, map_nthings
+	+bind_add th_room, map_nthings
 	+bind_set_n1
 	+bind_add room_slope_o, bind_n
 	+bind_add room_plat_o, bind_n
 	+bind_add room_trig_o, bind_n
-	+bind_add room_bp_o, bind_n
+	+bind_add room_th_o, bind_n
 	!word 0, 0

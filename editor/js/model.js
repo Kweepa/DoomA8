@@ -174,7 +174,7 @@ export function clampMdlScale(n) {
 /**
  * Room colour is one Atari byte: hue in the high nibble, luminance in the low
  * nibble (bit 0 unused). The game feeds it straight to COLPF0 (paper); ink is
- * the same hue at luminance $0e. No other per-room colours exist.
+ * the same hue at luminance $0c. No other per-room colours exist.
  */
 export const ROOM_BG_GREY_DARK = 0x04;
 export const ROOM_BG_GREY_LIGHT = 0x0a;
@@ -243,9 +243,9 @@ export function a8Hex(byte) {
   return A8_HEX[((b >> 4) << 3) | ((b & 15) >> 1)];
 }
 
-/** What the DLI draws as ink for this paper: same hue, luminance $0e. */
+/** Line colour for this paper: same hue, luminance $0c. Matches the seam DLI. */
 export function a8InkHex(byte) {
-  return a8Hex((byte & 0xf0) | 0x0e);
+  return a8Hex((byte & 0xf0) | 0x0c);
 }
 
 /** Black and white papers are not allowed: black gutters / ink == paper. */
@@ -353,14 +353,6 @@ export const KINDS = {
     fixed: false,
     slope: false,
   },
-  teleporter_dest: {
-    id: "teleporter_dest",
-    label: "Teleport dest",
-    color: "#c4a8ff",
-    defaultSize: [2, 2, 2],
-    fixed: true,
-    slope: false,
-  },
   pickup: {
     id: "pickup",
     label: "Pickup",
@@ -373,22 +365,21 @@ export const KINDS = {
 
 /** Editor-only dashed / ghost volumes (not solid world geometry). */
 export function isGhostKind(kind) {
-  return kind === "trigger" || kind === "teleporter_dest";
+  return kind === "trigger";
 }
 
 /** Kinds that always carry a link tag (resolved to indices on export). */
 export function usesLinkTag(kind) {
-  return kind === "switch" || kind === "elevator" || kind === "teleporter_dest";
+  return kind === "switch" || kind === "elevator";
 }
 
-/** Trigger purposes. Tag is used for teleport / elevator / summon / unlock. */
-export const TRIGGER_PURPOSES = ["message", "end_level", "hurt", "hurt_small", "teleport", "elevator", "summon", "unlock"];
+/** Trigger purposes. Tag is used for elevator / summon / unlock. */
+export const TRIGGER_PURPOSES = ["message", "end_level", "hurt", "hurt_small", "elevator", "summon", "unlock"];
 export const TRIGGER_PURPOSE_LABELS = {
   message: "Display message",
   end_level: "End of level",
   hurt: "Large hurt",
   hurt_small: "Small hurt",
-  teleport: "Teleport",
   elevator: "Activate elevator",
   summon: "Summon elevator",
   unlock: "Unlock door",
@@ -400,7 +391,7 @@ export function clampTriggerPurpose(s) {
 
 export function triggerUsesTag(purpose) {
   const p = clampTriggerPurpose(purpose);
-  return p === "teleport" || p === "elevator" || p === "summon" || p === "unlock";
+  return p === "elevator" || p === "summon" || p === "unlock";
 }
 
 export function doorUsesTag(lockKey) {
@@ -431,19 +422,10 @@ export function clampSlopeFlags(n) {
   return (n | 0) & (SLOPE_FLAG_BOTTOM | SLOPE_FLAG_TOP);
 }
 
-/** (z,+1) → (z,−1) → (x,+1) → (x,−1) → … */
+/** +90° Y. High end walks N (+Z) → E (+X) → S (−Z) → W (−X). */
 export function cycleSlopeOrient(obj) {
   if (!obj || obj.kind !== "slope") return obj;
-  if (obj.axis === "z" && obj.dir === 1) obj.dir = -1;
-  else if (obj.axis === "z") {
-    obj.axis = "x";
-    obj.dir = 1;
-  } else if (obj.dir === 1) obj.dir = -1;
-  else {
-    obj.axis = "z";
-    obj.dir = 1;
-  }
-  return obj;
+  return rotateSlopeOrientY(obj, 1);
 }
 
 export const PALETTE_ORDER = [
@@ -456,9 +438,19 @@ export const PALETTE_ORDER = [
   "elevator",
   "spawn",
   "trigger",
-  "teleporter_dest",
-  "pickup",
 ];
+/** Palette icon stem in editor/thingicons/{stem}.png. */
+export const KIND_ICON = {
+  room: "room",
+  doorway: "door",
+  switch: "switch",
+  slope: "ramp",
+  platform: "platform",
+  crate: "crate",
+  elevator: "elevator",
+  spawn: "spawn",
+  trigger: "trigger",
+};
 export const MAX_TRIGGER_TEXT = 80;
 export const MAX_NAME_LEN = 40;
 export const MAX_TAG_LEN = 16;
@@ -581,6 +573,28 @@ export const PICKUP_TYPES = [
   "lightpost",
   "barrel",
 ];
+/** Palette icon stem in editor/thingicons/{stem}.png. */
+export const PICKUP_ICON = {
+  "small health": "health",
+  "large health": "healthcrate",
+  "green armor": "greenarmor",
+  "blue armor": "bluearmor",
+  "ammo box": "ammobox",
+  shells: "shellbox",
+  "box of rockets": "boxofrockets",
+  shotgun: "shotgun",
+  chaingun: "chaingun",
+  chainsaw: "chainsaw",
+  "rocket launcher": "rocketlauncher",
+  backpack: "backpack",
+  "red keycard": "redcard",
+  "yellow keycard": "yellowcard",
+  "blue keycard": "bluecard",
+  soulsphere: "soulsphere",
+  radsuit: "radsuit",
+  lightpost: "lightpost",
+  barrel: "barrel",
+};
 /** @deprecated Use PICKUP_TYPES */
 export const BACKPACK_TYPES = PICKUP_TYPES;
 
@@ -1590,6 +1604,7 @@ export function rotateAabbYAround(obj, pivotX, pivotZ, delta) {
   return obj;
 }
 
+/** One +90° Y: (z,+1)→(x,+1)→(z,−1)→(x,−1). High end N→E→S→W. */
 function rotateSlopeOrientY(obj, delta) {
   const steps = ((delta | 0) % 4 + 4) % 4;
   for (let i = 0; i < steps; i++) {
@@ -1615,7 +1630,7 @@ export function applyYawQuarterMeta(obj, delta) {
   if (!obj) return obj;
   const steps = ((delta | 0) % 4 + 4) % 4;
   if (!steps) return obj;
-  if (obj.kind === "enemy" || obj.kind === "spawn" || obj.kind === "teleporter_dest") {
+  if (obj.kind === "enemy" || obj.kind === "spawn") {
     obj.rot = clampEnemyRot((obj.rot | 0) + 2 * steps);
   }
   if (obj.kind === "doorway" || obj.kind === "switch") {
@@ -1882,12 +1897,8 @@ export function clampObject(obj) {
     obj.sy = clampSize(obj.y, obj.sy);
     obj.sz = clampSize(obj.z, obj.sz);
   }
-  if (obj.kind === "enemy" || obj.kind === "spawn" || obj.kind === "teleporter_dest") {
+  if (obj.kind === "enemy" || obj.kind === "spawn") {
     obj.rot = clampEnemyRot(obj.rot ?? 0);
-  }
-  if (obj.kind === "teleporter_dest") {
-    if (obj.keepFacing) obj.keepFacing = true;
-    else delete obj.keepFacing;
   }
   if (obj.kind === "trigger") {
     obj.purpose = clampTriggerPurpose(obj.purpose);
@@ -1959,10 +1970,9 @@ export function createObject(kind, x, y, z, extra = {}) {
     obj.sz = 4;
     obj.flags = extra.flags;
   }
-  if (kind === "spawn" || kind === "enemy" || kind === "teleporter_dest") {
+  if (kind === "spawn" || kind === "enemy") {
     obj.rot = clampEnemyRot(extra.rot ?? 0);
   }
-  if (kind === "teleporter_dest" && extra.keepFacing) obj.keepFacing = true;
   if (kind === "spawn") obj.enabled = extra.enabled === true;
   if (kind === "enemy") {
     const name = extra.enemy || "Possessed";
@@ -2196,8 +2206,8 @@ export const MAP_MAX_BYTES = 4096;
 export const ENEMY_POSE_MAX = 7680;
 export const STICK_POSE_BYTES = 13 * 3; // gx+gy+gz per stored pose
 
-/** Packed map header: 12 counts + 2 type pads + 6 spawn + 4 mesh lens. */
-export const MAP_HDR_BYTES = 24;
+/** Packed map header: 10 counts + 3 type pads + 4 mesh lens + 6 spawn. */
+export const MAP_HDR_BYTES = 23;
 
 // Keep in sync with tools/genenemies.py (role names).
 const PAIN_MAX = 4;
@@ -2532,7 +2542,7 @@ export function canAddEnemyType(map, typeName, roomId) {
 
 /**
  * Bytes per instance in the cooked C64 SoA (tools/genmap.py).
- * Trigger text blob is counted separately. Spawn lives in the 24-byte header.
+ * Trigger text blob is counted separately. Spawn lives in the 23-byte header.
  */
 export const C64_OBJECT_BYTES = {
   room: 7, // x y z sx sy sz bg
@@ -2546,7 +2556,6 @@ export const C64_OBJECT_BYTES = {
   trigger: 10,
   spawn: 0,
   pickup: 6,
-  teleporter_dest: 5,
 };
 
 /** Counts + packed map RAM for the active level (matches genmap cook_one). */
@@ -2663,7 +2672,6 @@ const MAP_KIND_ORDER = [
   "trigger",
   "spawn",
   "pickup",
-  "teleporter_dest",
 ];
 
 const MAP_KIND_PLURALS = {
@@ -2678,7 +2686,6 @@ const MAP_KIND_PLURALS = {
   trigger: "triggers",
   spawn: "spawns",
   pickup: "pickups",
-  teleporter_dest: "dests",
 };
 
 function mapKindCountLabel(kind, n) {
@@ -3312,7 +3319,6 @@ function parseObjects(list) {
       enemy: o.enemy,
       shootable: o.shootable,
       rot: o.rot,
-      keepFacing: o.keepFacing,
       text: o.text,
       purpose: o.purpose,
       name: o.name,
@@ -3355,7 +3361,7 @@ function parseObjects(list) {
       obj.sy = o.sy ?? obj.sy;
       obj.sz = o.sz ?? obj.sz;
     }
-    if (o.kind === "enemy" || o.kind === "spawn" || o.kind === "teleporter_dest") {
+    if (o.kind === "enemy" || o.kind === "spawn") {
       if (o.kind === "enemy") {
         const name = o.enemy || "";
         if (!ENEMY_TYPES.some((t) => t.name === name)) continue;

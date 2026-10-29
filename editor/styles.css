@@ -613,7 +613,7 @@ button:disabled {
 
 .item-palette {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: repeat(4, 1fr);
   gap: 4px;
   margin-bottom: 1rem;
 }
@@ -627,10 +627,17 @@ button:disabled {
   color: var(--muted);
 }
 
+.palette-things {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
 .palette-enemies {
   grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: repeat(4, 1fr);
   gap: 4px;
 }
 
@@ -647,7 +654,9 @@ button:disabled {
   font-size: 0.65rem;
   color: var(--muted);
   user-select: none;
+  min-width: 0;
   min-height: 1.3rem;
+  text-align: center;
 }
 
 .palette-item:hover {
@@ -662,8 +671,21 @@ button:disabled {
   pointer-events: none;
 }
 
+.palette-thing-icon {
+  width: 24px;
+  height: 24px;
+  display: block;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
 .palette-enemy-name {
   line-height: 1.1;
+}
+
+.palette-thing-name {
+  line-height: 1.1;
+  text-align: center;
 }
 
 .object-list {
@@ -897,6 +919,22 @@ button:disabled {
   width: 100%;
 }
 
+.room-palette .hue-digits,
+.room-palette .color-swatches {
+  display: grid;
+  grid-template-columns: repeat(16, 1fr);
+  gap: 1px;
+  width: 100%;
+}
+
+.room-palette .hue-digits {
+  color: var(--muted);
+  font-size: 0.6rem;
+  line-height: 1;
+  text-align: center;
+  user-select: none;
+}
+
 .swatch {
   flex: 1 1 0;
   width: auto;
@@ -906,6 +944,14 @@ button:disabled {
   padding: 0;
   border: 1px solid var(--border);
   border-radius: 1px;
+}
+
+.room-palette .swatch {
+  flex: none;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  position: relative;
 }
 
 .swatch.selected {

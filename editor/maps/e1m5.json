@@ -784,23 +784,6 @@
       "locked": false
     },
     {
-      "id": "58d025cf-193c-4423-9e7c-290c1d72d7dc",
-      "kind": "trigger",
-      "x": 77,
-      "y": 116,
-      "z": 100,
-      "sx": 4,
-      "sy": 4,
-      "sz": 4,
-      "face": "+z",
-      "axis": "z",
-      "dir": 1,
-      "purpose": "teleport",
-      "text": "",
-      "tag": "up",
-      "roomId": "ee7ac3fe-6aa6-4622-a643-3d2009808772"
-    },
-    {
       "id": "b884c044-ee4b-45d4-a9d1-6965988ecf3b",
       "kind": "platform",
       "x": 77,
@@ -814,22 +797,6 @@
       "dir": 1,
       "roomId": "ee7ac3fe-6aa6-4622-a643-3d2009808772",
       "collide": false
-    },
-    {
-      "id": "6cb9a692-78f4-4a6c-928c-a38b400590da",
-      "kind": "teleporter_dest",
-      "x": 78,
-      "y": 122,
-      "z": 100,
-      "sx": 2,
-      "sy": 2,
-      "sz": 2,
-      "face": "+z",
-      "axis": "z",
-      "dir": 1,
-      "rot": 0,
-      "roomId": "ee7ac3fe-6aa6-4622-a643-3d2009808772",
-      "tag": "up"
     },
     {
       "id": "014993bb-5709-4020-8731-9991e33b0f6b",
@@ -1021,23 +988,6 @@
       "collide": false
     },
     {
-      "id": "8da20764-dd5c-4264-ad00-a0e1ea2c7b6d",
-      "kind": "teleporter_dest",
-      "x": 112,
-      "y": 128,
-      "z": 113,
-      "sx": 2,
-      "sy": 2,
-      "sz": 2,
-      "face": "+z",
-      "axis": "z",
-      "dir": 1,
-      "rot": 4,
-      "keepFacing": true,
-      "roomId": "6630f0ea-8abd-4c03-8f72-073c736c3f2a",
-      "tag": "dropdown"
-    },
-    {
       "id": "ca14fef7-7e02-4a77-a136-c8f8cfb83013",
       "kind": "pickup",
       "x": 111,
@@ -1051,23 +1001,6 @@
       "dir": 1,
       "roomId": "9fd8315b-6a3a-4376-b66c-2a44e2ebb86e",
       "pickup": "yellow keycard"
-    },
-    {
-      "id": "2683aec3-42b5-47fe-9878-afb76eba731a",
-      "kind": "trigger",
-      "x": 110,
-      "y": 133,
-      "z": 112,
-      "sx": 4,
-      "sy": 4,
-      "sz": 4,
-      "face": "+z",
-      "axis": "z",
-      "dir": 1,
-      "purpose": "teleport",
-      "text": "",
-      "tag": "dropdown",
-      "roomId": "9fd8315b-6a3a-4376-b66c-2a44e2ebb86e"
     },
     {
       "id": "cfef8f43-cba3-4952-b456-9a2b0bf5d218",
@@ -1406,23 +1339,6 @@
       "otherRoomId": null
     },
     {
-      "id": "88ca26e5-2bb9-4865-abf3-bdf4784e90e4",
-      "kind": "trigger",
-      "x": 172,
-      "y": 138,
-      "z": 156,
-      "sx": 2,
-      "sy": 4,
-      "sz": 4,
-      "face": "+z",
-      "axis": "z",
-      "dir": 1,
-      "purpose": "teleport",
-      "text": "",
-      "tag": "outofattic",
-      "roomId": "6ea37ef6-9498-4caa-bedd-1605f29b391f"
-    },
-    {
       "id": "cec8b86d-0401-4378-a21f-585e8037e6b7",
       "kind": "enemy",
       "x": 168,
@@ -1550,22 +1466,6 @@
       "ry": 0,
       "rz": 0,
       "cuts": []
-    },
-    {
-      "id": "c4082cf6-da6e-4c67-81bb-53e0250ff043",
-      "kind": "teleporter_dest",
-      "x": 182,
-      "y": 120,
-      "z": 89,
-      "sx": 2,
-      "sy": 2,
-      "sz": 2,
-      "face": "+z",
-      "axis": "z",
-      "dir": 1,
-      "rot": 0,
-      "roomId": "682e64f6-145d-46ac-8508-6d9743f5186f",
-      "tag": "outofattic"
     },
     {
       "id": "4e2dda14-cab4-48f8-a7f6-bdc790a5aefa",

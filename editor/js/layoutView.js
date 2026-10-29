@@ -13,7 +13,6 @@ import {
   isFigureObject,
   isGhostKind,
   figureTemplateName,
-  clampEnemyRot,
   roomGeometry,
   preserveRoomSplits,
   applyRoomSplitDelta,
@@ -21,7 +20,7 @@ import {
   alignSwitchToContact,
   rayCrateSwitchFace,
   rayRoomHull,
-  xzOnRoomFloor,
+  roomFloorY,
   roomById,
   itemMeshFor,
   itemMeshWorldSegs,
@@ -863,31 +862,6 @@ export class LayoutView {
       const right = { x: (b.x + c.x) / 2, y: (b.y + c.y) / 2, z: (b.z + c.z) / 2 };
       segs.push({ a: apex, b: left }, { a: left, b: right }, { a: right, b: apex });
     }
-    if (obj.kind === "teleporter_dest") {
-      const c = aabbCenter(obj);
-      if (obj.keepFacing) {
-        segs.push(
-          { a: { x: c.x - 1.5, y: c.y, z: c.z }, b: { x: c.x + 1.5, y: c.y, z: c.z } },
-          { a: { x: c.x, y: c.y, z: c.z - 1.5 }, b: { x: c.x, y: c.y, z: c.z + 1.5 } }
-        );
-        return segs;
-      }
-      const rot = clampEnemyRot(obj.rot ?? 0);
-      const th = (rot * Math.PI) / 4;
-      const fx = Math.sin(th);
-      const fz = Math.cos(th);
-      segs.push(
-        { a: c, b: { x: c.x + fx * 4, y: c.y, z: c.z + fz * 4 } },
-        {
-          a: { x: c.x + fx * 4, y: c.y, z: c.z + fz * 4 },
-          b: { x: c.x + fx * 2 - fz * 1.5, y: c.y, z: c.z + fz * 2 + fx * 1.5 },
-        },
-        {
-          a: { x: c.x + fx * 4, y: c.y, z: c.z + fz * 4 },
-          b: { x: c.x + fx * 2 + fz * 1.5, y: c.y, z: c.z + fz * 2 - fx * 1.5 },
-        }
-      );
-    }
     return segs;
   }
 
@@ -996,9 +970,10 @@ export class LayoutView {
     return best;
   }
 
-  /** Top of elevator / solid platform, or ramp surface. */
+  /** Top of elevator / solid platform, or ramp surface. Seen from above only. */
   #rayWalkableTop(obj, ray) {
     if (obj.kind === "elevator" || (obj.kind === "platform" && obj.collide !== false)) {
+      if (ray.dir.y >= 0) return null;
       const y = (obj.y | 0) + (obj.sy | 0);
       const hit = intersectPlane(ray.origin, ray.dir, { x: 0, y, z: 0 }, { x: 0, y: 1, z: 0 });
       if (!hit) return null;
@@ -1013,32 +988,47 @@ export class LayoutView {
       [p0, p1, p2],
       [p0, p2, p3],
     ]) {
-      const hit = rayTriangle(ray.origin, ray.dir, tri[0], tri[1], tri[2]);
+      const [a, b, c] = tri;
+      const e1 = { x: b.x - a.x, y: b.y - a.y, z: b.z - a.z };
+      const e2 = { x: c.x - a.x, y: c.y - a.y, z: c.z - a.z };
+      let ny = e1.z * e2.x - e1.x * e2.z;
+      let nx = e1.y * e2.z - e1.z * e2.y;
+      let nz = e1.x * e2.y - e1.y * e2.x;
+      if (ny < 0) {
+        nx = -nx;
+        ny = -ny;
+        nz = -nz;
+      }
+      if (ny < 1e-6 || nx * ray.dir.x + ny * ray.dir.y + nz * ray.dir.z >= 0) continue;
+      const hit = rayTriangle(ray.origin, ray.dir, a, b, c);
       if (hit && (!best || hit.t < best.t)) best = hit;
     }
     if (!best) return null;
     return { t: best.t, point: best.point, y: best.point.y };
   }
 
-  /** If a non-floor hull hit still maps onto a floor fragment, drop there (no ray slide). */
-  #floorPoseFromHull(hit, pose) {
-    const f = hit.face;
-    if (!f) return null;
-    if (f.axis === "y" && f.sign === -1) {
-      return pose(hit.point.x, Math.round(f.plane), hit.point.z, hit.room, true);
+  /**
+   * No floor or walkable top under the ray: never stick to the roof or an outer face.
+   * Use the room the ray hit (selected room wins), else the selected room, and drop at
+   * that room's floor height where the ray crosses it.
+   */
+  #floorHeightPose(visRooms, ray, focus, pose) {
+    const any = this.#nearestRoomHull(visRooms, ray, null, focus);
+    const room = any?.room || focus;
+    if (!room) return null;
+    let hx = room.x + room.sx / 2;
+    let hz = room.z + room.sz / 2;
+    if (any) {
+      hx = any.point.x;
+      hz = any.point.z;
     }
-    if (f.axis === "y") {
-      const floor = xzOnRoomFloor(hit.room, hit.point.x, hit.point.z);
-      if (!floor) return null;
-      return pose(hit.point.x, Math.round(floor.plane), hit.point.z, hit.room, true);
+    const y = Math.round(roomFloorY(room, hx, hz));
+    const plane = intersectPlane(ray.origin, ray.dir, { x: 0, y, z: 0 }, { x: 0, y: 1, z: 0 });
+    if (plane) {
+      hx = plane.point.x;
+      hz = plane.point.z;
     }
-    let x = hit.point.x;
-    let z = hit.point.z;
-    if (f.axis === "x") x = f.plane - f.sign;
-    else if (f.axis === "z") z = f.plane - f.sign;
-    const floor = xzOnRoomFloor(hit.room, x, z);
-    if (!floor) return null;
-    return pose(x, Math.round(floor.plane), z, hit.room, true);
+    return pose(hx, y, hz, room, false);
   }
 
   /** Drop pose from screen: hull faces under the cursor; walkable tops beat floor. */
@@ -1092,36 +1082,35 @@ export class LayoutView {
             hitY: mount.point.y,
           };
         }
-      } else {
-        const floorHit = this.#nearestRoomHull(
-          visRooms,
-          ray,
-          (f) => f.axis === "y" && f.sign === -1,
-          focus
-        );
-        let walk = null;
-        for (const obj of visible) {
-          const hit = this.#rayWalkableTop(obj, ray);
-          if (!hit) continue;
-          if (!walk || hit.t < walk.t) walk = { ...hit, obj };
-        }
-        if (walk && (!floorHit || walk.t <= floorHit.t + 1e-4)) {
-          const room = roomById(doc, walk.obj.roomId) || floorHit?.room;
-          return pose(walk.point.x, Math.round(walk.y), walk.point.z, room, false);
-        }
-        if (floorHit) {
-          return pose(
-            floorHit.point.x,
-            Math.round(floorHit.face.plane),
-            floorHit.point.z,
-            floorHit.room,
-            true
-          );
-        }
-        const any = this.#nearestRoomHull(visRooms, ray, null, focus);
-        const dropped = any && this.#floorPoseFromHull(any, pose);
-        if (dropped) return dropped;
       }
+
+      // Only doors/switches mount on faces. Everything else passes through roofs, outer
+      // walls and undersides: floors count only when seen from above.
+      const floorHit =
+        ray.dir.y < 0
+          ? this.#nearestRoomHull(visRooms, ray, (f) => f.axis === "y" && f.sign === -1, focus)
+          : null;
+      let walk = null;
+      for (const obj of visible) {
+        const hit = this.#rayWalkableTop(obj, ray);
+        if (!hit) continue;
+        if (!walk || hit.t < walk.t) walk = { ...hit, obj };
+      }
+      if (walk && (!floorHit || walk.t <= floorHit.t + 1e-4)) {
+        const room = roomById(doc, walk.obj.roomId) || floorHit?.room;
+        return pose(walk.point.x, Math.round(walk.y), walk.point.z, room, false);
+      }
+      if (floorHit) {
+        return pose(
+          floorHit.point.x,
+          Math.round(floorHit.face.plane),
+          floorHit.point.z,
+          floorHit.room,
+          true
+        );
+      }
+      const dropped = this.#floorHeightPose(visRooms, ray, focus, pose);
+      if (dropped) return dropped;
     }
 
     const gy = this.gridY;

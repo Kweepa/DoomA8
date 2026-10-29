@@ -10,7 +10,7 @@ Level PRG payload:
     overlay_len word, reloc_len word, overlay, reloc dests, then packed map.
 
 Packed layout:
-    24 bytes  counts header (map_nrooms .. spawn_id, see src/map_bss.asm)
+    23 bytes  counts header (map_nrooms .. spawn_id, see src/map_bss.asm)
     n bytes   NUL-terminated map name
     ...       the bind_add arrays, in source order
 
@@ -32,14 +32,14 @@ ROOT = Path(__file__).resolve().parents[1]
 OVERLAY = ROOT / "src" / "overlay.asm"
 MAP_BSS = ROOT / "src" / "map_bss.asm"
 
-HDR_LEN = 24
+HDR_LEN = 23
 LEVEL_HDR = 4
 ENEMY_NTYPES = 4
 ROOM_MAX_TYPES = 2
 
 
 def header_symbols() -> list[str]:
-    """The 24 count bytes, in address order, from map_bss.asm."""
+    """The 23 count bytes, in address order, from map_bss.asm."""
     text = MAP_BSS.read_text(encoding="utf-8", errors="replace")
     found: dict[int, str] = {}
     for m in re.finditer(r"^([a-z_0-9]+)\s*=\s*\$0([0-9a-fA-F]{3})\s*$",

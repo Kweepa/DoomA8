@@ -12,7 +12,7 @@
 ;
 ; Disk slot (QSAVE_N sectors, zero padded, 8-bit checksum over all of it):
 ;   0 magic  1 version  2 checksum (sum of the slot == 0)  3 level_num
-;   4 nenemies  5 ndoors  6 nbackpacks  7 nelevs  8 ntrigs
+;   4 nenemies  5 ndoors  6 nthings  7 nelevs  8 ntrigs
 ;   then the INV fields, the WLD fields, door bytes (key | hidden bit),
 ;   elevator destination Y.
 ; Map counts that do not match the map that was reloaded (editor rebuilt
@@ -79,7 +79,7 @@ qso_save
 	sta qso_buf+4
 	lda map_ndoors
 	sta qso_buf+5
-	lda map_nbackpacks
+	lda map_nthings
 	sta qso_buf+6
 	lda map_nelevs
 	sta qso_buf+7
@@ -205,13 +205,13 @@ qso_restore
 	rts
 
 ; ---------------------------------------------------------------------
-; Element counts for the selectors: 0 one, 1 enemies, 2 backpacks, 3 triggers.
+; Element counts for the selectors: 0 one, 1 enemies, 2 things, 3 triggers.
 qso_counts
 	lda #1
 	sta qso_n
 	lda map_nenemies
 	sta qso_n+1
-	lda map_nbackpacks
+	lda map_nthings
 	sta qso_n+2
 	lda map_ntrigs
 	sta qso_n+3
@@ -226,7 +226,7 @@ qso_cmp_counts
 	cmp map_ndoors
 	bne .cc_bad
 	lda qso_buf+6
-	cmp map_nbackpacks
+	cmp map_nthings
 	bne .cc_bad
 	lda qso_buf+7
 	cmp map_nelevs
@@ -547,7 +547,7 @@ qso_wld
 	+qf yaw, 0
 	+qf pitch, 0
 	+qf rune_taken, 0
-	+qf bp_taken, 2
+	+qf th_taken, 2
 	+qf en_state, 1
 	+qf en_hp, 1
 	+qf en_frame, 1

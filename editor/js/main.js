@@ -1,6 +1,7 @@
 import {
   KINDS,
   PALETTE_ORDER,
+  KIND_ICON,
   ENEMY_TYPES,
   enemyTypesByHp,
   enemiesByHp,
@@ -27,12 +28,12 @@ import {
   VERT_MIN,
   VERT_MAX,
   ROOM_BG_DEFAULT,
-  ROOM_BG_SLOTS,
   a8Hex,
   MAX_TRIGGER_TEXT,
   MAX_NAME_LEN,
   MAX_TAG_LEN,
   PICKUP_TYPES,
+  PICKUP_ICON,
   ALL_MESH_KEYS,
   ITEM_MESH_KEYS,
   DOOR_MESH_KEYS,
@@ -340,7 +341,7 @@ const previewView = new PreviewView(document.getElementById("preview-canvas"), {
   getSpawn: () => previewSpawn(),
   getEditSpawn: () => selectedSpawn(),
   getRoomsOnlyMode: () => roomsOnlyDraw,
-  chainImg: document.getElementById("preview-chain-png"),
+  pistolImg: document.getElementById("preview-pistol-png"),
   onRotate: (yaw) => {
     const spawn = selectedSpawn();
     if (!spawn) return;
@@ -1332,7 +1333,9 @@ function previewObjectAtScreen(place, mx, my) {
   const kind = place.kind;
   const p = layoutView.placeAtScreen(mx, my, kind);
   const owner = placeOwner(kind, p.room);
-  const extra = place.enemy ? { enemy: place.enemy } : {};
+  const extra = {};
+  if (place.enemy) extra.enemy = place.enemy;
+  if (place.pickup) extra.pickup = place.pickup;
   if (owner) extra.roomId = owner.id;
   if (kind === "spawn") {
     extra.enabled = !activeMap(doc).objects.some((o) => o.kind === "spawn");
@@ -1370,6 +1373,16 @@ function buildPalette() {
   for (const kind of PALETTE_ORDER) {
     root.appendChild(paletteButton(KINDS[kind].label, KINDS[kind].color, { kind }));
   }
+  const thingsSep = document.createElement("div");
+  thingsSep.className = "palette-sep";
+  thingsSep.textContent = "Things";
+  root.appendChild(thingsSep);
+  const things = document.createElement("div");
+  things.className = "palette-things";
+  for (const t of PICKUP_TYPES) {
+    things.appendChild(paletteButton(t, KINDS.pickup.color, { kind: "pickup", pickup: t }));
+  }
+  root.appendChild(things);
   const sep = document.createElement("div");
   sep.className = "palette-sep";
   sep.textContent = "Enemies";
@@ -1501,10 +1514,31 @@ function paletteButton(label, color, payload) {
     name.className = "palette-enemy-name";
     name.textContent = label;
     el.append(icon, name);
+  } else if (payload.pickup) {
+    el.classList.add("palette-thing");
+    const icon = document.createElement("img");
+    icon.className = "palette-thing-icon";
+    icon.alt = "";
+    icon.draggable = false;
+    icon.src = `thingicons/${PICKUP_ICON[payload.pickup]}.png`;
+    const name = document.createElement("span");
+    name.className = "palette-thing-name";
+    name.textContent = label;
+    el.append(icon, name);
+  } else if (KIND_ICON[payload.kind]) {
+    const icon = document.createElement("img");
+    icon.className = "palette-thing-icon";
+    icon.alt = "";
+    icon.draggable = false;
+    icon.src = `thingicons/${KIND_ICON[payload.kind]}.png`;
+    const name = document.createElement("span");
+    name.className = "palette-thing-name";
+    name.textContent = label;
+    el.append(icon, name);
   } else {
     el.textContent = label;
   }
-  el.title = "Drag onto the map to place";
+  el.title = payload.pickup ? label : "Drag onto the map to place";
   el.addEventListener("pointerdown", (e) => {
     if (e.button !== 0) return;
     e.preventDefault();
@@ -2365,24 +2399,40 @@ function roomItems() {
   ];
 }
 
+function a8ByteText(byte) {
+  return "$" + byte.toString(16).padStart(2, "0");
+}
+
 function roomPaletteEditor(objs, apply) {
   const wrap = document.createElement("div");
   wrap.className = "field color-field room-palette";
   const span = document.createElement("span");
-  span.textContent = "Background";
+  const cur = unanimous(objs, (o) => o.a8Bg ?? ROOM_BG_DEFAULT);
+  span.textContent = cur === undefined ? "Background" : `Background ${a8ByteText(cur)}`;
+
+  const hues = document.createElement("div");
+  hues.className = "hue-digits";
+  for (let hue = 0; hue < 16; hue++) {
+    const digit = document.createElement("span");
+    digit.textContent = hue.toString(16).toUpperCase();
+    hues.appendChild(digit);
+  }
+
   const row = document.createElement("div");
   row.className = "color-swatches";
-  const cur = unanimous(objs, (o) => o.a8Bg ?? ROOM_BG_DEFAULT);
-  for (const slot of ROOM_BG_SLOTS) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "swatch" + (slot.byte === cur ? " selected" : "");
-    btn.title = `$${slot.byte.toString(16).padStart(2, "0")} ${slot.name}`;
-    btn.style.background = a8Hex(slot.byte);
-    btn.addEventListener("click", () => apply((obj) => (obj.a8Bg = slot.byte)));
-    row.appendChild(btn);
+  for (const lum of [0x08, 0x06, 0x04]) {
+    for (let hue = 0; hue < 16; hue++) {
+      const byte = (hue << 4) | lum;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "swatch" + (byte === cur ? " selected" : "");
+      btn.title = a8ByteText(byte);
+      btn.style.background = a8Hex(byte);
+      btn.addEventListener("click", () => apply((obj) => (obj.a8Bg = byte)));
+      row.appendChild(btn);
+    }
   }
-  wrap.append(span, row);
+  wrap.append(span, hues, row);
   return wrap;
 }
 
@@ -2499,15 +2549,8 @@ function renderLayoutObjectFields(root, objs) {
     );
   }
 
-  if (isFigureObject(objs[0]) || kind === "teleporter_dest") {
+  if (isFigureObject(objs[0])) {
     root.appendChild(rotateRow(() => apply((obj) => (obj.rot = cycleEnemyRot(obj.rot ?? 0)))));
-  }
-
-  if (kind === "teleporter_dest") {
-    const allKeep = objs.every((o) => !!o.keepFacing);
-    root.appendChild(
-      toggleField("Keep facing", allKeep, () => apply((obj) => (obj.keepFacing = !allKeep)))
-    );
   }
 
   if (kind === "trigger") {
@@ -4350,7 +4393,7 @@ window.addEventListener("keydown", (e) => {
   if (e.key.toLowerCase() === "r" && editorMode === "layout") {
     const objs = selectedLayoutObjects();
     const kind = objs.length ? unanimous(objs, (o) => o.kind) : undefined;
-    if (kind && (isFigureObject(objs[0]) || kind === "teleporter_dest")) {
+    if (kind && isFigureObject(objs[0])) {
       e.preventDefault();
       pushUndo();
       for (const obj of objs) {

@@ -654,7 +654,7 @@ hud_msg_center
 ; Name at HUD_OFF_GREN + HUD_PU_LABEL (row below the 2×2 icon on SHELL/SHELLS).
 hud_powerup
 	lda pu_kind
-	cmp #BP_RADSUIT
+	cmp #TH_RADSUIT
 	beq .hpu_pent
 	lda #HUD_CH_SP
 	ldx #5
@@ -714,17 +714,17 @@ hud_powerup
 	bne .hpu_lab
 	rts
 
-; A = BP_* type. "Got the <name>" for 5s on HUD_ROW4.
+; A = TH_* type. "Got the <name>" for 5s on HUD_ROW4.
 hud_got
-	cmp #BP_NTYPES
+	cmp #TH_NTYPES
 	bcc .hg_ok
 	rts
 .hg_ok
 	sta rot2
 	tay
-	lda bp_name_lo,y
+	lda th_name_lo,y
 	sta src_ptr
-	lda bp_name_hi,y
+	lda th_name_hi,y
 	sta src_ptr+1
 	jsr hud_msg_blank
 	ldy #0
@@ -834,35 +834,35 @@ hud_str_yellow_req	!text "Yellow keycard required",0
 hud_str_blue_req	!text "Blue keycard required",0
 hud_str_red_req	!text "Red keycard required",0
 hud_str_remote_req	!text "This door is opened elsewhere",0
-bpn_hsm	!text "small health",0
-bpn_hlg	!text "large health",0
-bpn_ag	!text "green armor",0
-bpn_ab	!text "blue armor",0
-bpn_bullets	!text "ammo box",0
-bpn_shells	!text "shells",0
-bpn_rockets	!text "box of rockets",0
-bpn_shot	!text "shotgun",0
-bpn_chain	!text "chaingun",0
-bpn_saw	!text "chainsaw",0
-bpn_rl	!text "rocket launcher",0
-bpn_pack	!text "backpack",0
-bpn_red	!text "red keycard",0
-bpn_yellow	!text "yellow keycard",0
-bpn_blue	!text "blue keycard",0
-bpn_soul	!text "soulsphere",0
-bpn_suit	!text "radsuit",0
-bpn_lamp	!text "lightpost",0
-bpn_barrel	!text "barrel",0
-bp_name_lo
-	!byte <bpn_hsm, <bpn_hlg, <bpn_ag, <bpn_ab, <bpn_bullets
-	!byte <bpn_shells, <bpn_rockets, <bpn_shot, <bpn_chain, <bpn_saw
-	!byte <bpn_rl, <bpn_pack, <bpn_red, <bpn_yellow, <bpn_blue
-	!byte <bpn_soul, <bpn_suit, <bpn_lamp, <bpn_barrel
-bp_name_hi
-	!byte >bpn_hsm, >bpn_hlg, >bpn_ag, >bpn_ab, >bpn_bullets
-	!byte >bpn_shells, >bpn_rockets, >bpn_shot, >bpn_chain, >bpn_saw
-	!byte >bpn_rl, >bpn_pack, >bpn_red, >bpn_yellow, >bpn_blue
-	!byte >bpn_soul, >bpn_suit, >bpn_lamp, >bpn_barrel
+thn_hsm	!text "small health",0
+thn_hlg	!text "large health",0
+thn_ag	!text "green armor",0
+thn_ab	!text "blue armor",0
+thn_bullets	!text "ammo box",0
+thn_shells	!text "shells",0
+thn_rockets	!text "box of rockets",0
+thn_shot	!text "shotgun",0
+thn_chain	!text "chaingun",0
+thn_saw	!text "chainsaw",0
+thn_rl	!text "rocket launcher",0
+thn_pack	!text "backpack",0
+thn_red	!text "red keycard",0
+thn_yellow	!text "yellow keycard",0
+thn_blue	!text "blue keycard",0
+thn_soul	!text "soulsphere",0
+thn_suit	!text "radsuit",0
+thn_lamp	!text "lightpost",0
+thn_barrel	!text "barrel",0
+th_name_lo
+	!byte <thn_hsm, <thn_hlg, <thn_ag, <thn_ab, <thn_bullets
+	!byte <thn_shells, <thn_rockets, <thn_shot, <thn_chain, <thn_saw
+	!byte <thn_rl, <thn_pack, <thn_red, <thn_yellow, <thn_blue
+	!byte <thn_soul, <thn_suit, <thn_lamp, <thn_barrel
+th_name_hi
+	!byte >thn_hsm, >thn_hlg, >thn_ag, >thn_ab, >thn_bullets
+	!byte >thn_shells, >thn_rockets, >thn_shot, >thn_chain, >thn_saw
+	!byte >thn_rl, >thn_pack, >thn_red, >thn_yellow, >thn_blue
+	!byte >thn_soul, >thn_suit, >thn_lamp, >thn_barrel
 
 ; ASCII (UI charset), not PETSCII
 hud_str_title	!text "DoomA8",0

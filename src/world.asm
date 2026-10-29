@@ -31,6 +31,9 @@ world_init
 	sta hurt_ms_h
 	sta item_spin
 	sta item_spin_l
+	sta crack_ms_l
+	sta crack_ms_h
+	sta crack_flags
 	; spawn eye at spawn_x+1 (center-ish), spawn_y+EYE, spawn_z+1
 	clc
 	lda spawn_x
@@ -53,7 +56,7 @@ world_init
 	asl
 	sta yaw
 	jsr proc_init
-	jsr init_backpacks
+	jsr init_things
 	jsr init_enemies
 	jsr init_grenades
 	jsr init_drops
@@ -65,8 +68,8 @@ world_init
 	sta palette_room
 	jmp apply_room_palette
 
-; Clear bp_taken[0..MAP_NBACKPACKS)
-init_backpacks
+; Clear th_taken[0..MAP_NTHINGS)
+init_things
 	lda #0
 	sta rune_taken
 	sta doom_anim_ph
@@ -80,10 +83,10 @@ init_backpacks
 	bpl .ib_pend
 	ldx #0
 .ib_lp
-	cpx	map_nbackpacks
+	cpx	map_nthings
 	bcs .ib_rts
 	lda #0
-	sta bp_taken,x
+	sta th_taken,x
 	inx
 	beq .ib_rts
 	jmp .ib_lp
@@ -860,6 +863,60 @@ update_fall
 	rts
 
 ; ------------------------------------------------------------------
+; crates_block — col_x/col_z inside a same-room crate?
+; Y=1: rise <= STEP_UP is a step, not a wall. Y=0: volume always solid.
+; col_room set. C=1 blocked and box_* is that crate. X = index.
+; ------------------------------------------------------------------
+crates_block
+	ldx #0
+.cb_c
+	cpx	map_ncrates
+	bcs .cb_no
+	+lda_mx crate_room
+	cmp col_room
+	bne .cb_n
+	+lda_mx crate_y
+	sta box_y
+	+lda_mx crate_sy
+	sta box_sy
+	jsr player_overlaps_y
+	bcc .cb_n
+	cpy #0
+	beq .cb_wall			; grenade — volume wall
+	sec
+	lda cam_yh
+	sbc #EYE_HEIGHT			; feet
+	sta col_y
+	clc
+	lda box_y
+	adc box_sy			; crate_top
+	sec
+	sbc col_y			; rise (overlap => top > feet)
+	cmp #STEP_UP + 1
+	bcc .cb_n			; step-up — not a wall
+.cb_wall
+	+lda_mx crate_x
+	sta box_x
+	+lda_mx crate_z
+	sta box_z
+	+lda_mx crate_sx
+	sta box_sx
+	+lda_mx crate_sz
+	sta box_sz
+	jsr point_in_box_xz
+	bcs .cb_yes
+.cb_n
+	inx
+	beq .cb_no
+	jmp .cb_c
+.cb_no
+	clc
+	rts
+.cb_yes
+	sec
+	rts
+
+; ------------------------------------------------------------------
 ; solid_at — col_x/col_z blocked by crate, solid platform, or closed door?
 ; C=1 blocked. Y=1: crate rise <= STEP_UP is not a wall (player/enemy).
 ; Y=0: crate volume always solid (grenade).
@@ -871,48 +928,8 @@ solid_at
 solid_at_col
 	cpy #2
 	beq .sa_p			; Y=2: lava ignores crates (electrodes)
-	; crates — solid on Y overlap (not when on/above top or under)
-	ldx #0
-.sa_c
-	cpx	map_ncrates
-	bcs .sa_p
-	+lda_mx crate_room
-	cmp col_room
-	bne .sa_cn
-	+lda_mx crate_y
-	sta box_y
-	+lda_mx crate_sy
-	sta box_sy
-	jsr player_overlaps_y
-	bcc .sa_cn
-	cpy #0
-	beq .sa_cwall			; grenade — volume wall
-	sec
-	lda cam_yh
-	sbc #EYE_HEIGHT			; feet
-	sta col_y
-	clc
-	lda box_y
-	adc box_sy			; crate_top
-	sec
-	sbc col_y			; rise (overlap => top > feet)
-	cmp #STEP_UP + 1
-	bcc .sa_cn			; step-up — not a wall
-.sa_cwall
-	+lda_mx crate_x
-	sta box_x
-	+lda_mx crate_z
-	sta box_z
-	+lda_mx crate_sx
-	sta box_sx
-	+lda_mx crate_sz
-	sta box_sz
-	jsr point_in_box_xz
+	jsr crates_block
 	bcs .sa_yes
-.sa_cn
-	inx
-	beq .sa_p
-	jmp .sa_c
 .sa_p
 	; platforms — solid on Y overlap (plane as sy=0); rise <= STEP_UP is a step-up
 	ldy col_room			; Y flag is dead past the crates
@@ -1407,6 +1424,8 @@ apply_move_world
 	sta col_z
 	jsr pos_ok
 	bcs .am_zx
+	lda #0
+	jsr note_bump
 	lda save_xl
 	sta cam_xl
 	lda save_xh
@@ -1433,6 +1452,8 @@ apply_move_world
 	sta col_z
 	jsr pos_ok
 	bcs .am_done
+	lda #1
+	jsr note_bump
 	lda save_zl
 	sta cam_zl
 	lda save_zh
@@ -1442,7 +1463,15 @@ apply_move_world
 	sta door_blk
 .am_done
 	jsr try_door_wish
-	bcs .am_hydro
+	bcc .am_walk
+	jsr crack_suppress_born		; drop a mark born this frame
+	jsr crack_clear_hold		; transit ended the contact
+	jmp .am_hydro
+.am_walk
+	lda door_blk
+	bne .am_still
+	jsr crack_clear_hold
+.am_still
 	lda wish_dx
 	ora wish_dxh
 	ora wish_dz
@@ -1465,6 +1494,163 @@ apply_move_world
 	lda #SOUND_DOROPN
 	jsr play_sound
 .am_rts
+	rts
+
+; ------------------------------------------------------------------
+; note_bump — A = 0 X reject, 1 Z reject. col_* is the failed cell.
+; save_* is the legal pose on both axes. Arms one crack on a wall or crate.
+; A live timer or CRACK_HOLD skips the probe, so a later axis cannot move it.
+; ------------------------------------------------------------------
+note_bump
+	pha
+	lda crack_ms_l
+	ora crack_ms_h
+	bne .ck_pop
+	lda crack_flags
+	and #CRACK_HOLD
+	bne .ck_pop
+	jsr in_room_inset
+	bcc .ck_wall
+	jsr enemies_block_player
+	bcc .ck_pop
+	lda room_idx
+	sta col_room
+	ldy #1
+	jsr crates_block
+	bcs .ck_crate
+.ck_pop
+	pla
+	rts
+.ck_wall
+	clc
+	bcc .ck_go
+.ck_crate
+	sec
+.ck_go
+	pla
+	tay				; axis. C = crate (pla/tay keep C)
+	php
+	ldx #1
+.ck_cp
+	lda save_xh,x
+	sta crack_x,x
+	lda save_xl,x
+	sta crack_xl,x
+	dex
+	bpl .ck_cp
+	lda wish_dxh,y
+	php
+	tya
+	eor #1
+	asl				; ((axis eor 1) << 1) | positive → FACE_*
+	plp
+	bmi .ck_face
+	ora #1
+.ck_face
+	sta crack_face
+	plp
+	php				; crate carry still needed at the feet
+	bcs .ck_box
+	lda wish_dxh,y
+	bmi .ck_sub
+	clc
+	lda crack_x,y
+	adc #PLAYER_R
+	bcc .ck_st
+	lda #$ff
+	bne .ck_sat			; clamp the +side
+.ck_sub
+	sec
+	lda crack_x,y
+	sbc #PLAYER_R
+	bcs .ck_st
+	lda #0
+.ck_sat
+	sta crack_x,y
+	lda #0
+	sta crack_xl,y
+	beq .ck_feet
+.ck_st
+	sta crack_x,y
+	jmp .ck_feet
+.ck_box
+	lda #0
+	sta crack_xl,y
+	tya
+	asl
+	tax				; box_x/box_z and box_sx/box_sz are stride 2
+	lda wish_dxh,y
+	bmi .ck_bneg
+	lda box_x,x
+	sta crack_x,y
+	jmp .ck_feet
+.ck_bneg
+	clc
+	lda box_x,x
+	adc box_sx,x
+	sta crack_x,y
+.ck_feet
+	sec
+	lda cam_yh
+	sbc #EYE_HEIGHT			; feet
+	sta crack_y
+	plp
+	bcc .ck_arm			; wall
+	lda box_y
+	cmp crack_y
+	bcc .ck_arm
+	beq .ck_arm
+	sta crack_y
+.ck_arm
+	lda room_idx
+	sta crack_room
+	lda #<CRACK_MS
+	sta crack_ms_l
+	lda #>CRACK_MS
+	sta crack_ms_h
+	lda crack_flags
+	ora #CRACK_BORN
+	sta crack_flags
+	rts
+
+; Contact ended (released, or the door wish consumed the bump).
+crack_clear_hold
+	lda crack_flags
+	and #$ff - CRACK_HOLD
+	sta crack_flags
+	rts
+
+; Player switch used this bump. Drop a same-frame mark and hold the contact.
+crack_suppress_born
+	lda crack_flags
+	and #CRACK_BORN
+	beq .csb_rts
+	lda #0
+	sta crack_ms_l
+	sta crack_ms_h
+	lda crack_flags
+	ora #CRACK_HOLD
+	sta crack_flags
+.csb_rts
+	rts
+
+; One second, same subtract as the hurt flash. Underflow clears the mark.
+tick_crack
+	lda crack_ms_l
+	ora crack_ms_h
+	beq .tc_rts
+	sec
+	lda crack_ms_l
+	sbc dt_ms
+	sta crack_ms_l
+	lda crack_ms_h
+	sbc dt_msh
+	sta crack_ms_h
+	bcs .tc_rts
+	lda #0
+	sta crack_ms_l
+	sta crack_ms_h
+.tc_rts
 	rts
 
 ; A = signed sintab → add (A * vel_ms)>>6 into wish X 8.8
@@ -1591,13 +1777,17 @@ try_proximity
 	jsr .sw_push
 	bcc .tp_sn
 	jsr fire_switch
+	jsr crack_suppress_born
 	jmp .tp_el			; one switch per press
 .tp_sn
 	ldx obj_i
 	inx
 	bne .tp_s
 .tp_el
-	jsr try_backpack_pickup
+	jsr try_thing_pickup
+	lda crack_flags
+	and #$ff - CRACK_BORN
+	sta crack_flags
 .tp_rts
 	rts
 
@@ -1630,63 +1820,66 @@ fire_switch
 .fs_rts
 	rts
 
-; Walk-over backpacks: grant if not full / not already owned
-try_backpack_pickup
-	ldy room_idx
-	+slice_x room_bp_o
-.tbp_lp
-	cpx sl_end
-	bcc .tbp_body
-	jmp .tbp_rts
-.tbp_body
-	stx obj_i
-	lda bp_taken,x
-	bne .tbp_n
-	+lda_mx bp_x
-	sta box_x
-	+lda_mx bp_y
-	sta box_y
-	+lda_mx bp_z
-	sta box_z
-	lda #BP_FOOT_SX
+; box_sx/sy/sz = TH_FOOT_*. Extents are equal (asserted in mem.asm).
+set_th_foot_box
+	lda #TH_FOOT_SX
 	sta box_sx
-	lda #BP_FOOT_SY
 	sta box_sy
-	lda #BP_FOOT_SZ
 	sta box_sz
+	rts
+
+; Walk-over things: grant if not full / not already owned
+try_thing_pickup
+	ldy room_idx
+	+slice_x room_th_o
+.tth_lp
+	cpx sl_end
+	bcc .tth_body
+	jmp .tth_rts
+.tth_body
+	stx obj_i
+	lda th_taken,x
+	bne .tth_n
+	+lda_mx th_x
+	sta box_x
+	+lda_mx th_y
+	sta box_y
+	+lda_mx th_z
+	sta box_z
+	jsr set_th_foot_box
 	lda cam_xh
 	sta col_x
 	lda cam_zh
 	sta col_z
-	lda #BP_GRAB_R
+	lda #TH_GRAB_R
 	jsr near_box_xz
-	bcc .tbp_n
+	bcc .tth_n
 	jsr player_overlaps_y
-	bcc .tbp_n
+	bcc .tth_n
 	ldx obj_i
-	+lda_mx bp_type
-	cmp #BP_LIGHTPOST
-	beq .tbp_n
-	cmp #BP_BARREL
-	beq .tbp_n
-	jsr grant_backpack
-	bcc .tbp_n
+	+lda_mx th_type
+	cmp #TH_LIGHTPOST
+	beq .tth_n
+	cmp #TH_BARREL
+	beq .tth_n
+	jsr grant_thing
+	bcc .tth_n
 	jsr hud_ammo
 	ldx obj_i
-	+lda_mx bp_type
+	+lda_mx th_type
 	jsr hud_got
 	ldx obj_i
-	+lda_mx bp_type
+	+lda_mx th_type
 	jsr pickup_sound
 	ldx obj_i
 	lda #1
-	sta bp_taken,x
-.tbp_n
+	sta th_taken,x
+.tth_n
 	ldx obj_i
 	inx
-	jmp .tbp_lp
-.tbp_rts
-	; death-drop backpacks
+	jmp .tth_lp
+.tth_rts
+	; death-drop things
 	ldx #0
 .tdp_lp
 	cpx	map_nenemies
@@ -1703,24 +1896,19 @@ try_backpack_pickup
 	sta box_y
 	lda drop_z,x
 	sta box_z
-	lda #BP_FOOT_SX
-	sta box_sx
-	lda #BP_FOOT_SY
-	sta box_sy
-	lda #BP_FOOT_SZ
-	sta box_sz
+	jsr set_th_foot_box
 	lda cam_xh
 	sta col_x
 	lda cam_zh
 	sta col_z
-	lda #BP_GRAB_R
+	lda #TH_GRAB_R
 	jsr near_box_xz
 	bcc .tdp_n
 	jsr player_overlaps_y
 	bcc .tdp_n
 	ldx obj_i
 	lda drop_type,x
-	jsr grant_bp_type
+	jsr grant_th_type
 	bcc .tdp_n
 	jsr hud_ammo
 	ldx obj_i
@@ -1739,14 +1927,14 @@ try_backpack_pickup
 .tdp_rts
 	rts
 
-; X = backpack index; C=1 granted
-grant_backpack
-	+lda_mx bp_type
-; A = BP_* type; C=1 granted
-grant_bp_type
-	cmp #BP_NTYPES
+; X = thing index; C=1 granted
+grant_thing
+	+lda_mx th_type
+; A = TH_* type; C=1 granted
+grant_th_type
+	cmp #TH_NTYPES
 	bcs .gb_bad
-	cmp #BP_LIGHTPOST
+	cmp #TH_LIGHTPOST
 	bcs .gb_bad
 	tay
 	lda gb_mode,y
@@ -1776,7 +1964,7 @@ PS_KEY = 3
 gb_mh
 	!word gb_do_add, gb_do_gun, gb_do_arm, gb_do_pu, gb_do_key, gb_do_pack
 
-; Row = BP_*. gb_max is the add cap, or the armor value set for GB_ARM.
+; Row = TH_*. gb_max is the add cap, or the armor value set for GB_ARM.
 ; gb_dbl = 1: have_pack doubles that cap (byte saturates at 255).
 gb_mode
 	!byte GB_ADD, GB_ADD, GB_ARM, GB_ARM, GB_ADD
@@ -1831,7 +2019,7 @@ gb_snd
 	!byte PS_AMMO, PS_BONUS, PS_KEY, PS_KEY, PS_KEY
 	!byte PS_HP, PS_BONUS, PS_AMMO, PS_AMMO
 
-; Y = BP_*. rot2=0 fail if at cap, 1 always add+clamp. C=1 stored. Restores Y.
+; Y = TH_*. rot2=0 fail if at cap, 1 always add+clamp. C=1 stored. Restores Y.
 gb_add_amt
 	lda gb_ptr_lo,y
 	sta rot0
@@ -1864,7 +2052,7 @@ gb_add_amt
 	sec
 	rts
 
-; X = BP_*. gb_cap = gb_max, doubled when have_pack and gb_dbl (saturate 255).
+; X = TH_*. gb_cap = gb_max, doubled when have_pack and gb_dbl (saturate 255).
 gb_load_cap
 	lda gb_max,x
 	sta gb_cap
@@ -1918,7 +2106,7 @@ gb_do_arm
 	sta player_armour
 	lda #0
 	sta combat_armor
-	cpy #BP_ARMOR_B
+	cpy #TH_ARMOR_B
 	bne +
 	lda #1
 	sta combat_armor
@@ -1960,9 +2148,9 @@ gb_no
 	clc
 	rts
 
-; A = BP_* — health / ammo / bonus / key
+; A = TH_* — health / ammo / bonus / key
 pickup_sound
-	cmp #BP_NTYPES
+	cmp #TH_NTYPES
 	bcc .ps_ok
 	rts
 .ps_ok
@@ -2205,7 +2393,7 @@ trig_arm_tag
 ; stay = hold (msg HUD / hurt tick); leave clears the bit.
 ; tr_purpose bits 4–7 = enable-tag id (0 = live). Nonzero = gated until
 ; a matching switch jsr trig_arm_tag (clears those bits).
-; End / teleport: jmp (do not continue the scan).
+; End: jmp (do not continue the scan).
 ; ------------------------------------------------------------------
 update_triggers
 	lda #0
@@ -2268,8 +2456,6 @@ update_triggers
 	sta trig_inside
 	+lda_mx tr_purpose
 	cmp #TRIG_END
-	beq .ut_jmp
-	cmp #TRIG_TELE
 	beq .ut_jmp
 	txa
 	pha
@@ -2396,8 +2582,6 @@ trig_enter
 	beq .te_hurt
 	cmp #TRIG_HURT_SM
 	beq .te_hurt
-	cmp #TRIG_TELE
-	beq .te_tele
 	cmp #TRIG_ELEV
 	beq .te_elev
 	cmp #TRIG_SUMMON
@@ -2433,40 +2617,3 @@ trig_enter
 .te_unlock
 	+lda_mx tr_arg
 	jmp door_unlock_tag
-.te_tele
-	lda map_ndests
-	beq .te_tele_rts
-	+ldy_mx tr_arg
-	lda #0
-	sta cam_xl
-	sta cam_zl
-	sta cam_yl
-	+lda_my td_x
-	sta cam_xh
-	+lda_my td_z
-	sta cam_zh
-	clc
-	+lda_my td_y
-	adc #EYE_HEIGHT
-	sta cam_yh
-	+lda_my td_rot			; bits 0-2 = octant; TD_KEEP leaves yaw
-	bmi .te_kyaw
-	asl
-	asl
-	asl
-	asl
-	asl
-	sta yaw
-.te_kyaw
-	+lda_my td_room
-	jsr set_room_idx
-	lda #$ff
-	sta pl_on_elev
-	lda #0
-	sta pl_falling
-	sta fall_vl
-	sta fall_vh
-	jsr update_floor
-	jmp sync_eye
-.te_tele_rts
-	rts

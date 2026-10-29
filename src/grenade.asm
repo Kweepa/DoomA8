@@ -738,25 +738,20 @@ gren_splash
 gren_touch_barrel
 	ldx #0
 .gtb
-	cpx	map_nbackpacks
+	cpx	map_nthings
 	bcs .gtb_rts
-	lda bp_taken,x
+	lda th_taken,x
 	bne .gtb_n
-	+lda_mx bp_type
-	cmp #BP_BARREL
+	+lda_mx th_type
+	cmp #TH_BARREL
 	bne .gtb_n
-	+lda_mx bp_x
+	+lda_mx th_x
 	sta box_x
-	+lda_mx bp_y
+	+lda_mx th_y
 	sta box_y
-	+lda_mx bp_z
+	+lda_mx th_z
 	sta box_z
-	lda #BP_FOOT_SX
-	sta box_sx
-	lda #BP_FOOT_SY
-	sta box_sy
-	lda #BP_FOOT_SZ
-	sta box_sz
+	jsr set_th_foot_box
 	ldy obj_i
 	lda gr_xh,y
 	sta col_x
@@ -765,10 +760,10 @@ gren_touch_barrel
 	lda #GREN_HIT_R
 	jsr near_box_xz
 	bcc .gtb_n
-	+lda_mx bp_y
+	+lda_mx th_y
 	sta pv0
 	clc
-	adc #BP_FOOT_SY
+	adc #TH_FOOT_SY
 	sta pv1
 	txa
 	pha
@@ -776,19 +771,15 @@ gren_touch_barrel
 	pla
 	tax
 	bcc .gtb_n
+	lda obj_i
+	pha
 	txa
 	pha
 	jsr gren_place
 	jsr gren_clear
-	lda obj_i
-	pha
 	jsr gren_splash
 	pla
-	sta obj_i
-	pla
 	tax
-	lda obj_i
-	pha
 	jsr barrel_explode
 	pla
 	sta obj_i
@@ -799,16 +790,16 @@ gren_touch_barrel
 .gtb_rts
 	rts
 
-; X = backpack index. Splash now, graphic restarts here. Neighbours wait
+; X = thing index. Splash now, graphic restarts here. Neighbours wait
 ; BARREL_CHAIN_MS. A taken barrel only drops its pending bit.
 barrel_explode
-	lda bp_taken,x
+	lda th_taken,x
 	beq .bx_go
 	jsr barrel_clr_bit
 	jmp barrel_arm
 .bx_go
 	lda #1
-	sta bp_taken,x
+	sta th_taken,x
 	jsr barrel_clr_bit
 	jsr barrel_place
 	jsr gren_splash
@@ -818,40 +809,35 @@ barrel_explode
 	jsr play_sound
 	jmp barrel_arm
 
-; X = backpack. Mesh centre → fx origin and ent_w* (splash / graphic).
+; X = thing. Mesh centre → fx origin and ent_w* (splash / graphic).
 barrel_place
+	jsr barrel_pv
 	lda #0
 	sta fx_oxl
 	sta fx_oyl
 	sta fx_ozl
-	+lda_mx bp_x
-	clc
-	adc #ITEM_BIAS
+	lda pv0
 	sta fx_ox
 	sta ent_wx
-	+lda_mx bp_y
-	clc
-	adc #1
+	lda pv1
 	sta fx_oy
 	sta ent_wy
-	+lda_mx bp_z
-	clc
-	adc #ITEM_BIAS
+	lda pv2
 	sta fx_oz
 	sta ent_wz
 	rts
 
-; X = backpack. Centre → pv0/1/2. Preserves X.
+; X = thing. Centre → pv0/1/2. Preserves X.
 barrel_pv
-	+lda_mx bp_x
+	+lda_mx th_x
 	clc
 	adc #ITEM_BIAS
 	sta pv0
-	+lda_mx bp_y
+	+lda_mx th_y
 	clc
 	adc #1
 	sta pv1
-	+lda_mx bp_z
+	+lda_mx th_z
 	clc
 	adc #ITEM_BIAS
 	sta pv2
@@ -861,12 +847,12 @@ barrel_pv
 barrel_queue
 	ldx #0
 .bq
-	cpx	map_nbackpacks
+	cpx	map_nthings
 	bcs .bq_rts
-	lda bp_taken,x
+	lda th_taken,x
 	bne .bq_n
-	+lda_mx bp_type
-	cmp #BP_BARREL
+	+lda_mx th_type
+	cmp #TH_BARREL
 	bne .bq_n
 	jsr barrel_pv
 	jsr gren_cheby
@@ -879,17 +865,9 @@ barrel_queue
 .bq_rts
 	rts
 
-; Full delay if any bit is still set. Direct hits reset a countdown already running.
+; Start the chain delay. An empty queue pops nothing when it expires.
+; A direct hit restarts a countdown already running.
 barrel_arm
-	ldx #0
-.ba
-	lda barrel_pend,x
-	bne .ba_set
-	inx
-	cpx #4
-	bcc .ba
-	rts
-.ba_set
 	lda #<BARREL_CHAIN_MS
 	sta barrel_ch_l
 	lda #>BARREL_CHAIN_MS
@@ -919,76 +897,51 @@ update_barrel_chain
 .ubc_rts
 	rts
 
-; C=1, X = lowest set backpack index. C=0 none.
+; C=1, X = lowest set thing index. C=0 none.
 barrel_pop
 	ldx #0
-.bpop_b
-	lda barrel_pend,x
-	bne .bpop_f
+.bpop
+	cpx	map_nthings
+	bcs .bpop_none
+	jsr barrel_mask
+	and barrel_pend,y
+	bne .bpop_got
 	inx
-	cpx #4
-	bcc .bpop_b
+	bne .bpop
+.bpop_none
 	clc
 	rts
-.bpop_f
-	lda barrel_pend,x
-	ldy #0
-.bpop_bit
-	lsr
-	bcs .bpop_got
-	iny
-	jmp .bpop_bit
 .bpop_got
-	txa
-	asl
-	asl
-	asl
-	pha
-	tya
-	clc
-	tsx
-	adc $0101,x
-	tax
-	pla
 	sec
 	rts
 
-; X = backpack index. Preserves X.
-barrel_set_bit
+; X = thing index. A = 1<<(X&7), Y = X>>3. Preserves X.
+barrel_mask
 	txa
-	pha
 	and #7
 	tay
-	pla
-	pha
-	lsr
-	lsr
-	lsr
-	tax
 	lda barrel_bit,y
-	ora barrel_pend,x
-	sta barrel_pend,x
+	pha
+	txa
+	lsr
+	lsr
+	lsr
+	tay
 	pla
-	tax
+	rts
+
+; X = thing index. Preserves X.
+barrel_set_bit
+	jsr barrel_mask
+	ora barrel_pend,y
+	sta barrel_pend,y
 	rts
 
 barrel_clr_bit
-	txa
-	pha
-	and #7
-	tay
-	pla
-	pha
-	lsr
-	lsr
-	lsr
-	tax
-	lda barrel_bit,y
+	jsr barrel_mask
 	eor #$ff
-	and barrel_pend,x
-	sta barrel_pend,x
-	pla
-	tax
+	and barrel_pend,y
+	sta barrel_pend,y
 	rts
 
 barrel_bit

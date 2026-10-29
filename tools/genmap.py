@@ -35,8 +35,7 @@ ELEV_MAX = 4
 ENEMY_MAX = 24  # keep in sync with src/mem.asm and editor/js/model.js
 TRIG_MAX = 16
 TRIG_ROOM_MAX = 8
-DEST_MAX = 16
-BP_MAX = 32
+TH_MAX = 32
 FACE = {"+z": 0, "-z": 1, "+x": 2, "-x": 3}
 # Width × height × thickness; keep in sync with editor/js/model.js doorSizeForScale.
 DOOR_SIZE_BY_SCALE = {1: (4, 5, 1), 1.5: (6, 8, 1), 2: (8, 10, 1)}
@@ -339,12 +338,11 @@ def cook_one(level: dict, map_key: str) -> bytes:
     elevs = [o for o in objs if o["kind"] == "elevator"]
     enemies = [o for o in objs if o["kind"] == "enemy"]
     triggers = [o for o in objs if o["kind"] == "trigger"]
-    dests = [o for o in objs if o["kind"] == "teleporter_dest"]
-    backpacks = [o for o in objs if o["kind"] in ("pickup", "backpack", "key")]
+    things = [o for o in objs if o["kind"] in ("pickup", "backpack", "key")]
     spawns = [o for o in objs if o["kind"] == "spawn"]
 
     # Room-sorted (stable): runtime loops walk one room slice via room_*_o.
-    for lst, kind in ((slopes, "slope"), (plats, "platform"), (triggers, "trigger"), (backpacks, "pickup")):
+    for lst, kind in ((slopes, "slope"), (plats, "platform"), (triggers, "trigger"), (things, "pickup")):
         lst.sort(key=lambda o: room_index(rooms, o, kind))
 
     if not spawns:
@@ -357,7 +355,7 @@ def cook_one(level: dict, map_key: str) -> bytes:
     # Unique id per world object (order in level.objects)
     map_id = {id(o): i for i, o in enumerate(objs)}
 
-    BP_TYPE = {
+    TH_TYPE = {
         "small health": 0,
         "large health": 1,
         "green armor": 2,
@@ -400,7 +398,7 @@ def cook_one(level: dict, map_key: str) -> bytes:
     TRIG_MSG = 0
     TRIG_END = 1
     TRIG_HURT = 2
-    TRIG_TELE = 3
+    # 3 unused (was teleport). Do not renumber.
     TRIG_ELEV = 4
     TRIG_SUMMON = 5
     TRIG_UNLOCK = 6
@@ -410,7 +408,6 @@ def cook_one(level: dict, map_key: str) -> bytes:
         "end_level": TRIG_END,
         "hurt": TRIG_HURT,
         "hurt_small": TRIG_HURT_SM,
-        "teleport": TRIG_TELE,
         "elevator": TRIG_ELEV,
         "summon": TRIG_SUMMON,
         "unlock": TRIG_UNLOCK,
@@ -816,25 +813,6 @@ def cook_one(level: dict, map_key: str) -> bytes:
         en_room.append(ri)
         en_id.append(map_id[id(e)])
 
-    # Teleport destinations
-    td_x, td_y, td_z, td_rot, td_room = [], [], [], [], []
-    dest_by_tag: dict[str, int] = {}
-    for i, d in enumerate(dests):
-        ri = room_index(rooms, d, "teleporter_dest")
-        tag = (d.get("tag") or "").strip()
-        if tag:
-            if tag in dest_by_tag:
-                raise SystemExit(f"duplicate teleport dest tag {tag!r}")
-            dest_by_tag[tag] = i
-        td_x.append((int(d["x"]) + int(d["sx"]) // 2) & 0xFF)
-        td_y.append(int(d["y"]) & 0xFF)
-        td_z.append((int(d["z"]) + int(d["sz"]) // 2) & 0xFF)
-        rot = int(d.get("rot") or 0) & 7
-        if d.get("keepFacing"):
-            rot |= 0x80  # TD_KEEP: leave player yaw
-        td_rot.append(rot)
-        td_room.append(ri)
-
     # Triggers
     tr_x, tr_y, tr_z = [], [], []
     tr_sx, tr_sy, tr_sz, tr_room = [], [], [], []
@@ -853,11 +831,6 @@ def cook_one(level: dict, map_key: str) -> bytes:
             chars = ascii_screen(text)
             text_blob.extend(chars)
             text_blob.append(0)  # NUL
-        elif purpose == TRIG_TELE:
-            tag = (t.get("tag") or "").strip()
-            if tag not in dest_by_tag:
-                raise SystemExit(f"teleport trigger tag {tag!r} has no destination")
-            arg = dest_by_tag[tag]
         elif purpose in (TRIG_ELEV, TRIG_SUMMON):
             tag = (t.get("tag") or "").strip()
             kind = "elevator" if purpose == TRIG_ELEV else "summon"
@@ -902,10 +875,10 @@ def cook_one(level: dict, map_key: str) -> bytes:
                 f"{map_key} room {ri} has {n} triggers (max {TRIG_ROOM_MAX})"
             )
 
-    # Backpacks (pickup tetrahedrons)
-    bp_x, bp_y, bp_z, bp_type, bp_room = [], [], [], [], []
-    bp_id = []
-    for b in backpacks:
+    # Things
+    th_x, th_y, th_z, th_type, th_room = [], [], [], [], []
+    th_id = []
+    for b in things:
         kind = b.get("kind")
         ri = room_index(rooms, b, "pickup")
         if kind == "key":
@@ -918,13 +891,13 @@ def cook_one(level: dict, map_key: str) -> bytes:
                 bt = 13
         else:
             name = (b.get("pickup") or b.get("backpack") or "shells").strip()
-            bt = BP_TYPE.get(name, 0)
-        bp_x.append(b["x"])
-        bp_y.append(b["y"])
-        bp_z.append(b["z"])
-        bp_type.append(bt)
-        bp_room.append(ri)
-        bp_id.append(map_id[id(b)])
+            bt = TH_TYPE.get(name, 0)
+        th_x.append(b["x"])
+        th_y.append(b["y"])
+        th_z.append(b["z"])
+        th_type.append(bt)
+        th_room.append(ri)
+        th_id.append(map_id[id(b)])
 
     spawn_room = room_index(rooms, spawn, "spawn")
     spawn_id = map_id[id(spawn)]
@@ -938,8 +911,7 @@ def cook_one(level: dict, map_key: str) -> bytes:
         (elevs, ELEV_MAX, "elevators"),
         (enemies, ENEMY_MAX, "enemies"),
         (triggers, TRIG_MAX, "triggers"),
-        (dests, DEST_MAX, "teleport dests"),
-        (backpacks, BP_MAX, "pickups"),
+        (things, TH_MAX, "things"),
     ]
     for lst, cap, what in caps:
         if len(lst) > cap:
@@ -993,8 +965,7 @@ def cook_one(level: dict, map_key: str) -> bytes:
             len(elevs),
             len(enemies),
             len(triggers),
-            len(dests),
-            len(backpacks),
+            len(things),
             0,  # map_type0 unused
         ]
     )
@@ -1125,18 +1096,13 @@ def cook_one(level: dict, map_key: str) -> bytes:
     add(tr_room)
     add(tr_purpose)
     add(tr_arg)
-    add(td_x)
-    add(td_y)
-    add(td_z)
-    add(td_rot)
-    add(td_room)
-    add(bp_x)
-    add(bp_y)
-    add(bp_z)
-    add(bp_type)
-    add(bp_room)
+    add(th_x)
+    add(th_y)
+    add(th_z)
+    add(th_type)
+    add(th_room)
     # room_<type>_o: first index of each room's slice (nrooms+1; last = count)
-    for lst in (slope_room, plat_room, tr_room, bp_room):
+    for lst in (slope_room, plat_room, tr_room, th_room):
         add([sum(1 for r in lst if r < i) for i in range(len(rooms) + 1)])
     payload.extend(text_blob if text_blob else [0])
 
@@ -1156,8 +1122,6 @@ SWITCH_MAX	= 16
 ELEV_MAX	= 4
 TRIG_MAX	= 16
 TRIG_ROOM_MAX	= 8
-DEST_MAX	= 16
-TD_KEEP	= $80
 ROOM_MAX_TYPES	= 2
 MAP_MAX_BYTES	= 4096
 ENEMY_POSE_MAX	= 7680
@@ -1165,11 +1129,10 @@ MAP_NLEVELS	= 8
 TRIG_MSG	= 0
 TRIG_END	= 1
 TRIG_HURT	= 2
-TRIG_TELE	= 3
+; 3 unused (was teleport). 7 and 8 unused (were electrode). Do not renumber.
 TRIG_ELEV	= 4
 TRIG_SUMMON	= 5
 TRIG_UNLOCK	= 6
-; 7 and 8 unused (were electrode). Do not renumber.
 TRIG_HURT_SM	= 9
 TRIG_PURPOSE_MASK	= $0F
 TRIG_GATED_MASK	= $F0
@@ -1181,26 +1144,26 @@ FACE_PZ	= 0
 FACE_MZ	= 1
 FACE_PX	= 2
 FACE_MX	= 3
-BP_HEALTH_SM	= 0
-BP_HEALTH_LG	= 1
-BP_ARMOR_G	= 2
-BP_ARMOR_B	= 3
-BP_BULLETS	= 4
-BP_SHELLS	= 5
-BP_ROCKETS	= 6
-BP_SHOTGUN	= 7
-BP_CHAINGUN	= 8
-BP_CHAINSAW	= 9
-BP_ROCKETLAUNCHER	= 10
-BP_BACKPACK	= 11
-BP_KEY_RED	= 12
-BP_KEY_YELLOW	= 13
-BP_KEY_BLUE	= 14
-BP_SOUL	= 15
-BP_RADSUIT	= 16
-BP_LIGHTPOST	= 17
-BP_BARREL	= 18
-BP_NTYPES	= 19
+TH_HEALTH_SM	= 0
+TH_HEALTH_LG	= 1
+TH_ARMOR_G	= 2
+TH_ARMOR_B	= 3
+TH_BULLETS	= 4
+TH_SHELLS	= 5
+TH_ROCKETS	= 6
+TH_SHOTGUN	= 7
+TH_CHAINGUN	= 8
+TH_CHAINSAW	= 9
+TH_ROCKETLAUNCHER	= 10
+TH_BACKPACK	= 11
+TH_KEY_RED	= 12
+TH_KEY_YELLOW	= 13
+TH_KEY_BLUE	= 14
+TH_SOUL	= 15
+TH_RADSUIT	= 16
+TH_LIGHTPOST	= 17
+TH_BARREL	= 18
+TH_NTYPES	= 19
 DOOR_KEY_NONE	= 0
 DOOR_KEY_YELLOW	= 1
 DOOR_KEY_BLUE	= 2

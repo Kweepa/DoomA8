@@ -1356,6 +1356,14 @@ clip_draw_xy
 .cd_no
 	rts
 
+; ent_w* → CAM[0]. View trig already loaded (cs_b / sn_b).
+xform_ent_view
+	lda cs_b
+	jsr mulset_a
+	lda sn_b
+	jsr mulset_b
+	ldx #0
+
 ; X = CAM slot; world int ent_wx/wy/wz → view CAM[X]
 ; Caller must jsr load_view_trig first.
 xform_world_vert
@@ -1762,6 +1770,7 @@ xform_item_spin
 xform_item_at
 	ldx #0
 	jsr xform_world_vert
+xform_item_cam
 	lda CAM_X
 	sta org_xl
 	lda CAM_XH
@@ -2014,12 +2023,7 @@ draw_enemies
 	sta ent_wy
 	+lda_mx en_z
 	sta ent_wz
-	lda cs_b			; re-prime view sets (prev enemy clobbered)
-	jsr mulset_a
-	lda sn_b
-	jsr mulset_b
-	ldx #0
-	jsr xform_world_vert
+	jsr xform_ent_view			; re-prime view sets (prev enemy clobbered)
 	jsr try_bite_splat			; origin in CAM[0], even if off-screen
 	jsr enemy_in_view
 	bcs .de_vis

@@ -621,7 +621,7 @@ button:disabled {
 
 .item-palette {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: repeat(4, 1fr);
   gap: 4px;
   margin-bottom: 1rem;
 }
@@ -635,10 +635,17 @@ button:disabled {
   color: var(--muted);
 }
 
+.palette-things {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
 .palette-enemies {
   grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: repeat(4, 1fr);
   gap: 4px;
 }
 
@@ -655,7 +662,9 @@ button:disabled {
   font-size: 0.65rem;
   color: var(--muted);
   user-select: none;
+  min-width: 0;
   min-height: 1.3rem;
+  text-align: center;
 }
 
 .palette-item:hover {
@@ -670,8 +679,21 @@ button:disabled {
   pointer-events: none;
 }
 
+.palette-thing-icon {
+  width: 24px;
+  height: 24px;
+  display: block;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
 .palette-enemy-name {
   line-height: 1.1;
+}
+
+.palette-thing-name {
+  line-height: 1.1;
+  text-align: center;
 }
 
 .object-list {
@@ -905,6 +927,22 @@ button:disabled {
   width: 100%;
 }
 
+.room-palette .hue-digits,
+.room-palette .color-swatches {
+  display: grid;
+  grid-template-columns: repeat(16, 1fr);
+  gap: 1px;
+  width: 100%;
+}
+
+.room-palette .hue-digits {
+  color: var(--muted);
+  font-size: 0.6rem;
+  line-height: 1;
+  text-align: center;
+  user-select: none;
+}
+
 .swatch {
   flex: 1 1 0;
   width: auto;
@@ -914,6 +952,14 @@ button:disabled {
   padding: 0;
   border: 1px solid var(--border);
   border-radius: 1px;
+}
+
+.room-palette .swatch {
+  flex: none;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  position: relative;
 }
 
 .swatch.selected {
@@ -1496,7 +1542,7 @@ button:disabled {
           <canvas id="preview-canvas"></canvas>
         </div>
         <p class="muted" id="preview-hint">Drag L/R to rotate · U/D to walk</p>
-      <img id="preview-chain-png" width="48" height="42" hidden alt="" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAqCAMAAADCkShIAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAGUExURQAAAOjk2LCMVNkAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAZdEVYdFNvZnR3YXJlAFBhaW50Lk5FVCA1LjEuMTITAUd0AAAAuGVYSWZJSSoACAAAAAUAGgEFAAEAAABKAAAAGwEFAAEAAABSAAAAKAEDAAEAAAACAAAAMQECABEAAABaAAAAaYcEAAEAAABsAAAAAAAAAGAAAAABAAAAYAAAAAEAAABQYWludC5ORVQgNS4xLjEyAAADAACQBwAEAAAAMDIzMAGgAwABAAAAAQAAAAWgBAABAAAAlgAAAAAAAAACAAEAAgAEAAAAUjk4AAIABwAEAAAAMDEwMAAAAADZp5qVybcLXwAAAQpJREFUSEuVkgcOwzAMA5P/f7pwJFLUcNwQRWuN03B9XaGbmsxBDDjQA1ktoRRo2gMzESO3HeYtlvO2WgDo+QT4p0tCFdiO5AB3MPc/gOxqLWry0uP2RYB9A3SJmlxXYOYLERfORq/AGuBFnRhcqn6x3ZPUwocGnah2U0k4NqhEvZRRmn9ukHN271HVgKMEkEeQSsH/fNPw85rJqA1QCoHZADYTAlzZ3n8HaiWenl+Zle8cI0UaTmRgawkQsa40EcAxArFMxgG417fGlHAMAJwMOafNO+BHHzhdRgVQ0z8CODMA2gTzzIDnzIB5cz6cAHgv66+GJgAZCMGKwTIQGYxEvxlgm4jA2AGhHyvhAjQZxho5AAAAAElFTkSuQmCC" />
+      <img id="preview-pistol-png" width="24" height="32" hidden alt="" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAgCAMAAAA/gEgKAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAGUExURQAAAP///6XZn90AAAAJcEhZcwAADsEAAA7BAbiRa+0AAAAZdEVYdFNvZnR3YXJlAFBhaW50Lk5FVCA1LjEuMTITAUd0AAAAuGVYSWZJSSoACAAAAAUAGgEFAAEAAABKAAAAGwEFAAEAAABSAAAAKAEDAAEAAAACAAAAMQECABEAAABaAAAAaYcEAAEAAABsAAAAAAAAANl2AQDoAwAA2XYBAOgDAABQYWludC5ORVQgNS4xLjEyAAADAACQBwAEAAAAMDIzMAGgAwABAAAAAQAAAAWgBAABAAAAlgAAAAAAAAACAAEAAgAEAAAAUjk4AAIABwAEAAAAMDEwMAAAAACGuzBWtNQBsAAAAFdJREFUOE/Nj1sKACAIBPX+lw40X5nVR0ELZu6YEoAToq9USBpd6pY4Bz7/AOxrixcBcckxHZbsEpTLCyCLpUVhBHrnFEfRObEi4PmuyYDpGujOe5DtDWgY+QCxyAn/zQAAAABJRU5ErkJggg==" />
       </div>
       <div id="overhead-panel" class="preview-panel panel">
         <div class="toolbar-actions ortho-tabs" role="group" aria-label="Ortho view">
@@ -3162,7 +3208,7 @@ function clampMdlScale(n) {
 /**
  * Room colour is one Atari byte: hue in the high nibble, luminance in the low
  * nibble (bit 0 unused). The game feeds it straight to COLPF0 (paper); ink is
- * the same hue at luminance $0e. No other per-room colours exist.
+ * the same hue at luminance $0c. No other per-room colours exist.
  */
 const ROOM_BG_GREY_DARK = 0x04;
 const ROOM_BG_GREY_LIGHT = 0x0a;
@@ -3231,9 +3277,9 @@ function a8Hex(byte) {
   return A8_HEX[((b >> 4) << 3) | ((b & 15) >> 1)];
 }
 
-/** What the DLI draws as ink for this paper: same hue, luminance $0e. */
+/** Line colour for this paper: same hue, luminance $0c. Matches the seam DLI. */
 function a8InkHex(byte) {
-  return a8Hex((byte & 0xf0) | 0x0e);
+  return a8Hex((byte & 0xf0) | 0x0c);
 }
 
 /** Black and white papers are not allowed: black gutters / ink == paper. */
@@ -3341,14 +3387,6 @@ const KINDS = {
     fixed: false,
     slope: false,
   },
-  teleporter_dest: {
-    id: "teleporter_dest",
-    label: "Teleport dest",
-    color: "#c4a8ff",
-    defaultSize: [2, 2, 2],
-    fixed: true,
-    slope: false,
-  },
   pickup: {
     id: "pickup",
     label: "Pickup",
@@ -3361,22 +3399,21 @@ const KINDS = {
 
 /** Editor-only dashed / ghost volumes (not solid world geometry). */
 function isGhostKind(kind) {
-  return kind === "trigger" || kind === "teleporter_dest";
+  return kind === "trigger";
 }
 
 /** Kinds that always carry a link tag (resolved to indices on export). */
 function usesLinkTag(kind) {
-  return kind === "switch" || kind === "elevator" || kind === "teleporter_dest";
+  return kind === "switch" || kind === "elevator";
 }
 
-/** Trigger purposes. Tag is used for teleport / elevator / summon / unlock. */
-const TRIGGER_PURPOSES = ["message", "end_level", "hurt", "hurt_small", "teleport", "elevator", "summon", "unlock"];
+/** Trigger purposes. Tag is used for elevator / summon / unlock. */
+const TRIGGER_PURPOSES = ["message", "end_level", "hurt", "hurt_small", "elevator", "summon", "unlock"];
 const TRIGGER_PURPOSE_LABELS = {
   message: "Display message",
   end_level: "End of level",
   hurt: "Large hurt",
   hurt_small: "Small hurt",
-  teleport: "Teleport",
   elevator: "Activate elevator",
   summon: "Summon elevator",
   unlock: "Unlock door",
@@ -3388,7 +3425,7 @@ function clampTriggerPurpose(s) {
 
 function triggerUsesTag(purpose) {
   const p = clampTriggerPurpose(purpose);
-  return p === "teleport" || p === "elevator" || p === "summon" || p === "unlock";
+  return p === "elevator" || p === "summon" || p === "unlock";
 }
 
 function doorUsesTag(lockKey) {
@@ -3419,19 +3456,10 @@ function clampSlopeFlags(n) {
   return (n | 0) & (SLOPE_FLAG_BOTTOM | SLOPE_FLAG_TOP);
 }
 
-/** (z,+1) → (z,−1) → (x,+1) → (x,−1) → … */
+/** +90° Y. High end walks N (+Z) → E (+X) → S (−Z) → W (−X). */
 function cycleSlopeOrient(obj) {
   if (!obj || obj.kind !== "slope") return obj;
-  if (obj.axis === "z" && obj.dir === 1) obj.dir = -1;
-  else if (obj.axis === "z") {
-    obj.axis = "x";
-    obj.dir = 1;
-  } else if (obj.dir === 1) obj.dir = -1;
-  else {
-    obj.axis = "z";
-    obj.dir = 1;
-  }
-  return obj;
+  return rotateSlopeOrientY(obj, 1);
 }
 
 const PALETTE_ORDER = [
@@ -3444,9 +3472,19 @@ const PALETTE_ORDER = [
   "elevator",
   "spawn",
   "trigger",
-  "teleporter_dest",
-  "pickup",
 ];
+/** Palette icon stem in editor/thingicons/{stem}.png. */
+const KIND_ICON = {
+  room: "room",
+  doorway: "door",
+  switch: "switch",
+  slope: "ramp",
+  platform: "platform",
+  crate: "crate",
+  elevator: "elevator",
+  spawn: "spawn",
+  trigger: "trigger",
+};
 const MAX_TRIGGER_TEXT = 80;
 const MAX_NAME_LEN = 40;
 const MAX_TAG_LEN = 16;
@@ -3569,6 +3607,28 @@ const PICKUP_TYPES = [
   "lightpost",
   "barrel",
 ];
+/** Palette icon stem in editor/thingicons/{stem}.png. */
+const PICKUP_ICON = {
+  "small health": "health",
+  "large health": "healthcrate",
+  "green armor": "greenarmor",
+  "blue armor": "bluearmor",
+  "ammo box": "ammobox",
+  shells: "shellbox",
+  "box of rockets": "boxofrockets",
+  shotgun: "shotgun",
+  chaingun: "chaingun",
+  chainsaw: "chainsaw",
+  "rocket launcher": "rocketlauncher",
+  backpack: "backpack",
+  "red keycard": "redcard",
+  "yellow keycard": "yellowcard",
+  "blue keycard": "bluecard",
+  soulsphere: "soulsphere",
+  radsuit: "radsuit",
+  lightpost: "lightpost",
+  barrel: "barrel",
+};
 /** @deprecated Use PICKUP_TYPES */
 const BACKPACK_TYPES = PICKUP_TYPES;
 
@@ -4578,6 +4638,7 @@ function rotateAabbYAround(obj, pivotX, pivotZ, delta) {
   return obj;
 }
 
+/** One +90° Y: (z,+1)→(x,+1)→(z,−1)→(x,−1). High end N→E→S→W. */
 function rotateSlopeOrientY(obj, delta) {
   const steps = ((delta | 0) % 4 + 4) % 4;
   for (let i = 0; i < steps; i++) {
@@ -4603,7 +4664,7 @@ function applyYawQuarterMeta(obj, delta) {
   if (!obj) return obj;
   const steps = ((delta | 0) % 4 + 4) % 4;
   if (!steps) return obj;
-  if (obj.kind === "enemy" || obj.kind === "spawn" || obj.kind === "teleporter_dest") {
+  if (obj.kind === "enemy" || obj.kind === "spawn") {
     obj.rot = clampEnemyRot((obj.rot | 0) + 2 * steps);
   }
   if (obj.kind === "doorway" || obj.kind === "switch") {
@@ -4870,12 +4931,8 @@ function clampObject(obj) {
     obj.sy = clampSize(obj.y, obj.sy);
     obj.sz = clampSize(obj.z, obj.sz);
   }
-  if (obj.kind === "enemy" || obj.kind === "spawn" || obj.kind === "teleporter_dest") {
+  if (obj.kind === "enemy" || obj.kind === "spawn") {
     obj.rot = clampEnemyRot(obj.rot ?? 0);
-  }
-  if (obj.kind === "teleporter_dest") {
-    if (obj.keepFacing) obj.keepFacing = true;
-    else delete obj.keepFacing;
   }
   if (obj.kind === "trigger") {
     obj.purpose = clampTriggerPurpose(obj.purpose);
@@ -4947,10 +5004,9 @@ function createObject(kind, x, y, z, extra = {}) {
     obj.sz = 4;
     obj.flags = extra.flags;
   }
-  if (kind === "spawn" || kind === "enemy" || kind === "teleporter_dest") {
+  if (kind === "spawn" || kind === "enemy") {
     obj.rot = clampEnemyRot(extra.rot ?? 0);
   }
-  if (kind === "teleporter_dest" && extra.keepFacing) obj.keepFacing = true;
   if (kind === "spawn") obj.enabled = extra.enabled === true;
   if (kind === "enemy") {
     const name = extra.enemy || "Possessed";
@@ -5184,8 +5240,8 @@ const MAP_MAX_BYTES = 4096;
 const ENEMY_POSE_MAX = 7680;
 const STICK_POSE_BYTES = 13 * 3; // gx+gy+gz per stored pose
 
-/** Packed map header: 12 counts + 2 type pads + 6 spawn + 4 mesh lens. */
-const MAP_HDR_BYTES = 24;
+/** Packed map header: 10 counts + 3 type pads + 4 mesh lens + 6 spawn. */
+const MAP_HDR_BYTES = 23;
 
 // Keep in sync with tools/genenemies.py (role names).
 const PAIN_MAX = 4;
@@ -5520,7 +5576,7 @@ function canAddEnemyType(map, typeName, roomId) {
 
 /**
  * Bytes per instance in the cooked C64 SoA (tools/genmap.py).
- * Trigger text blob is counted separately. Spawn lives in the 24-byte header.
+ * Trigger text blob is counted separately. Spawn lives in the 23-byte header.
  */
 const C64_OBJECT_BYTES = {
   room: 7, // x y z sx sy sz bg
@@ -5534,7 +5590,6 @@ const C64_OBJECT_BYTES = {
   trigger: 10,
   spawn: 0,
   pickup: 6,
-  teleporter_dest: 5,
 };
 
 /** Counts + packed map RAM for the active level (matches genmap cook_one). */
@@ -5651,7 +5706,6 @@ const MAP_KIND_ORDER = [
   "trigger",
   "spawn",
   "pickup",
-  "teleporter_dest",
 ];
 
 const MAP_KIND_PLURALS = {
@@ -5666,7 +5720,6 @@ const MAP_KIND_PLURALS = {
   trigger: "triggers",
   spawn: "spawns",
   pickup: "pickups",
-  teleporter_dest: "dests",
 };
 
 function mapKindCountLabel(kind, n) {
@@ -6300,7 +6353,6 @@ function parseObjects(list) {
       enemy: o.enemy,
       shootable: o.shootable,
       rot: o.rot,
-      keepFacing: o.keepFacing,
       text: o.text,
       purpose: o.purpose,
       name: o.name,
@@ -6343,7 +6395,7 @@ function parseObjects(list) {
       obj.sy = o.sy ?? obj.sy;
       obj.sz = o.sz ?? obj.sz;
     }
-    if (o.kind === "enemy" || o.kind === "spawn" || o.kind === "teleporter_dest") {
+    if (o.kind === "enemy" || o.kind === "spawn") {
       if (o.kind === "enemy") {
         const name = o.enemy || "";
         if (!ENEMY_TYPES.some((t) => t.name === name)) continue;
@@ -9680,31 +9732,6 @@ class LayoutView {
       const right = { x: (b.x + c.x) / 2, y: (b.y + c.y) / 2, z: (b.z + c.z) / 2 };
       segs.push({ a: apex, b: left }, { a: left, b: right }, { a: right, b: apex });
     }
-    if (obj.kind === "teleporter_dest") {
-      const c = aabbCenter(obj);
-      if (obj.keepFacing) {
-        segs.push(
-          { a: { x: c.x - 1.5, y: c.y, z: c.z }, b: { x: c.x + 1.5, y: c.y, z: c.z } },
-          { a: { x: c.x, y: c.y, z: c.z - 1.5 }, b: { x: c.x, y: c.y, z: c.z + 1.5 } }
-        );
-        return segs;
-      }
-      const rot = clampEnemyRot(obj.rot ?? 0);
-      const th = (rot * Math.PI) / 4;
-      const fx = Math.sin(th);
-      const fz = Math.cos(th);
-      segs.push(
-        { a: c, b: { x: c.x + fx * 4, y: c.y, z: c.z + fz * 4 } },
-        {
-          a: { x: c.x + fx * 4, y: c.y, z: c.z + fz * 4 },
-          b: { x: c.x + fx * 2 - fz * 1.5, y: c.y, z: c.z + fz * 2 + fx * 1.5 },
-        },
-        {
-          a: { x: c.x + fx * 4, y: c.y, z: c.z + fz * 4 },
-          b: { x: c.x + fx * 2 + fz * 1.5, y: c.y, z: c.z + fz * 2 - fx * 1.5 },
-        }
-      );
-    }
     return segs;
   }
 
@@ -9813,9 +9840,10 @@ class LayoutView {
     return best;
   }
 
-  /** Top of elevator / solid platform, or ramp surface. */
+  /** Top of elevator / solid platform, or ramp surface. Seen from above only. */
   #rayWalkableTop(obj, ray) {
     if (obj.kind === "elevator" || (obj.kind === "platform" && obj.collide !== false)) {
+      if (ray.dir.y >= 0) return null;
       const y = (obj.y | 0) + (obj.sy | 0);
       const hit = intersectPlane(ray.origin, ray.dir, { x: 0, y, z: 0 }, { x: 0, y: 1, z: 0 });
       if (!hit) return null;
@@ -9830,32 +9858,47 @@ class LayoutView {
       [p0, p1, p2],
       [p0, p2, p3],
     ]) {
-      const hit = rayTriangle(ray.origin, ray.dir, tri[0], tri[1], tri[2]);
+      const [a, b, c] = tri;
+      const e1 = { x: b.x - a.x, y: b.y - a.y, z: b.z - a.z };
+      const e2 = { x: c.x - a.x, y: c.y - a.y, z: c.z - a.z };
+      let ny = e1.z * e2.x - e1.x * e2.z;
+      let nx = e1.y * e2.z - e1.z * e2.y;
+      let nz = e1.x * e2.y - e1.y * e2.x;
+      if (ny < 0) {
+        nx = -nx;
+        ny = -ny;
+        nz = -nz;
+      }
+      if (ny < 1e-6 || nx * ray.dir.x + ny * ray.dir.y + nz * ray.dir.z >= 0) continue;
+      const hit = rayTriangle(ray.origin, ray.dir, a, b, c);
       if (hit && (!best || hit.t < best.t)) best = hit;
     }
     if (!best) return null;
     return { t: best.t, point: best.point, y: best.point.y };
   }
 
-  /** If a non-floor hull hit still maps onto a floor fragment, drop there (no ray slide). */
-  #floorPoseFromHull(hit, pose) {
-    const f = hit.face;
-    if (!f) return null;
-    if (f.axis === "y" && f.sign === -1) {
-      return pose(hit.point.x, Math.round(f.plane), hit.point.z, hit.room, true);
+  /**
+   * No floor or walkable top under the ray: never stick to the roof or an outer face.
+   * Use the room the ray hit (selected room wins), else the selected room, and drop at
+   * that room's floor height where the ray crosses it.
+   */
+  #floorHeightPose(visRooms, ray, focus, pose) {
+    const any = this.#nearestRoomHull(visRooms, ray, null, focus);
+    const room = any?.room || focus;
+    if (!room) return null;
+    let hx = room.x + room.sx / 2;
+    let hz = room.z + room.sz / 2;
+    if (any) {
+      hx = any.point.x;
+      hz = any.point.z;
     }
-    if (f.axis === "y") {
-      const floor = xzOnRoomFloor(hit.room, hit.point.x, hit.point.z);
-      if (!floor) return null;
-      return pose(hit.point.x, Math.round(floor.plane), hit.point.z, hit.room, true);
+    const y = Math.round(roomFloorY(room, hx, hz));
+    const plane = intersectPlane(ray.origin, ray.dir, { x: 0, y, z: 0 }, { x: 0, y: 1, z: 0 });
+    if (plane) {
+      hx = plane.point.x;
+      hz = plane.point.z;
     }
-    let x = hit.point.x;
-    let z = hit.point.z;
-    if (f.axis === "x") x = f.plane - f.sign;
-    else if (f.axis === "z") z = f.plane - f.sign;
-    const floor = xzOnRoomFloor(hit.room, x, z);
-    if (!floor) return null;
-    return pose(x, Math.round(floor.plane), z, hit.room, true);
+    return pose(hx, y, hz, room, false);
   }
 
   /** Drop pose from screen: hull faces under the cursor; walkable tops beat floor. */
@@ -9909,36 +9952,35 @@ class LayoutView {
             hitY: mount.point.y,
           };
         }
-      } else {
-        const floorHit = this.#nearestRoomHull(
-          visRooms,
-          ray,
-          (f) => f.axis === "y" && f.sign === -1,
-          focus
-        );
-        let walk = null;
-        for (const obj of visible) {
-          const hit = this.#rayWalkableTop(obj, ray);
-          if (!hit) continue;
-          if (!walk || hit.t < walk.t) walk = { ...hit, obj };
-        }
-        if (walk && (!floorHit || walk.t <= floorHit.t + 1e-4)) {
-          const room = roomById(doc, walk.obj.roomId) || floorHit?.room;
-          return pose(walk.point.x, Math.round(walk.y), walk.point.z, room, false);
-        }
-        if (floorHit) {
-          return pose(
-            floorHit.point.x,
-            Math.round(floorHit.face.plane),
-            floorHit.point.z,
-            floorHit.room,
-            true
-          );
-        }
-        const any = this.#nearestRoomHull(visRooms, ray, null, focus);
-        const dropped = any && this.#floorPoseFromHull(any, pose);
-        if (dropped) return dropped;
       }
+
+      // Only doors/switches mount on faces. Everything else passes through roofs, outer
+      // walls and undersides: floors count only when seen from above.
+      const floorHit =
+        ray.dir.y < 0
+          ? this.#nearestRoomHull(visRooms, ray, (f) => f.axis === "y" && f.sign === -1, focus)
+          : null;
+      let walk = null;
+      for (const obj of visible) {
+        const hit = this.#rayWalkableTop(obj, ray);
+        if (!hit) continue;
+        if (!walk || hit.t < walk.t) walk = { ...hit, obj };
+      }
+      if (walk && (!floorHit || walk.t <= floorHit.t + 1e-4)) {
+        const room = roomById(doc, walk.obj.roomId) || floorHit?.room;
+        return pose(walk.point.x, Math.round(walk.y), walk.point.z, room, false);
+      }
+      if (floorHit) {
+        return pose(
+          floorHit.point.x,
+          Math.round(floorHit.face.plane),
+          floorHit.point.z,
+          floorHit.room,
+          true
+        );
+      }
+      const dropped = this.#floorHeightPose(visRooms, ray, focus, pose);
+      if (dropped) return dropped;
     }
 
     const gy = this.gridY;
@@ -10554,11 +10596,12 @@ const PREVIEW_SY = PREVIEW_H / GAME_VIEW_H;
 const PREVIEW_FX = GAME_FOCAL * PREVIEW_SX;
 const PREVIEW_FY = GAME_FOCAL * PREVIEW_SY;
 
-const CHAIN_W = 48;
-const CHAIN_H = 42;
-/** Viewport-relative top-left in game pixels: sprite (160,214). */
-const CHAIN_VX = 72;
-const CHAIN_VY = 92;
+/** pistol_lines.png is 24×32, pasted at x=10 on the 48-wide weapon cell. */
+const PISTOL_W = 24;
+const PISTOL_H = 32;
+/** Viewport-relative top-left: sprite (160, 224) plus the x=10 paste. */
+const PISTOL_VX = 82;
+const PISTOL_VY = 102;
 
 /** FACE_PZ/MZ/PX/MX â†’ yaw so local +Z points out of the door face (door_face_rot). */
 const PV_DOOR_YAW = {
@@ -10723,15 +10766,6 @@ function pvDefaultCam(room) {
   };
 }
 
-function pvParseHex(hex) {
-  const h = (hex || "#000000").replace("#", "");
-  return {
-    r: parseInt(h.slice(0, 2), 16) || 0,
-    g: parseInt(h.slice(2, 4), 16) || 0,
-    b: parseInt(h.slice(4, 6), 16) || 0,
-  };
-}
-
 function pvTryStep(room, x, y, z) {
   if (x < WORLD_MIN || x > WORLD_MAX || z < WORLD_MIN || z > WORLD_MAX) return false;
   return pointInRoom({ x, y, z }, room);
@@ -10750,7 +10784,7 @@ class PreviewView {
    *   onEditStart?: () => void,
    *   onEditEnd?: () => void,
    *   onChange?: () => void,
-   *   chainImg?: HTMLImageElement | null,
+   *   pistolImg?: HTMLImageElement | null,
    * }} opts
    */
   constructor(canvas, opts) {
@@ -10767,7 +10801,7 @@ class PreviewView {
     this.lastY = 0;
     this.live = null;
     this.stickyCam = null;
-    this.chainTints = new Map();
+    this.pistolBlack = null;
     pvDisableSmoothing(this.ctx);
     pvDisableSmoothing(this.dctx);
 
@@ -10779,10 +10813,10 @@ class PreviewView {
     this._ro = new ResizeObserver(() => this.draw());
     if (this.frame) this._ro.observe(this.frame);
 
-    const chain = opts.chainImg;
-    if (chain && !chain.complete) {
-      chain.addEventListener("load", () => {
-        this.chainTints.clear();
+    const pistol = opts.pistolImg;
+    if (pistol && !pistol.complete) {
+      pistol.addEventListener("load", () => {
+        this.pistolBlack = null;
         this.draw();
       });
     }
@@ -10949,49 +10983,45 @@ class PreviewView {
     }
   }
 
-  #chainTint(hex) {
-    const img = this.opts.chainImg;
+  #pistolBlack() {
+    if (this.pistolBlack) return this.pistolBlack;
+    const img = this.opts.pistolImg;
     if (!img?.complete || !img.naturalWidth) return null;
-    let tint = this.chainTints.get(hex);
-    if (tint) return tint;
     const c = document.createElement("canvas");
-    c.width = CHAIN_W;
-    c.height = CHAIN_H;
+    c.width = PISTOL_W;
+    c.height = PISTOL_H;
     const ctx = c.getContext("2d");
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(img, 0, 0);
-    const data = ctx.getImageData(0, 0, CHAIN_W, CHAIN_H);
+    ctx.drawImage(img, 0, 0, PISTOL_W, PISTOL_H);
+    const data = ctx.getImageData(0, 0, PISTOL_W, PISTOL_H);
     const px = data.data;
-    const { r, g, b } = pvParseHex(hex);
     for (let i = 0; i < px.length; i += 4) {
       if (px[i] > 16 || px[i + 1] > 16 || px[i + 2] > 16) {
-        px[i] = r;
-        px[i + 1] = g;
-        px[i + 2] = b;
+        px[i] = 0;
+        px[i + 1] = 0;
+        px[i + 2] = 0;
         px[i + 3] = 255;
       } else {
         px[i + 3] = 0;
       }
     }
     ctx.putImageData(data, 0, 0);
-    this.chainTints.set(hex, c);
+    this.pistolBlack = c;
     return c;
   }
 
-  #drawChain(ctx, room) {
-    const hex = a8InkHex(room.a8Bg ?? ROOM_BG_DEFAULT);
-    const tint = this.#chainTint(hex);
-    if (!tint) return;
-    const dx = CHAIN_VX * PREVIEW_SX;
-    const dy = CHAIN_VY * PREVIEW_SY;
-    const dw = CHAIN_W * PREVIEW_SX;
-    const dh = CHAIN_H * PREVIEW_SY;
+  #drawPistol(ctx) {
+    const img = this.#pistolBlack();
+    if (!img) return;
+    const dx = PISTOL_VX * PREVIEW_SX;
+    const dy = PISTOL_VY * PREVIEW_SY;
+    const dw = PISTOL_W * PREVIEW_SX;
+    const dh = PISTOL_H * PREVIEW_SY;
     const clipH = Math.min(dh, PREVIEW_H - dy);
     if (clipH <= 0) return;
-    const srcH = CHAIN_H * (clipH / dh);
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(tint, 0, 0, CHAIN_W, srcH, dx, dy, dw, clipH);
+    const srcH = PISTOL_H * (clipH / dh);
+    pvDisableSmoothing(ctx);
+    ctx.drawImage(img, 0, 0, PISTOL_W, srcH, dx, dy, dw, clipH);
   }
 
   #present() {
@@ -11049,7 +11079,7 @@ class PreviewView {
         }
         this.#drawObject(ctx, doc, obj, cam, line);
       }
-      this.#drawChain(ctx, room);
+      this.#drawPistol(ctx);
     }
 
     this.#present();
@@ -14158,7 +14188,7 @@ const previewView = new PreviewView(document.getElementById("preview-canvas"), {
   getSpawn: () => previewSpawn(),
   getEditSpawn: () => selectedSpawn(),
   getRoomsOnlyMode: () => roomsOnlyDraw,
-  chainImg: document.getElementById("preview-chain-png"),
+  pistolImg: document.getElementById("preview-pistol-png"),
   onRotate: (yaw) => {
     const spawn = selectedSpawn();
     if (!spawn) return;
@@ -15150,7 +15180,9 @@ function previewObjectAtScreen(place, mx, my) {
   const kind = place.kind;
   const p = layoutView.placeAtScreen(mx, my, kind);
   const owner = placeOwner(kind, p.room);
-  const extra = place.enemy ? { enemy: place.enemy } : {};
+  const extra = {};
+  if (place.enemy) extra.enemy = place.enemy;
+  if (place.pickup) extra.pickup = place.pickup;
   if (owner) extra.roomId = owner.id;
   if (kind === "spawn") {
     extra.enabled = !activeMap(doc).objects.some((o) => o.kind === "spawn");
@@ -15188,6 +15220,16 @@ function buildPalette() {
   for (const kind of PALETTE_ORDER) {
     root.appendChild(paletteButton(KINDS[kind].label, KINDS[kind].color, { kind }));
   }
+  const thingsSep = document.createElement("div");
+  thingsSep.className = "palette-sep";
+  thingsSep.textContent = "Things";
+  root.appendChild(thingsSep);
+  const things = document.createElement("div");
+  things.className = "palette-things";
+  for (const t of PICKUP_TYPES) {
+    things.appendChild(paletteButton(t, KINDS.pickup.color, { kind: "pickup", pickup: t }));
+  }
+  root.appendChild(things);
   const sep = document.createElement("div");
   sep.className = "palette-sep";
   sep.textContent = "Enemies";
@@ -15319,10 +15361,31 @@ function paletteButton(label, color, payload) {
     name.className = "palette-enemy-name";
     name.textContent = label;
     el.append(icon, name);
+  } else if (payload.pickup) {
+    el.classList.add("palette-thing");
+    const icon = document.createElement("img");
+    icon.className = "palette-thing-icon";
+    icon.alt = "";
+    icon.draggable = false;
+    icon.src = `thingicons/${PICKUP_ICON[payload.pickup]}.png`;
+    const name = document.createElement("span");
+    name.className = "palette-thing-name";
+    name.textContent = label;
+    el.append(icon, name);
+  } else if (KIND_ICON[payload.kind]) {
+    const icon = document.createElement("img");
+    icon.className = "palette-thing-icon";
+    icon.alt = "";
+    icon.draggable = false;
+    icon.src = `thingicons/${KIND_ICON[payload.kind]}.png`;
+    const name = document.createElement("span");
+    name.className = "palette-thing-name";
+    name.textContent = label;
+    el.append(icon, name);
   } else {
     el.textContent = label;
   }
-  el.title = "Drag onto the map to place";
+  el.title = payload.pickup ? label : "Drag onto the map to place";
   el.addEventListener("pointerdown", (e) => {
     if (e.button !== 0) return;
     e.preventDefault();
@@ -16183,24 +16246,40 @@ function roomItems() {
   ];
 }
 
+function a8ByteText(byte) {
+  return "$" + byte.toString(16).padStart(2, "0");
+}
+
 function roomPaletteEditor(objs, apply) {
   const wrap = document.createElement("div");
   wrap.className = "field color-field room-palette";
   const span = document.createElement("span");
-  span.textContent = "Background";
+  const cur = unanimous(objs, (o) => o.a8Bg ?? ROOM_BG_DEFAULT);
+  span.textContent = cur === undefined ? "Background" : `Background ${a8ByteText(cur)}`;
+
+  const hues = document.createElement("div");
+  hues.className = "hue-digits";
+  for (let hue = 0; hue < 16; hue++) {
+    const digit = document.createElement("span");
+    digit.textContent = hue.toString(16).toUpperCase();
+    hues.appendChild(digit);
+  }
+
   const row = document.createElement("div");
   row.className = "color-swatches";
-  const cur = unanimous(objs, (o) => o.a8Bg ?? ROOM_BG_DEFAULT);
-  for (const slot of ROOM_BG_SLOTS) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "swatch" + (slot.byte === cur ? " selected" : "");
-    btn.title = `$${slot.byte.toString(16).padStart(2, "0")} ${slot.name}`;
-    btn.style.background = a8Hex(slot.byte);
-    btn.addEventListener("click", () => apply((obj) => (obj.a8Bg = slot.byte)));
-    row.appendChild(btn);
+  for (const lum of [0x08, 0x06, 0x04]) {
+    for (let hue = 0; hue < 16; hue++) {
+      const byte = (hue << 4) | lum;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "swatch" + (byte === cur ? " selected" : "");
+      btn.title = a8ByteText(byte);
+      btn.style.background = a8Hex(byte);
+      btn.addEventListener("click", () => apply((obj) => (obj.a8Bg = byte)));
+      row.appendChild(btn);
+    }
   }
-  wrap.append(span, row);
+  wrap.append(span, hues, row);
   return wrap;
 }
 
@@ -16317,15 +16396,8 @@ function renderLayoutObjectFields(root, objs) {
     );
   }
 
-  if (isFigureObject(objs[0]) || kind === "teleporter_dest") {
+  if (isFigureObject(objs[0])) {
     root.appendChild(rotateRow(() => apply((obj) => (obj.rot = cycleEnemyRot(obj.rot ?? 0)))));
-  }
-
-  if (kind === "teleporter_dest") {
-    const allKeep = objs.every((o) => !!o.keepFacing);
-    root.appendChild(
-      toggleField("Keep facing", allKeep, () => apply((obj) => (obj.keepFacing = !allKeep)))
-    );
   }
 
   if (kind === "trigger") {
@@ -18168,7 +18240,7 @@ window.addEventListener("keydown", (e) => {
   if (e.key.toLowerCase() === "r" && editorMode === "layout") {
     const objs = selectedLayoutObjects();
     const kind = objs.length ? unanimous(objs, (o) => o.kind) : undefined;
-    if (kind && (isFigureObject(objs[0]) || kind === "teleporter_dest")) {
+    if (kind && isFigureObject(objs[0])) {
       e.preventDefault();
       pushUndo();
       for (const obj of objs) {

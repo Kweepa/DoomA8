@@ -82,6 +82,7 @@ main
 	jsr prof_frame_sample
 	jsr calc_frame_dt
 	jsr update_hurt_flash
+	jsr tick_crack
 	jsr update_powerup
 	jsr update_item_spin
 

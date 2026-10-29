@@ -1855,7 +1855,7 @@ gun_hitscan
 	lda #$ff
 	sta shot_hit_i
 	sta shot_hit_z
-	sta shot_bp
+	sta shot_th
 	jsr load_view_trig
 	ldx #0
 .sh_lp
@@ -1874,12 +1874,7 @@ gun_hitscan
 	beq .sh_room
 	jmp .sh_n
 .sh_room
-	lda cam_xh
-	sta ln_ax
-	lda cam_yh
-	sta ln_ay
-	lda cam_zh
-	sta ln_az
+	jsr ln_a_from_cam
 	ldx enemy_idx
 	+lda_mx en_x
 	sta ln_bx
@@ -1903,12 +1898,7 @@ gun_hitscan
 	sta ent_wy
 	+lda_mx en_z
 	sta ent_wz
-	lda cs_b
-	jsr mulset_a
-	lda sn_b
-	jsr mulset_b
-	ldx #0
-	jsr xform_world_vert
+	jsr xform_ent_view
 	ldx enemy_idx
 	; z_high in [0, SHOT_Z_MAX)
 	lda CAM_ZH
@@ -2036,11 +2026,11 @@ gun_hitscan
 	beq .sh_sw
 	ldx shot_hit_i
 	cpx #$ff
-	beq .sh_bp_win
+	beq .sh_th_win
 	cpy shot_hit_z
 	bcs .sh_sw			; enemy closer or tie
-.sh_bp_win
-	sta shot_bp
+.sh_th_win
+	sta shot_th
 	sty shot_hit_z
 	lda #$ff
 	sta shot_hit_i
@@ -2055,7 +2045,7 @@ gun_hitscan
 	ldx shot_hit_i
 	cpx #$ff
 	bne .sh_sw_en
-	ldx shot_bp
+	ldx shot_th
 	cpx #$ff
 	beq .sh_splats			; miss: switch takes the shot
 	cpy shot_hit_z
@@ -2066,7 +2056,7 @@ gun_hitscan
 	jmp .sh_splats
 .sh_sw_dropbp
 	lda #$ff
-	sta shot_bp
+	sta shot_th
 	jmp .sh_splats
 .sh_sw_en
 	cpy shot_hit_z
@@ -2109,7 +2099,7 @@ gun_hitscan
 	lda scan_dmg_max
 	jmp .sh_nroll
 .sh_miss
-	ldx shot_bp
+	ldx shot_th
 	cpx #$ff
 	beq .sh_miss_wall
 	jsr barrel_explode
@@ -2141,12 +2131,7 @@ shotgun_hit_splat
 	sta ent_wy
 	+lda_mx en_z
 	sta ent_wz
-	lda cs_b
-	jsr mulset_a
-	lda sn_b
-	jsr mulset_b
-	ldx #0
-	jsr xform_world_vert
+	jsr xform_ent_view
 	jsr project_cam0_screen
 	bcc .shs_rts
 	ldx CAM_ZH				; view depth → EMUZ_Z* LOD
@@ -2161,15 +2146,20 @@ shotgun_hit_splat
 .shs_rts
 	rts
 
-; Miss splat at the nearest room solid (cutout, crate, platform, elevator,
-; ramp, or the outer wall). View trig loaded.
-shotgun_miss_splat
+; Camera high bytes → line A endpoint.
+ln_a_from_cam
 	lda cam_xh
 	sta ln_ax
 	lda cam_yh
 	sta ln_ay
 	lda cam_zh
 	sta ln_az
+	rts
+
+; Miss splat at the nearest room solid (cutout, crate, platform, elevator,
+; ramp, or the outer wall). View trig loaded.
+shotgun_miss_splat
+	jsr ln_a_from_cam
 	ldy pitch
 	lda COSTAB,y
 	sta rot2				; cos pitch
@@ -2201,12 +2191,7 @@ shotgun_miss_splat
 	sta ent_wy
 	lda col_z
 	sta ent_wz
-	lda cs_b
-	jsr mulset_a
-	lda sn_b
-	jsr mulset_b
-	ldx #0
-	jsr xform_world_vert
+	jsr xform_ent_view
 	ldx CAM_ZH
 	bpl .sms_z
 	ldx #0
@@ -2231,68 +2216,41 @@ scan_shoot_barrels
 	pha
 	ldx #0
 .sb_lp
-	cpx	map_nbackpacks
-	bcc .sb_body
-	jmp .sb_done
+	cpx	map_nthings
+	bcs .sb_done
 .sb_body
 	stx enemy_idx
-	lda bp_taken,x
-	beq .sb_live
-	jmp .sb_n
-.sb_live
-	+lda_mx bp_type
-	cmp #BP_BARREL
-	beq .sb_typ
-	jmp .sb_n
-.sb_typ
-	+lda_mx bp_room
+	lda th_taken,x
+	bne .sb_n
+	+lda_mx th_type
+	cmp #TH_BARREL
+	bne .sb_n
+	+lda_mx th_room
 	cmp room_idx
-	beq .sb_room
-	jmp .sb_n
-.sb_room
-	+lda_mx bp_x
-	clc
-	adc #ITEM_BIAS
+	bne .sb_n
+	jsr barrel_pv
+	lda pv0
 	sta ln_bx
 	sta ent_wx
-	+lda_mx bp_y
-	clc
-	adc #1
+	lda pv1
 	sta ln_by
 	sta ent_wy
-	+lda_mx bp_z
-	clc
-	adc #ITEM_BIAS
+	lda pv2
 	sta ln_bz
 	sta ent_wz
-	lda cam_xh
-	sta ln_ax
-	lda cam_yh
-	sta ln_ay
-	lda cam_zh
-	sta ln_az
+	jsr ln_a_from_cam
 	ldy room_idx
 	jsr line_solids_blocked
 	bcs .sb_n
-	lda cs_b
-	jsr mulset_a
-	lda sn_b
-	jsr mulset_b
-	ldx #0
-	jsr xform_world_vert
+	jsr xform_ent_view
 	lda CAM_ZH
-	bpl .sb_zpos
-	jmp .sb_n
-.sb_zpos
+	bmi .sb_n
 	cmp #SHOT_Z_MAX
-	bcc .sb_zok
-	jmp .sb_n
-.sb_zok
+	bcs .sb_n
 	sta gidx
 	bne .sb_proj
 	lda CAM_Z
-	bne .sb_proj
-	jmp .sb_n
+	beq .sb_n
 .sb_proj
 	jsr project_cam0_screen
 	bcc .sb_n
@@ -2385,21 +2343,11 @@ scan_shoot_switches
 	+adc_mx sw_z
 	sta ln_bz
 	sta ent_wz
-	lda cam_xh
-	sta ln_ax
-	lda cam_yh
-	sta ln_ay
-	lda cam_zh
-	sta ln_az
+	jsr ln_a_from_cam
 	ldy room_idx
 	jsr line_solids_blocked
 	bcs .ss_n
-	lda cs_b
-	jsr mulset_a
-	lda sn_b
-	jsr mulset_b
-	ldx #0
-	jsr xform_world_vert
+	jsr xform_ent_view
 	lda CAM_ZH
 	bpl .ss_zpos
 	jmp .ss_n

@@ -990,18 +990,18 @@ bind_map
 	lda (src_ptr),y
 	sta map_nrooms,y
 	iny
-	cpy #24
+	cpy #23
 	bne .bm_hdr
 
 	clc
 	lda map_base
-	adc #24
+	adc #23
 	sta map_name
 	lda map_base+1
 	adc #0
 	sta map_name+1
 
-	ldy #24
+	ldy #23
 .bm_nm
 	lda (src_ptr),y
 	beq .bm_nm0

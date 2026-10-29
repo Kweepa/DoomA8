@@ -21,7 +21,7 @@ Caps used by the mesh path: **16 verts**, **32 edges**, **6 unique world X** and
 | `$0002`–`$00FF` | 254 | Zero page — [`src/zp.asm`](src/zp.asm) |
 | `$0100`–`$01FF` | 256 | Stack |
 | `$0200`–`$03FF` | 512 | Mostly free. `MAP_SMC_HI` `$02` is a GAME operand sentinel, not occupancy. Live KERNAL shadows: `$02A1` (CIA2 ICR), `$02A6` (PAL/NTSC), `$0314`/`$0318` (IRQ/NMI vectors, also `$FFFA`) |
-| `$0400`–`$051F` | 288 | Map header + SoA pointers (`map_bss.asm`; `bind_map`) |
+| `$0400`–`$0519` | 282 | Map header + SoA pointers (`map_bss.asm`; `bind_map`). `$0417` unused. `$051A`–`$0523` free |
 | `$0524`–`$06F6` | 467 | Play BSS (frame/pose pointers and streamed-SFX state) |
 | `$06F7`–`$0875` | 383 | Boot-loaded immutable enemy metadata (`enemydata.prg`) |
 | `$0876`–`$0885` | 16 | Streamed AI entry pointers (8 lo + 8 hi) |
@@ -98,7 +98,7 @@ Macros-only (no bytes): `mem.asm`, `zp.asm`, `map_counts.asm`, `mapacc.asm`, `ma
 ### Heap `$9712`–`$C000`
 
 Grows down from `SCR_A`. `LoadLevel` one-shots each E1Mn (4-byte header +
-PIC overlay + reloc dest words + packed map). `bind_map` copies the 24-byte
+PIC overlay + reloc dest words + packed map). `bind_map` copies the 23-byte
 header and name, SMC-`jsr`s the overlay (`bind_apply` then `patch_map_smc`),
 then `heap_top = map_base` dumps the prefix. At most `ROOM_MAX_TYPES` (2)
 fused enemy banks are then resident for the current room. Play peak is packed
@@ -288,7 +288,7 @@ Vertex tables are 16 slots. Edge clip tables are 32 slots. Unique-X/Z product ta
 | `$CD01` | 1 | unused | |
 | `$CD02` | 1 | `ammo_grenades` | |
 | `$CD03` | 1 | `have_wpn` | `HAVE_*` bitfield |
-| `$CD04` | 32 | `bp_taken` | `BP_MAX` |
+| `$CD04` | 32 | `th_taken` | `TH_MAX` |
 | `$CD24` | 1 | `player_hp` | 0..`PLAYER_HP_MAX` |
 | `$CD25` | 1 | `player_armour` | starts 0; no pickups yet |
 | `$CD26` | 24 | `en_state` | `ENEMY_MAX` |
