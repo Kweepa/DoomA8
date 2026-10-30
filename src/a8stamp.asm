@@ -30,11 +30,8 @@ stamp_view
 	sta stamp_y
 	ldx cur_weapon
 	lda wpn_fr_base,x
-	cpx #WPN_CHAIN
-	bne .body
 	clc
 	adc wpn_fr
-.body
 	tax
 	lda wpn_fr_lo,x
 	sta init_ptr
@@ -46,6 +43,9 @@ stamp_view
 	sta stamp_red
 	jsr blit_rect
 
+	lda wpn_pose
+	cmp #POSE_COCK
+	beq .no5
 	lda flash_phase
 	beq .no4
 	ldx cur_weapon

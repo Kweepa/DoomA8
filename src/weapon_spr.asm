@@ -3,13 +3,13 @@
 ; X is a multiple of 8 hires (phase 0). Bodies are inverted (ink %00, clear %11).
 ; Flashes are ink %11 / clear %00. Phase 1 ORs line colour; phase 2 writes %10.
 
-; Frame pointers: axe, shot, chain0, chain1, chain2, rock, pist.
+; Frame pointers: axe, shot, cock, chain, rock, pist.
 wpn_fr_lo
-	!byte <spr_axe_b, <spr_shot_b, <spr_chain_b0, <spr_chain_b1, <spr_chain_b2, <spr_rock_b, <spr_pist_b
+	!byte <spr_axe_b, <spr_shot_b, <spr_shot_cock_b, <spr_chain_b, <spr_rock_b, <spr_pist_b
 wpn_fr_hi
-	!byte >spr_axe_b, >spr_shot_b, >spr_chain_b0, >spr_chain_b1, >spr_chain_b2, >spr_rock_b, >spr_pist_b
+	!byte >spr_axe_b, >spr_shot_b, >spr_shot_cock_b, >spr_chain_b, >spr_rock_b, >spr_pist_b
 wpn_fr_base
-	!byte 0, 1, 2, 5, 6
+	!byte 0, 1, 3, 4, 5
 wpn_fl4_lo
 	!byte <spr_spark_b, <spr_muzzle_b, <spr_chain_fl_b, <spr_muzzle_b, <spr_muzzle_b
 wpn_fl4_hi
@@ -44,6 +44,19 @@ spr_shot_b
 	!byte $cc,$0f,$fc,$ff,$f3,$c3,$3f,$fc,$ff,$f3,$cf,$3f,$fc,$ff,$f3,$cf
 	!byte $3f,$fc,$ff,$f3
 
+spr_shot_cock_b
+	!byte $02,$00,$04,$2a,$fc,$ff,$ff,$ff,$f3,$3f,$ff,$ff,$f3,$3f,$ff,$ff
+	!byte $f3,$cf,$ff,$ff,$f3,$cf,$ff,$ff,$f3,$f3,$ff,$ff,$f3,$f3,$ff,$ff
+	!byte $f3,$cf,$ff,$ff,$f3,$cf,$ff,$ff,$f3,$cf,$ff,$ff,$f3,$c0,$3f,$ff
+	!byte $f3,$cf,$3f,$ff,$f3,$c0,$cf,$ff,$f3,$c3,$cf,$ff,$f3,$c3,$f3,$ff
+	!byte $f3,$cc,$f3,$ff,$f3,$cc,$fc,$ff,$f3,$cc,$3c,$ff,$f3,$cf,$3f,$3f
+	!byte $f3,$cf,$c3,$3f,$f3,$cf,$f3,$3f,$f3,$cf,$fc,$3f,$f3,$c0,$fc,$ff
+	!byte $c3,$c3,$3c,$ff,$c0,$f0,$cc,$ff,$f0,$fc,$f0,$ff,$f3,$ff,$3c,$ff
+	!byte $cf,$ff,$c3,$ff,$cf,$ff,$f3,$ff,$cf,$ff,$f3,$ff,$cf,$ff,$f3,$ff
+	!byte $cf,$ff,$f3,$ff,$cf,$ff,$f3,$ff,$cf,$ff,$f3,$ff,$cf,$ff,$cf,$ff
+	!byte $cf,$ff,$f3,$ff,$cf,$ff,$f3,$ff,$cf,$ff,$f3,$ff,$cf,$ff,$fc,$ff
+	!byte $cf,$ff,$fc,$ff,$cf,$ff,$fc,$ff,$cf,$ff,$fc,$ff
+
 spr_rock_b
 	!byte $01,$00,$04,$2a,$ff,$f0,$0f,$ff,$ff,$f3,$cf,$ff,$ff,$f3,$cf,$ff
 	!byte $ff,$c3,$c3,$ff,$ff,$c3,$c3,$ff,$ff,$c3,$c3,$ff,$ff,$33,$cc,$ff
@@ -68,7 +81,7 @@ spr_pist_b
 	!byte $f3,$ff,$fc,$ff,$f3,$ff,$fc,$ff,$f3,$ff,$fc,$ff,$cf,$ff,$fc,$ff
 	!byte $cf,$ff,$fc,$ff
 
-spr_chain_b0
+spr_chain_b
 	!byte $00,$00,$06,$2a,$ff,$c0,$03,$c0,$0f,$ff,$ff,$cf,$f3,$cf,$f3,$ff
 	!byte $ff,$cf,$f3,$cf,$f3,$ff,$ff,$cf,$f3,$cf,$f3,$ff,$ff,$00,$03,$c0
 	!byte $03,$ff,$ff,$30,$f3,$cc,$33,$ff,$ff,$30,$f3,$cc,$c3,$ff,$ff,$30
@@ -85,42 +98,6 @@ spr_chain_b0
 	!byte $03,$0c,$cf,$cf,$0c,$30,$03,$30,$cf,$cf,$0c,$30,$33,$30,$cf,$f3
 	!byte $0c,$30,$30,$f0,$cf,$f3,$0c,$03,$00,$00,$cf,$f3,$00,$03,$c0,$cc
 	!byte $cf,$f3,$30,$33,$f0,$0c,$cf,$f3,$3c,$0f,$f0,$fc,$cf,$f3,$3f,$ff
-
-spr_chain_b1
-	!byte $00,$00,$06,$2a,$ff,$ff,$ff,$c0,$0f,$ff,$ff,$c0,$03,$cf,$f3,$ff
-	!byte $ff,$cf,$f3,$cf,$f3,$ff,$ff,$cf,$f3,$cf,$f3,$ff,$ff,$cf,$c3,$c0
-	!byte $03,$ff,$ff,$00,$03,$cc,$33,$ff,$ff,$30,$c3,$cc,$c3,$ff,$ff,$30
-	!byte $c3,$cf,$03,$ff,$ff,$30,$c3,$c3,$03,$ff,$ff,$0c,$c0,$03,$03,$ff
-	!byte $ff,$0c,$c3,$03,$03,$ff,$ff,$0c,$c3,$03,$0c,$ff,$ff,$0c,$c3,$33
-	!byte $30,$ff,$ff,$03,$c3,$33,$00,$ff,$ff,$03,$c0,$00,$3c,$ff,$fc,$30
-	!byte $00,$ff,$fc,$ff,$fc,$3f,$ff,$ff,$fc,$3f,$fc,$3f,$ff,$ff,$ff,$3f
-	!byte $fc,$3f,$ff,$ff,$ff,$3f,$fc,$3f,$ff,$ff,$f0,$3f,$f0,$ff,$ff,$00
-	!byte $0f,$3f,$f0,$f0,$00,$ff,$ff,$0f,$f0,$03,$ff,$ff,$c0,$0f,$f0,$ff
-	!byte $ff,$00,$03,$0f,$f0,$f0,$00,$cc,$f0,$0f,$cc,$03,$0f,$cc,$c3,$0f
-	!byte $c3,$cf,$0f,$cc,$c3,$0f,$c0,$0f,$0f,$cc,$c3,$03,$c3,$cf,$0f,$cc
-	!byte $33,$03,$c3,$c3,$0f,$cc,$33,$c3,$c3,$c0,$0f,$cc,$f0,$03,$03,$30
-	!byte $cf,$cc,$f3,$c3,$33,$3c,$cf,$cf,$0c,$03,$30,$3c,$cf,$cf,$0c,$33
-	!byte $30,$0c,$cf,$cf,$0c,$33,$03,$0c,$cf,$cf,$0c,$33,$03,$0c,$cf,$f3
-	!byte $00,$03,$30,$f0,$cf,$f3,$00,$33,$30,$f0,$cf,$f3,$30,$0f,$30,$c0
-	!byte $cf,$f3,$3f,$0f,$c0,$00,$cf,$f3,$3f,$ff,$c0,$cc,$cf,$f3,$3f,$ff
-
-spr_chain_b2
-	!byte $00,$00,$06,$2a,$ff,$c0,$03,$ff,$ff,$ff,$ff,$cf,$f3,$c0,$03,$ff
-	!byte $ff,$cf,$f3,$cf,$f3,$ff,$ff,$c0,$03,$cf,$f3,$ff,$ff,$c3,$33,$cf
-	!byte $fc,$ff,$ff,$c3,$33,$c0,$00,$ff,$ff,$c3,$33,$cc,$cc,$ff,$ff,$c0
-	!byte $c3,$cc,$cc,$ff,$ff,$cc,$c3,$cf,$00,$ff,$ff,$cc,$c0,$0f,$00,$ff
-	!byte $ff,$cc,$c3,$03,$00,$ff,$ff,$0c,$c3,$03,$00,$ff,$ff,$0c,$c3,$33
-	!byte $30,$ff,$ff,$00,$c3,$33,$30,$ff,$ff,$0c,$00,$33,$30,$ff,$ff,$3f
-	!byte $ff,$00,$00,$ff,$fc,$3f,$ff,$ff,$c0,$ff,$fc,$3f,$ff,$ff,$fc,$3f
-	!byte $fc,$3f,$ff,$ff,$fc,$3f,$fc,$03,$ff,$ff,$ff,$3f,$fc,$f0,$00,$ff
-	!byte $ff,$3f,$f0,$ff,$ff,$00,$0f,$3f,$f0,$03,$ff,$ff,$c0,$0f,$f0,$00
-	!byte $00,$ff,$ff,$0f,$f0,$c3,$0f,$00,$0f,$0f,$f0,$c3,$0f,$cc,$c0,$0f
-	!byte $c0,$cc,$0f,$cc,$f3,$0f,$c3,$cc,$0f,$cc,$f3,$c3,$c3,$cc,$0f,$cc
-	!byte $f0,$03,$c0,$0f,$0f,$cc,$f3,$c3,$c3,$cc,$0f,$cc,$c3,$c3,$cc,$0c
-	!byte $cf,$cc,$c3,$c3,$0c,$30,$cf,$cc,$cc,$c0,$0c,$30,$cf,$cc,$3c,$cc
-	!byte $0c,$30,$cf,$cc,$3c,$0c,$c0,$00,$cf,$cc,$fc,$00,$f0,$00,$cf,$f3
-	!byte $30,$c0,$fc,$0c,$cf,$f3,$30,$c0,$ff,$fc,$cf,$f3,$30,$cc,$ff,$fc
-	!byte $cf,$f3,$0f,$0c,$ff,$fc,$cf,$f3,$0f,$00,$ff,$fc,$cf,$f3,$03,$30
 
 spr_muzzle_b
 	!byte $0b,$f5,$02,$0c,$03,$00,$03,$00,$03,$00,$03,$c0,$0c,$c0,$0c,$c0

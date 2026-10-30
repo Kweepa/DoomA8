@@ -49,6 +49,7 @@ FLASHES = [
 # shotgun columns 20–21 sit on the muzzle stem (clock 47).
 PISTOL_OX = 10
 SHOT_OX = 2
+COCK_OX = 18
 
 
 def glob_edit_frames(key: str) -> list[int]:
@@ -140,6 +141,10 @@ def shotgun_canvas() -> list[list[int]]:
     return line_canvas("shotgun_lines.png", SHOT_OX, 40, 32)
 
 
+def cock_canvas() -> list[list[int]]:
+    return line_canvas("shotgun_cock_lines.png", COCK_OX, 24, 42)
+
+
 def flash_pix(png_name: str) -> list[list[int]]:
     path = PNG_DIR / png_name
     if not path.is_file():
@@ -208,25 +213,26 @@ def main() -> None:
     doc = json.loads(DOC.read_text(encoding="utf-8"))
     weapons = doc.get("weapons") or {}
 
-    chain_frames = item_frames(weapons, "chain")
     rock_frames = item_frames(weapons, "rock")
     axe_frames = item_frames(weapons, AXE_KEY)
 
     shot_pix = shotgun_canvas()
+    cock_pix = cock_canvas()
     rock_pix = load_pix("rock", rock_frames[0])
     axe_pix = load_pix("axe", axe_frames[0])
-    chain_pix = [load_pix("chain", f) for f in chain_frames]
-    if len(chain_pix) != 3:
-        raise SystemExit(f"chain needs 3 frames, got {len(chain_pix)}")
+    chain_pix = load_pix("chain", 0)
     pist_pix = pistol_canvas()
 
     axe_b = pack_clipped(axe_pix, black=True, name="axe")
     shot_b = pack_clipped(shot_pix, black=True, name="shot")
+    cock_b = pack_clipped(cock_pix, black=True, name="cock")
     rock_b = pack_clipped(rock_pix, black=True, name="rock")
     pist_b = pack_clipped(pist_pix, black=True, name="pist")
-    chain_b = [pack_clipped(pix, black=True, name=f"chain{i}") for i, pix in enumerate(chain_pix)]
+    chain_b = pack_clipped(chain_pix, black=True, name="chain")
     if shot_b[0] != 0 or shot_b[1] != 0 or shot_b[2] != 5 or shot_b[3] != 32:
         raise SystemExit(f"shotgun rect {shot_b[:4]}, expected 40x32 at 0,0")
+    if cock_b[0] != 2 or cock_b[1] != 0 or cock_b[2] != 4 or cock_b[3] != 42:
+        raise SystemExit(f"cock rect {cock_b[:4]}, expected 32x42 at x=16")
     flashes = [
         (label, pack_clipped(flash_pix(png), x_origin=ox, y_origin=dy, name=label))
         for label, png, ox, dy in FLASHES
@@ -238,13 +244,13 @@ def main() -> None:
         "; X is a multiple of 8 hires (phase 0). Bodies are inverted (ink %00, clear %11).",
         "; Flashes are ink %11 / clear %00. Phase 1 ORs line colour; phase 2 writes %10.",
         "",
-        "; Frame pointers: axe, shot, chain0, chain1, chain2, rock, pist.",
+        "; Frame pointers: axe, shot, cock, chain, rock, pist.",
         "wpn_fr_lo",
-        "\t!byte <spr_axe_b, <spr_shot_b, <spr_chain_b0, <spr_chain_b1, <spr_chain_b2, <spr_rock_b, <spr_pist_b",
+        "\t!byte <spr_axe_b, <spr_shot_b, <spr_shot_cock_b, <spr_chain_b, <spr_rock_b, <spr_pist_b",
         "wpn_fr_hi",
-        "\t!byte >spr_axe_b, >spr_shot_b, >spr_chain_b0, >spr_chain_b1, >spr_chain_b2, >spr_rock_b, >spr_pist_b",
+        "\t!byte >spr_axe_b, >spr_shot_b, >spr_shot_cock_b, >spr_chain_b, >spr_rock_b, >spr_pist_b",
         "wpn_fr_base",
-        "\t!byte 0, 1, 2, 5, 6",
+        "\t!byte 0, 1, 3, 4, 5",
         "wpn_fl4_lo",
         "\t!byte <spr_spark_b, <spr_muzzle_b, <spr_chain_fl_b, <spr_muzzle_b, <spr_muzzle_b",
         "wpn_fl4_hi",
@@ -253,19 +259,17 @@ def main() -> None:
     ]
     parts += emit_bytes("spr_axe_b", axe_b)
     parts += emit_bytes("spr_shot_b", shot_b)
+    parts += emit_bytes("spr_shot_cock_b", cock_b)
     parts += emit_bytes("spr_rock_b", rock_b)
     parts += emit_bytes("spr_pist_b", pist_b)
-    for i, data in enumerate(chain_b):
-        parts += emit_bytes(f"spr_chain_b{i}", data)
+    parts += emit_bytes("spr_chain_b", chain_b)
     for label, data in flashes:
         parts += emit_bytes(label, data)
 
     OUT.write_text("\n".join(parts) + "\n", encoding="utf-8")
     print(f"Wrote {OUT.relative_to(ROOT)}")
-    print(f"  axe {rect_note(axe_b)}  shot {rect_note(shot_b)}")
-    print(f"  rock {rect_note(rock_b)}  pist {rect_note(pist_b)}")
-    for i, data in enumerate(chain_b):
-        print(f"  chain{i} {rect_note(data)}")
+    print(f"  axe {rect_note(axe_b)}  shot {rect_note(shot_b)}  cock {rect_note(cock_b)}")
+    print(f"  rock {rect_note(rock_b)}  pist {rect_note(pist_b)}  chain {rect_note(chain_b)}")
     for label, data in flashes:
         print(f"  {label}: {rect_note(data)}")
 
@@ -274,10 +278,11 @@ def main() -> None:
             [
                 ("axe", axe_pix, axe_b),
                 ("shot2", shot_pix, shot_b),
+                ("cock", cock_pix, cock_b),
                 ("rock", rock_pix, rock_b),
                 ("pist", pist_pix, pist_b),
             ],
-            [(f"chain {i}", pix, data) for i, (pix, data) in enumerate(zip(chain_pix, chain_b))],
+            [("chain", chain_pix, chain_b)],
         ]
     )
 

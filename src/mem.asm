@@ -698,7 +698,10 @@ in_wpn_pist	= $CC78 + A8_OFF
 key_wpn_pist	= $CC79 + A8_OFF
 have_pack	= $CC7A + A8_OFF			; 1 = backpack raised ammo caps
 gb_cap		= $CC7B + A8_OFF			; grant_th_type effective max
-; $CC7C–$CC7F free
+cock_ms_l	= $CC7C + A8_OFF			; shotgun blast wait before cock
+cock_ms_h	= $CC7D + A8_OFF
+cock_pend	= $CC7E + A8_OFF			; blast done; wait out recoil and flash
+; $CC7F free
 VSX		= $CC80 + A8_OFF			; screen X/Y (front verts with outcode 0)
 VSY		= $CC90 + A8_OFF
 

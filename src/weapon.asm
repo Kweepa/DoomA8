@@ -7,6 +7,7 @@ POSE_IDLE = 0
 POSE_FIRE = 1
 POSE_RECOIL = 2
 POSE_ANIM = 3
+POSE_COCK = 4
 
 AXE_NSTEPS = 4
 AXE_F_OOF = $40
@@ -15,6 +16,9 @@ AXE_F_SPARK = $80
 
 RECOIL_NSTEPS = 3
 PISTOL_RECOIL_N = 2			; −4 for 300 ms, then −6 for 160 ms
+SG_COCK_DELAY = 320			; let DPSHOTGN finish (16 mid-split samples)
+COCK_NSTEPS = 3
+COCK_X = WPN_X0 - 16			; two character columns left of the gun
 
 ; have_wpn bit per weapon id
 wpn_have_bit
@@ -122,6 +126,12 @@ recoil_pist_ms_lo
 recoil_pist_ms_hi
 	!byte >300, >160
 
+; Cock: sit on the viewport bottom, dip 5, pop back. DPSGCOCK plays on the dip.
+cock_y
+	!byte WPN_Y_FLUSH, WPN_Y_FLUSH + 5, WPN_Y_FLUSH
+cock_step_ms
+	!byte 40, 40, 160
+
 ; ------------------------------------------------------------------
 ; VIC sprite slots / flash state. Does not touch HP, ammo, or weapons.
 init_weapon_hw
@@ -147,6 +157,9 @@ init_weapon_hw
 	inx
 	cpx #FXH_COUNT
 	bcc .iw_fxh
+	sta cock_ms_l
+	sta cock_ms_h
+	sta cock_pend
 	sta emuz_xmsb
 	sta emuz_vx
 	sta emuz_vy
@@ -240,11 +253,17 @@ switch_weapon
 	sta mg_frame
 	sta wpn_pose
 	sta anim_step
+	sta cock_ms_l
+	sta cock_ms_h
+	sta cock_pend
 	jmp setup_weapon
 
 setup_weapon
 	lda #0
 	sta wpn_fr
+	sta cock_ms_l
+	sta cock_ms_h
+	sta cock_pend
 	ldx cur_weapon
 	lda wpn_flashdy,x
 	sta wpn_flash_dy
@@ -333,6 +352,7 @@ update_weapon
 .uw_fx
 	jsr tick_all_fx
 	jsr tick_anim
+	jsr tick_cock_wait
 
 	lda fire_rpt_l
 	ora fire_rpt_h
@@ -357,6 +377,8 @@ update_weapon
 	ldx cur_weapon
 	cpx #WPN_CHAIN
 	beq .uw_shot
+	lda cock_pend
+	bne .uw_done
 	lda wpn_pose
 	bne .uw_done
 .uw_shot
@@ -401,6 +423,10 @@ fire_shot
 	cpx #WPN_SHOT
 	bne .fs_notshot
 	jsr shotgun_hitscan
+	lda #<SG_COCK_DELAY
+	sta cock_ms_l
+	lda #>SG_COCK_DELAY
+	sta cock_ms_h
 	ldx cur_weapon
 .fs_notshot
 	cpx #WPN_CHAIN
@@ -422,9 +448,6 @@ fire_shot
 	jsr chaingun_hitscan
 	lda #POSE_FIRE
 	sta wpn_pose
-	ldx mg_frame
-	inx
-	stx wpn_fr
 	ldx mg_frame
 	lda chain_flash_en,x
 	jsr start_flash
@@ -535,6 +558,7 @@ wpn_to_idle
 	sta wpn_pose
 	lda #0
 	sta anim_step
+	sta wpn_fr
 	cpx #WPN_AXE
 	bne .ti_pos
 	jsr hide_flash
@@ -544,11 +568,6 @@ wpn_to_idle
 	sta wpn_x
 	lda wpn_idle_y,x
 	sta wpn_y
-	cpx #WPN_CHAIN
-	bne .ti_xy
-	lda #0
-	sta wpn_fr
-.ti_xy
 	rts
 
 start_recoil
@@ -821,13 +840,77 @@ start_world_spr
 	sta (fx_ptr),y
 	rts
 
+; Count the blast, then wait until the kick and the muzzle flash are both gone.
+tick_cock_wait
+	lda cock_ms_l
+	ora cock_ms_h
+	beq .tcw_pend
+	sec
+	lda cock_ms_l
+	sbc dt_ms
+	sta cock_ms_l
+	lda cock_ms_h
+	sbc dt_msh
+	sta cock_ms_h
+	bcc .tcw_due
+	lda cock_ms_l
+	ora cock_ms_h
+	bne .tcw_rts
+.tcw_due
+	lda #0
+	sta cock_ms_l
+	sta cock_ms_h
+	lda #1
+	sta cock_pend
+.tcw_pend
+	lda cock_pend
+	beq .tcw_rts
+	lda wpn_pose
+	bne .tcw_rts
+	lda flash_phase
+	ora flash5_phase
+	bne .tcw_rts
+	jmp start_cock
+.tcw_rts
+	rts
+
+start_cock
+	lda #0
+	sta cock_pend
+	lda #1
+	sta wpn_fr
+	lda #POSE_COCK
+	sta wpn_pose
+	lda #0
+	sta anim_step
+	lda #COCK_X
+	sta wpn_x
+	jmp cock_apply_step
+
+cock_apply_step
+	ldx anim_step
+	cpx #1
+	bne .cas_y
+	lda #SOUND_SGCOCK
+	jsr play_sound
+	ldx anim_step
+.cas_y
+	lda cock_y,x
+	sta wpn_y
+	lda cock_step_ms,x
+	sta anim_ms_l
+	lda #0
+	sta anim_ms_h
+	rts
+
 tick_anim
 	lda wpn_pose
 	cmp #POSE_ANIM
 	beq .ta_tick
 	cmp #POSE_RECOIL
 	beq .ta_tick
-	rts
+	cmp #POSE_COCK
+	bne .ta_rts
 .ta_tick
 	sec
 	lda anim_ms_l
@@ -836,16 +919,26 @@ tick_anim
 	lda anim_ms_h
 	sbc dt_msh
 	sta anim_ms_h
-	bcc .ta_next
+	bcc .ta_exp
 	ora anim_ms_l
 	bne .ta_rts
-.ta_next
-	inc anim_step
+.ta_exp
 	lda wpn_pose
+	cmp #POSE_COCK
+	beq .ta_cock_done
+	inc anim_step
 	cmp #POSE_RECOIL
 	beq .ta_rec
 	jmp axe_apply_step
 .ta_rec
 	jmp recoil_apply_step
+.ta_cock_done
+	inc anim_step
+	lda anim_step
+	cmp #COCK_NSTEPS
+	bcc .ta_cock_step
+	jmp wpn_to_idle
+.ta_cock_step
+	jmp cock_apply_step
 .ta_rts
 	rts
