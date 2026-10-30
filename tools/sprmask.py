@@ -1,4 +1,4 @@
-"""Shared sprite packing: 24×21 cells, leftover-ink, zero-byte occupancy mask."""
+"""Shared sprite packing: clipped mode-E rects, plus the old 24×21 cell helpers."""
 
 from __future__ import annotations
 
@@ -144,6 +144,71 @@ def parse_label_bytes(path: Path, label: str) -> list[int]:
     if not acc:
         raise SystemExit(f"{path}: no bytes for {label}")
     return acc
+
+
+def pack_clipped(
+    pix: list[list[int]],
+    *,
+    black: bool = False,
+    x_origin: int = 0,
+    y_origin: int = 0,
+    name: str = "sprite",
+) -> list[int]:
+    """One phase-0 rect: x_byte, y, width, height, then row-major bytes.
+
+    X covers the ink with the smallest multiple of 8 hires
+    (left = ink_min & ~7, right = (ink_max | 7) + 1). Y is the ink span.
+    x_origin / y_origin are added to the local ink before the header is
+    stored (flash placement). y_origin may be negative.
+
+    black: inverted plane (ink %00, clear %11) for an AND blit.
+    Otherwise ink %11, clear %00 for ORA or the %10 red write.
+    """
+    ph = len(pix)
+    pw = len(pix[0]) if ph else 0
+    xs: list[int] = []
+    ys: list[int] = []
+    for y in range(ph):
+        row = pix[y]
+        for x in range(pw):
+            if row[x]:
+                xs.append(x)
+                ys.append(y)
+    if not xs:
+        raise SystemExit(f"{name}: no ink")
+    abs_l = (x_origin + min(xs)) & ~7
+    abs_r = ((x_origin + max(xs)) | 7) + 1
+    top = min(ys)
+    height = max(ys) - top + 1
+    if abs_l < 0 or (abs_r - abs_l) & 7:
+        raise SystemExit(f"{name}: x rect {abs_l}..{abs_r} is not a multiple of 8")
+    width = (abs_r - abs_l) // 8
+    yb = y_origin + top
+    if width <= 0 or width > 32 or not -128 <= yb <= 127:
+        raise SystemExit(f"{name}: rect {width} bytes, y {yb} out of range")
+    plane: list[int] = []
+    for ry in range(height):
+        sy = top + ry
+        for bi in range(width):
+            b = 0xFF if black else 0
+            base = abs_l + bi * 8
+            for pair in range(4):
+                hires = base + pair * 2
+                ink = False
+                for dx in (0, 1):
+                    lx = hires + dx - x_origin
+                    if 0 <= sy < ph and 0 <= lx < pw and pix[sy][lx]:
+                        ink = True
+                        break
+                if not ink:
+                    continue
+                bits = 3 << ((3 - pair) * 2)
+                if black:
+                    b = (b & ~bits) & 0xFF
+                else:
+                    b = (b | bits) & 0xFF
+            plane.append(b)
+    return [(abs_l >> 3) & 0xFF, yb & 0xFF, width, height, *plane]
 
 
 def load_png_1bit(path: Path, width: int, height: int) -> list[list[int]]:

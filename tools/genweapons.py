@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Pack view-model PNGs → mode-E mask/image rows in src/weapon_spr.asm.
+"""Pack view-model PNGs → one mode-E rect each in src/weapon_spr.asm.
 
-Each body cell and flash is baked at its real x, including the phase inside
-the byte. Two hires bits become one colour-clock pixel. Bodies store the
-inverted plane (ink %00, clear %11) and are ANDed on, so the gun is black.
-Flashes store ink %11 / clear %00 and are ORed on (line colour).
+X is clipped to a multiple of 8 hires (phase 0). Two hires bits are one
+colour-clock pixel, stored row-major. Bodies are inverted (ink %00, clear
+%11) and ANDed on, so the gun is black. Flashes are ink %11 / clear %00.
 
     python tools/genweapons.py
 """
@@ -20,19 +19,11 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
 from sprmask import (  # noqa: E402
-    CELL,
     H,
     W,
     bchunk,
-    blit_cell,
-    leftover_ink,
     load_png_1bit,
-    pack_24x21,
-    pack_window,
-    pack_zeromask,
-    parse_label_bytes,
-    unpack_2x2,
-    unpack_zeromask,
+    pack_clipped,
 )
 
 DOC = ROOT / "editor" / "doom64.json"
@@ -53,17 +44,11 @@ FLASHES = [
 ]
 
 # Weapon order in tables: axe, shot, chain, gren, pistol.
-# pistol_lines.png is 2×1 pixels. Even origin, so the bake's >>1
-# turns each pair into one mode-E pixel. Columns 12–13 land on the
-# muzzle stem (clock 47).
+# pistol_lines.png and shotgun_lines.png are 2×1 pixels. Even origin,
+# so each pair lands on one mode-E pixel. Pistol columns 12–13 and
+# shotgun columns 20–21 sit on the muzzle stem (clock 47).
 PISTOL_OX = 10
-WINDOWS = {
-    "axe": [(14, 0), (13, 21), (24, 8)],
-    "shot2": [(13, 0), (13, 21)],
-    "chain": [(0, 0), (24, 0), (0, 21), (24, 21)],
-    "rock": [(12, 0), (0, 21), (24, 21)],
-    "pist": [(PISTOL_OX, 0), (PISTOL_OX, 21)],
-}
+SHOT_OX = 2
 
 
 def glob_edit_frames(key: str) -> list[int]:
@@ -109,20 +94,7 @@ def pix_from_png(key: str, frame: int) -> list[list[int]] | None:
     return None
 
 
-def pix_from_asm(label: str, windows: list[tuple[int, int]]) -> list[list[int]]:
-    raw = parse_label_bytes(OUT, label)
-    if len(raw) >= 256:
-        return unpack_2x2(raw[:256])
-    n = len(windows)
-    if len(raw) < n * CELL:
-        raise SystemExit(f"{label}: expected {n * CELL} occupancy bytes, got {len(raw)}")
-    pix = [[0] * W for _ in range(H)]
-    for i, (ox, oy) in enumerate(windows):
-        blit_cell(pix, raw[i * CELL : (i + 1) * CELL], ox, oy)
-    return pix
-
-
-def load_pix(key: str, frame: int, label: str) -> list[list[int]]:
+def load_pix(key: str, frame: int) -> list[list[int]]:
     path = edit_png(key, frame)
     pix = pix_from_png(key, frame)
     if pix is not None:
@@ -131,34 +103,41 @@ def load_pix(key: str, frame: int, label: str) -> list[list[int]]:
     raise SystemExit(f"occupancy needs {path} (not packed asm / unedited png)")
 
 
-def cut_cells(key: str, pix: list[list[int]]) -> list[list[int]]:
-    windows = WINDOWS[key]
-    left = leftover_ink(pix, windows)
-    if left:
-        raise SystemExit(f"{key}: leftover ink {left[:20]}{'…' if len(left) > 20 else ''} ({len(left)})")
-    return [pack_window(pix, ox, oy) for ox, oy in windows]
+def line_canvas(name: str, ox: int, width: int, height: int | None = None) -> list[list[int]]:
+    """Line-art PNG copied at ox. Even origin pairs the 2×1 pixels.
 
-
-def pistol_canvas() -> list[list[int]]:
-    """pistol_lines.png copied at PISTOL_OX. Even origin pairs the 2×1 pixels."""
-    path = PNG_DIR / "pistol_lines.png"
+    height set: the PNG must be exactly that tall. Otherwise any h≤H is accepted.
+    """
+    path = PNG_DIR / name
     if not path.is_file():
         raise SystemExit(f"missing {path}")
     from PIL import Image
 
     im = Image.open(path).convert("RGB")
     iw, ih = im.size
-    if iw != 24 or ih > H:
-        raise SystemExit(f"{path.name}: expected 24×h with h≤{H}, got {iw}×{ih}")
+    bad_h = ih != height if height is not None else ih > H
+    if iw != width or bad_h or ox + iw > W:
+        want_h = str(height) if height is not None else f"h≤{H}"
+        raise SystemExit(
+            f"{path.name}: expected {width}×{want_h} at x={ox}, got {iw}×{ih}"
+        )
     pix = [[0] * W for _ in range(H)]
     src = im.load()
     for y in range(ih):
         for x in range(iw):
             r, g, b = src[x, y][:3]
             if r > 16 or g > 16 or b > 16:
-                pix[y][PISTOL_OX + x] = 1
-    print(f"  occupancy pistol: {path.name} at x={PISTOL_OX}")
+                pix[y][ox + x] = 1
+    print(f"  occupancy {path.stem}: {path.name} at x={ox}")
     return pix
+
+
+def pistol_canvas() -> list[list[int]]:
+    return line_canvas("pistol_lines.png", PISTOL_OX, 24)
+
+
+def shotgun_canvas() -> list[list[int]]:
+    return line_canvas("shotgun_lines.png", SHOT_OX, 40, 32)
 
 
 def flash_pix(png_name: str) -> list[list[int]]:
@@ -168,7 +147,8 @@ def flash_pix(png_name: str) -> list[list[int]]:
     return load_png_1bit(path, 24, 21)
 
 
-def write_sheet(rows: list[list[tuple[str, list[list[int]], list[tuple[int, int]]]]]) -> None:
+def write_sheet(rows: list[list[tuple[str, list[list[int]], list[int]]]]) -> None:
+    """Contact sheet. Ink from the canvas; the outline is the packed rect."""
     try:
         from PIL import Image, ImageDraw, ImageFont
     except ImportError:
@@ -188,11 +168,8 @@ def write_sheet(rows: list[list[tuple[str, list[list[int]], list[tuple[int, int]
     y = pad
     for row in rows:
         x = pad
-        for name, cells, windows in row:
+        for name, pix, packed in row:
             draw.text((x, y), name, fill=(212, 160, 23), font=font)
-            pix = [[0] * W for _ in range(H)]
-            for cell, (ox, oy) in zip(cells, windows):
-                blit_cell(pix, cell, ox, oy)
             cell_im = Image.new("RGB", (W, H), (10, 10, 12))
             px = cell_im.load()
             for yy in range(H):
@@ -201,7 +178,12 @@ def write_sheet(rows: list[list[tuple[str, list[list[int]], list[tuple[int, int]
                         px[xx, yy] = (232, 228, 216)
             cy = y + label_h
             im.paste(cell_im, (x, cy))
-            draw.rectangle((x - 1, cy - 1, x + W, cy + H), outline=(80, 70, 40))
+            xb, yb, bw, bh = packed[:4]
+            if yb >= 128:
+                yb -= 256
+            rx0 = x + xb * 8
+            ry0 = cy + yb
+            draw.rectangle((rx0, ry0, rx0 + bw * 8 - 1, ry0 + bh - 1), outline=(212, 160, 23))
             x += W + pad
         y += label_h + H + pad
     SHEET.parent.mkdir(parents=True, exist_ok=True)
@@ -209,66 +191,15 @@ def write_sheet(rows: list[list[tuple[str, list[list[int]], list[tuple[int, int]
     print(f"Wrote {SHEET.relative_to(ROOT)}")
 
 
-def bake_sprite(get_ink, ox: int, oy_store: int, *, black: bool = False) -> list[int]:
-    """24×21 sprite whose left edge is hires column ox. oy_store is the signed dy.
-
-    black: store the inverted plane (ink %00, clear %11) for an AND blit.
-    Otherwise store ink %11, clear %00 for an ORA blit.
-    """
-    fat0 = ox >> 1
-    fat1 = (ox + 23) >> 1
-    b0 = fat0 >> 2
-    b1 = fat1 >> 2
-    width = b1 - b0 + 1
-    plane: list[int] = []
-    for ry in range(21):
-        mask = [0xFF] * width
-        image = [0] * width
-        for px in range(24):
-            if not get_ink(px, ry):
-                continue
-            fat = (ox + px) >> 1
-            bi = (fat >> 2) - b0
-            pair = 3 << ((3 - (fat & 3)) * 2)
-            mask[bi] = (mask[bi] & ~pair) & 0xFF
-            image[bi] = (image[bi] | pair) & 0xFF
-        for m, im in zip(mask, image):
-            if (m ^ im) != 0xFF or (m & im) != 0:
-                raise SystemExit(f"bake phase broken at x={ox} row {ry}: {m:02x} {im:02x}")
-        plane.extend(mask if black else image)
-    yb = oy_store & 0xFF
-    return [b0 & 0xFF, yb, width, 21, *plane]
-
-
-def bake_windows(pix: list[list[int]], windows: list[tuple[int, int]]) -> list[int]:
-    out = [len(windows)]
-
-    def cell(ox: int, oy: int) -> list[int]:
-        def get_ink(px: int, ry: int) -> int:
-            x = ox + px
-            y = oy + ry
-            if 0 <= x < W and 0 <= y < H:
-                return pix[y][x]
-            return 0
-
-        return bake_sprite(get_ink, ox, oy, black=True)
-
-    for ox, oy in windows:
-        out.extend(cell(ox, oy))
-    return out
-
-
-def bake_flash(pix: list[list[int]], ox: int, dy: int) -> list[int]:
-    def get_ink(px: int, ry: int) -> int:
-        if 0 <= px < 24 and 0 <= ry < 21:
-            return pix[ry][px]
-        return 0
-
-    return [1, *bake_sprite(get_ink, ox, dy)]
-
-
 def emit_bytes(label: str, data: list[int]) -> list[str]:
     return [label, bchunk(data).rstrip(), ""]
+
+
+def rect_note(data: list[int]) -> str:
+    xb, yb, bw, bh = data[:4]
+    if yb >= 128:
+        yb -= 256
+    return f"{bw * 8}x{bh} @ {xb * 8},{yb} ({len(data)}B)"
 
 
 def main() -> None:
@@ -277,40 +208,34 @@ def main() -> None:
     doc = json.loads(DOC.read_text(encoding="utf-8"))
     weapons = doc.get("weapons") or {}
 
-    shot_frames = item_frames(weapons, "shot2")
     chain_frames = item_frames(weapons, "chain")
     rock_frames = item_frames(weapons, "rock")
     axe_frames = item_frames(weapons, AXE_KEY)
 
-    shot_pix = load_pix("shot2", shot_frames[0], "spr_shot2")
-    rock_pix = load_pix("rock", rock_frames[0], "spr_rock")
-    axe_pix = load_pix("axe", axe_frames[0], "spr_axe_0")
-    chain_pix = [load_pix("chain", f, f"spr_chain_{f}") for f in chain_frames]
+    shot_pix = shotgun_canvas()
+    rock_pix = load_pix("rock", rock_frames[0])
+    axe_pix = load_pix("axe", axe_frames[0])
+    chain_pix = [load_pix("chain", f) for f in chain_frames]
     if len(chain_pix) != 3:
         raise SystemExit(f"chain needs 3 frames, got {len(chain_pix)}")
-
     pist_pix = pistol_canvas()
-    shot = cut_cells("shot2", shot_pix)
-    rock = cut_cells("rock", rock_pix)
-    axe = cut_cells("axe", axe_pix)
-    pist = cut_cells("pist", pist_pix)
-    chain = [cut_cells("chain", pix) for pix in chain_pix]
 
-    # The blit uses the baked x_byte / y, phase included.
-    axe_b = bake_windows(axe_pix, WINDOWS["axe"])
-    shot_b = bake_windows(shot_pix, WINDOWS["shot2"])
-    rock_b = bake_windows(rock_pix, WINDOWS["rock"])
-    pist_b = bake_windows(pist_pix, WINDOWS["pist"])
-    chain_b = [bake_windows(pix, WINDOWS["chain"]) for pix in chain_pix]
+    axe_b = pack_clipped(axe_pix, black=True, name="axe")
+    shot_b = pack_clipped(shot_pix, black=True, name="shot")
+    rock_b = pack_clipped(rock_pix, black=True, name="rock")
+    pist_b = pack_clipped(pist_pix, black=True, name="pist")
+    chain_b = [pack_clipped(pix, black=True, name=f"chain{i}") for i, pix in enumerate(chain_pix)]
+    if shot_b[0] != 0 or shot_b[1] != 0 or shot_b[2] != 5 or shot_b[3] != 32:
+        raise SystemExit(f"shotgun rect {shot_b[:4]}, expected 40x32 at 0,0")
     flashes = [
-        (label, bake_flash(flash_pix(png), ox, dy))
+        (label, pack_clipped(flash_pix(png), x_origin=ox, y_origin=dy, name=label))
         for label, png, ox, dy in FLASHES
     ]
 
     parts = [
         "; Generated by tools/genweapons.py from assets/weapons — do not edit",
-        "; Mode-E cells: count, then x_byte, y, width, height, plane.",
-        "; Bodies are inverted (ink %00, clear %11) and the blit is AND, so the gun is black.",
+        "; One rect: x_byte, y, width, height, then width*height row-major bytes.",
+        "; X is a multiple of 8 hires (phase 0). Bodies are inverted (ink %00, clear %11).",
         "; Flashes are ink %11 / clear %00. Phase 1 ORs line colour; phase 2 writes %10.",
         "",
         "; Frame pointers: axe, shot, chain0, chain1, chain2, rock, pist.",
@@ -337,20 +262,22 @@ def main() -> None:
 
     OUT.write_text("\n".join(parts) + "\n", encoding="utf-8")
     print(f"Wrote {OUT.relative_to(ROOT)}")
-    print(f"  axe {len(axe_b)}B  shot {len(shot_b)}B  rock {len(rock_b)}B  pist {len(pist_b)}B")
-    print(f"  chain: {len(chain_b)} frames, {len(chain_b[0]) if chain_b else 0}B")
+    print(f"  axe {rect_note(axe_b)}  shot {rect_note(shot_b)}")
+    print(f"  rock {rect_note(rock_b)}  pist {rect_note(pist_b)}")
+    for i, data in enumerate(chain_b):
+        print(f"  chain{i} {rect_note(data)}")
     for label, data in flashes:
-        print(f"  {label}: {len(data)}B")
+        print(f"  {label}: {rect_note(data)}")
 
     write_sheet(
         [
             [
-                ("axe", axe, WINDOWS["axe"]),
-                ("shot2", shot, WINDOWS["shot2"]),
-                ("rock", rock, WINDOWS["rock"]),
-                ("pist", pist, WINDOWS["pist"]),
+                ("axe", axe_pix, axe_b),
+                ("shot2", shot_pix, shot_b),
+                ("rock", rock_pix, rock_b),
+                ("pist", pist_pix, pist_b),
             ],
-            [(f"chain {i}", cells, WINDOWS["chain"]) for i, cells in enumerate(chain)],
+            [(f"chain {i}", pix, data) for i, (pix, data) in enumerate(zip(chain_pix, chain_b))],
         ]
     )
 

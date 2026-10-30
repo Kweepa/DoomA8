@@ -106,7 +106,7 @@ axe_step_flags
 
 ; Shotgun: snap up for shot, kick down, settle. Grenade: snap down, recover.
 recoil_shot_y
-	!byte 208, 232, 224
+	!byte WPN_Y_SHOTIDLE - 10, WPN_Y_SHOTIDLE + 14, WPN_Y_SHOTIDLE + 6
 recoil_gren_y
 	!byte 232, 224, 216
 recoil_step_ms_lo

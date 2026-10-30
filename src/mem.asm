@@ -544,9 +544,10 @@ ZC_H		= $CC18 + A8_OFF
 ZS_L		= $CC1E + A8_OFF
 ZS_H		= $CC24 + A8_OFF			; last byte $CC29
 
-; Hardware sprite view-model (VIC bank 3). Atari body/flash cells are baked.
-; Muzzle and splat are mode-E pointers (emuz_src, splat_src). Buffers sit
-; under the heap ceiling so they miss bitmap A.
+; Hardware sprite view-model (VIC bank 3). Each body, flash, muzzle, and
+; splat is one clipped rect (x_byte, y, width, height, row-major plane).
+; emuz_src / splat_src point at that header. Buffers sit under the heap
+; ceiling so they miss bitmap A.
 
 WPN_RAM		= $BE00
 WPN_FLASH	= $BF00
@@ -579,12 +580,11 @@ COL_SPLAT_MISS	= 0			; wall hit / spark; must differ from COL_SPLAT_HIT
 SPLAT_MSB	= $80			; $d010 / $d015 bit for sprite 7
 WPN_X0		= 160			; 2×2 top-left, visual centre 184
 WPN_Y_FLUSH	= 208			; 42px tall, viewport bottom ~250
-WPN_Y_SHOTIDLE	= 218		; shotgun: 10px below WPN_Y_FLUSH
+WPN_Y_SHOTIDLE	= 228		; 32px art; −10 kick still meets the viewport bottom
 WPN_Y_AXEIDLE	= 229		; half off: top pair only
 WPN_Y_CHAINIDLE	= 214
 WPN_Y_PISTIDLE	= 224		; 32px art; −6 kick still meets the viewport bottom
-WPN_COL		= 24			; native sprite width
-WPN_ROW		= 21			; native sprite height
+; Rect size is per sprite (byte-aligned x, ink-tight y), not a fixed 24×21.
 FLASH_X_C	= 172			; 24px flash centred on visual 184
 FLASH_X_NL	= 160			; chaingun left
 FLASH_X_NR	= 184			; chaingun right
@@ -692,7 +692,7 @@ nc_n		= $CC71 + A8_OFF			; near clip: scaled (ZCLIP - zB) / (zF - zB)
 nc_d		= $CC72 + A8_OFF
 nc_v		= $CC73 + A8_OFF			; near clip: CAM index across lerp16
 nc_s		= $CC74 + A8_OFF			; near clip: behind endpoint's ox/oy slot (0/4)
-emuz_src	= $CC75 + A8_OFF			; mode-E muzzle rows (21×3)
+emuz_src	= $CC75 + A8_OFF			; clipped muzzle rect
 ammo_bullets	= $CC77 + A8_OFF			; pistol reserve (not in the $CD00 block)
 in_wpn_pist	= $CC78 + A8_OFF
 key_wpn_pist	= $CC79 + A8_OFF
@@ -904,7 +904,7 @@ barrel_ch_l	= $CF77 + A8_OFF
 barrel_ch_h	= $CF78 + A8_OFF
 shot_th		= $CF79 + A8_OFF		; hitscan barrel winner, $ff = none
 shot_abs	= $CF7A + A8_OFF		; shotgun pellet detonated a barrel
-splat_src	= $CF83 + A8_OFF			; mode-E splat rows (21×3)
+splat_src	= $CF83 + A8_OFF			; clipped splat rect
 !if barrel_pend != fx_vy + FX_N {
 	!error "barrel_pend must follow fx_vy"
 }

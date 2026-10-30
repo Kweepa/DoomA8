@@ -1,22 +1,18 @@
-; Body cells are inverted (ink %00, clear %11) and ANDed, so the gun is black.
-; Player flashes are ink %11. Phase 1 ORs line colour; phase 2 writes
-; pixel %10 (COLPF1). The enemy muzzle and the splats are mode-E rows,
-; snapped to a byte: three stores per row. Muzzle always writes %10.
+; One rect per graphic: x_byte, y, width, height, then row-major bytes.
+; Bodies are inverted (ink %00, clear %11) and ANDed, so the gun is black.
+; Flashes, splats, and the enemy muzzle are ink %11. ORA paints line colour;
+; red writes pixel %10 (COLPF1). X is phase 0 (a multiple of 8 hires).
 !zone a8stamp
 
 stamp_x		!byte 0
 stamp_xh	!byte 0
 stamp_y		!byte 0
-stamp_yb	!byte 0
-stamp_slot	!byte 0
-stamp_en	!byte 0
-stamp_base	!byte 0
 stamp_w		!byte 0
 stamp_h		!byte 0
 stamp_xb	!byte 0
 stamp_and	!byte 0			; 1 = AND the plane (black body)
-stamp_red	!byte 0			; 1 = flash fade, pixel %10
-stamp_bl	!byte 0			; splat byte column, signed
+stamp_red	!byte 0			; 1 = pixel %10
+stamp_bl	!byte 0			; world-sprite byte column, signed
 stamp_bh	!byte 0
 stamp_tmp	!byte 0
 
@@ -27,7 +23,11 @@ stamp_view
 	lsr
 	lsr
 	lsr
-	sta stamp_base
+	sta stamp_xb
+	lda wpn_y
+	sec
+	sbc #VIEW_SPR_Y0
+	sta stamp_y
 	ldx cur_weapon
 	lda wpn_fr_base,x
 	cpx #WPN_CHAIN
@@ -44,9 +44,7 @@ stamp_view
 	sta stamp_and
 	lda #0
 	sta stamp_red
-	jsr blit_list
-	lda #0
-	sta stamp_and
+	jsr blit_rect
 
 	lda flash_phase
 	beq .no4
@@ -87,7 +85,8 @@ stamp_view
 .nos
 	rts
 
-; init_ptr set. A is the phase (1 = line colour, 2 = red). X is absolute.
+; init_ptr set. A is the phase (1 = line colour, 2 = red). X is absolute,
+; so the anchor byte is 0 and the header x_byte is the viewport column.
 stamp_flash
 	ldx #0
 	cmp #2
@@ -96,30 +95,28 @@ stamp_flash
 .yel
 	stx stamp_red
 	lda #0
-	sta stamp_base
-	jmp blit_list
+	sta stamp_and
+	sta stamp_xb
+	lda wpn_y
+	sec
+	sbc #VIEW_SPR_Y0
+	sta stamp_y
+	jmp blit_rect
 
-; init_ptr = cell list (count, then x_byte, y, width, height, image).
-; stamp_base is added to each x_byte. Rows stop at y = 128.
-blit_list
-	ldy #0
-	lda (init_ptr),y
-	bne .go
-	rts
-.go
-	sta stamp_slot
-	inc init_ptr
-	bne .cell
-	inc init_ptr+1
-.cell
+; init_ptr = one rect. stamp_xb / stamp_y are the anchor; the header
+; x_byte and y are added. Rows at y >= 128 are skipped so a stock can
+; hang off the bottom. The op is chosen once per row.
+blit_rect
 	ldy #0
 	lda (init_ptr),y
 	clc
-	adc stamp_base
+	adc stamp_xb
 	sta stamp_xb
 	iny
 	lda (init_ptr),y
-	sta stamp_yb
+	clc
+	adc stamp_y
+	sta stamp_y
 	iny
 	lda (init_ptr),y
 	sta stamp_w
@@ -129,45 +126,29 @@ blit_list
 	clc
 	lda init_ptr
 	adc #4
-	sta init_ptr
 	sta src_ptr
 	lda init_ptr+1
 	adc #0
-	sta init_ptr+1
 	sta src_ptr+1
-	lda wpn_y
-	sec
-	sbc #VIEW_SPR_Y0
-	clc
-	adc stamp_yb
-	sta stamp_y
-.bl_row
+.row
 	lda stamp_y
 	cmp #128
 	bcs .adv
-	jsr blit_row
+	jsr blit_scan
 .adv
 	clc
 	lda src_ptr
 	adc stamp_w
 	sta src_ptr
-	bcc +
+	bcc .src_ok
 	inc src_ptr+1
-+
+.src_ok
 	inc stamp_y
 	dec stamp_h
-	bne .bl_row
-	lda src_ptr
-	sta init_ptr
-	lda src_ptr+1
-	sta init_ptr+1
-	dec stamp_slot
-	beq .bl_done
-	jmp .cell
-.bl_done
+	bne .row
 	rts
 
-blit_row
+blit_scan
 	lda #0
 	sta dst_ptr+1
 	lda stamp_y
@@ -187,16 +168,32 @@ blit_row
 	adc #0
 	adc bmp_hi
 	sta dst_ptr+1
-	ldy #0
-.b
 	lda stamp_and
 	bne .and
 	lda stamp_red
 	bne .red
+	ldy #0
+.ora
 	lda (dst_ptr),y
 	ora (src_ptr),y
-	jmp .st
+	sta (dst_ptr),y
+	iny
+	cpy stamp_w
+	bne .ora
+	rts
+.and
+	ldy #0
+-
+	lda (dst_ptr),y
+	and (src_ptr),y
+	sta (dst_ptr),y
+	iny
+	cpy stamp_w
+	bne -
+	rts
 .red
+	ldy #0
+-
 	lda (src_ptr),y
 	sta stamp_tmp
 	and #$55
@@ -206,15 +203,10 @@ blit_row
 	sta stamp_tmp
 	pla
 	eor stamp_tmp
-	jmp .st
-.and
-	lda (dst_ptr),y
-	and (src_ptr),y
-.st
 	sta (dst_ptr),y
 	iny
 	cpy stamp_w
-	bne .b
+	bne -
 	rts
 
 ; A = VIC x, X = msb flag (nonzero → +256)
@@ -239,33 +231,36 @@ stamp_set_y
 	sta stamp_y
 	rts
 
-; Mode-E muzzle. emuz_src is 21×3, phase 0. Always pixel %10.
+; Enemy muzzle. Always pixel %10. Anchor is the uncropped 24×21.
 stamp_emuz
 	lda emuz_src
-	sta src_ptr
+	sta init_ptr
 	lda emuz_src+1
-	sta src_ptr+1
+	sta init_ptr+1
+	lda #0
+	sta stamp_and
 	lda #1
-	sta stamp_en
-	jmp stamp_place
+	sta stamp_red
+	jmp stamp_anchor
 
-; Mode-E splat. splat_src is 21 rows of 3 bytes, phase 0.
-; Hit: V = (P OR V) EOR ($55 AND P) → pixel %10 (COLPF1). Miss: V = V OR P.
+; Splat. Hit writes %10. Miss ORs. Same uncropped anchor as the muzzle.
 stamp_splat
 	lda splat_src
-	sta src_ptr
+	sta init_ptr
 	lda splat_src+1
-	sta src_ptr+1
+	sta init_ptr+1
 	lda #0
-	sta stamp_en
+	sta stamp_and
+	sta stamp_red
 	lda splat_col
 	cmp #COL_SPLAT_HIT
-	bne stamp_place
-	inc stamp_en
+	bne stamp_anchor
+	inc stamp_red
 
-; src_ptr and stamp_en are set. Snap to a byte, clamp the 3×21 inside
-; the viewport, then store three bytes per row with no edge test.
-stamp_place
+; Snap the uncropped left (tip − EMUZ_OX, already in stamp_x) to a byte
+; and keep that 24×21 box inside the viewport. blit_rect then adds the
+; header crop, so the ink stays on the tip.
+stamp_anchor
 	clc
 	lda stamp_x
 	adc #4
@@ -286,87 +281,28 @@ stamp_place
 	bne .xhi
 	lda stamp_bl
 	cmp #BMP_DRAW_W-2		; 3 bytes must end by column 23
-	bcc .yfix
+	bcc .xin
 .xhi
 	lda #BMP_DRAW_W-3
-	sta stamp_bl
+	sta stamp_xb
 	jmp .yfix
 .xlo
 	lda #0
-	sta stamp_bl
+	sta stamp_xb
+	jmp .yfix
+.xin
+	lda stamp_bl
+	sta stamp_xb
 .yfix
 	lda stamp_y
 	bpl .ypos
 	lda #0
 	sta stamp_y
-	beq .arm
+	beq .go
 .ypos
 	cmp #128-20
-	bcc .arm
+	bcc .go
 	lda #128-21
 	sta stamp_y
-.arm
-	lda #21
-	sta stamp_h
-.srow
-	jsr stamp_splat_row
-	clc
-	lda src_ptr
-	adc #3
-	sta src_ptr
-	bcc +
-	inc src_ptr+1
-+
-	inc stamp_y
-	dec stamp_h
-	bne .srow
-	rts
-
-stamp_splat_row
-	lda #0
-	sta dst_ptr+1
-	lda stamp_y
-	sta dst_ptr
-	ldx #5
--
-	asl dst_ptr
-	rol dst_ptr+1
-	dex
-	bne -
-	clc
-	lda dst_ptr
-	adc #BMP_MARGIN
-	sta dst_ptr
-	lda dst_ptr+1
-	adc #0
-	adc bmp_hi
-	sta dst_ptr+1
-	ldx #0
-.spx
-	txa
-	tay
-	lda (src_ptr),y
-	sta stamp_tmp
-	txa
-	clc
-	adc stamp_bl
-	tay
-	lda stamp_en
-	beq .sora
-	lda stamp_tmp
-	and #$55
-	sta stamp_xb
-	lda (dst_ptr),y
-	ora stamp_tmp
-	eor stamp_xb
-	jmp .sput
-.sora
-	lda (dst_ptr),y
-	ora stamp_tmp
-.sput
-	sta (dst_ptr),y
-.snx
-	inx
-	cpx #3
-	bne .spx
-	rts
+.go
+	jmp blit_rect
