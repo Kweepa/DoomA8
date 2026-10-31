@@ -306,7 +306,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "name": "Compuroom",
+      "name": "Computer Room",
       "a8Bg": 4,
       "shape": "box",
       "rx": 0,
@@ -317,10 +317,10 @@
     {
       "id": "5b31a7e1-f037-4cc8-956e-4e27151a6f2c",
       "kind": "crate",
-      "x": 97,
+      "x": 96,
       "y": 57,
       "z": 156,
-      "sx": 4,
+      "sx": 5,
       "sy": 11,
       "sz": 12,
       "face": "+z",
@@ -1203,6 +1203,21 @@
       "dir": 1,
       "roomId": "e8273f44-22c1-4b8b-9625-540ae9febcd9",
       "pickup": "lightpost"
+    },
+    {
+      "id": "3a9ced46-54a2-428b-bdf2-de595ef33c4f",
+      "kind": "crate",
+      "x": 96,
+      "y": 58,
+      "z": 158,
+      "sx": 4,
+      "sy": 10,
+      "sz": 8,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "roomId": "6d086918-ee13-48f3-8f3a-95c9f66c993b",
+      "allEdges": true
     }
   ]
 }
