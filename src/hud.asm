@@ -76,7 +76,7 @@ init_hud
 	lda #HUD_CH_SHELL
 	sta HUD_SCR + HUD_OFF_SHELLS + HUD_AMMO_ICON
 	lda #HUD_CH_ROCKET
-	sta HUD_SCR + HUD_OFF_GREN + HUD_AMMO_ICON
+	sta HUD_SCR + HUD_OFF_RKT + HUD_AMMO_ICON
 	lda #COL_HUD_DIM
 
 
@@ -262,12 +262,12 @@ hud_ammo
 	ldx #HUD_AMMO_NUM
 	lda ammo_shells
 	jsr .u8_3at
-	lda #<HUD_SCR + HUD_OFF_GREN
+	lda #<HUD_SCR + HUD_OFF_RKT
 	sta dst_ptr
-	lda #>HUD_SCR + HUD_OFF_GREN
+	lda #>HUD_SCR + HUD_OFF_RKT
 	sta dst_ptr+1
 	ldx #HUD_AMMO_NUM
-	lda ammo_grenades
+	lda ammo_rockets
 	jsr .u8_3at
 	ldx #HUD_HP_NUM
 	lda player_hp
@@ -651,7 +651,7 @@ hud_msg_center
 .hm_done
 	rts
 
-; Name at HUD_OFF_GREN + HUD_PU_LABEL (row below the 2×2 icon on SHELL/SHELLS).
+; Name at HUD_OFF_RKT + HUD_PU_LABEL (row below the 2×2 icon on SHELL/SHELLS).
 hud_powerup
 	lda pu_kind
 	cmp #TH_RADSUIT
@@ -659,9 +659,9 @@ hud_powerup
 	lda #HUD_CH_SP
 	ldx #5
 
-	lda #<HUD_SCR + HUD_OFF_GREN + HUD_PU_LABEL
+	lda #<HUD_SCR + HUD_OFF_RKT + HUD_PU_LABEL
 	sta init_ptr
-	lda #>HUD_SCR + HUD_OFF_GREN + HUD_PU_LABEL
+	lda #>HUD_SCR + HUD_OFF_RKT + HUD_PU_LABEL
 	sta init_ptr+1
 	lda #HUD_CH_SP
 
@@ -698,9 +698,9 @@ hud_powerup
 	sta HUD_SCR + HUD_OFF_SHELLS + HUD_PU_COL + 1
 	ldy #0
 
-	lda #<HUD_SCR + HUD_OFF_GREN + HUD_PU_LABEL
+	lda #<HUD_SCR + HUD_OFF_RKT + HUD_PU_LABEL
 	sta init_ptr
-	lda #>HUD_SCR + HUD_OFF_GREN + HUD_PU_LABEL
+	lda #>HUD_SCR + HUD_OFF_RKT + HUD_PU_LABEL
 	sta init_ptr+1
 
 .hpu_lab
@@ -834,8 +834,8 @@ hud_str_yellow_req	!text "Yellow keycard required",0
 hud_str_blue_req	!text "Blue keycard required",0
 hud_str_red_req	!text "Red keycard required",0
 hud_str_remote_req	!text "This door is opened elsewhere",0
-thn_hsm	!text "small health",0
-thn_hlg	!text "large health",0
+thn_hsm	!text "stimpack",0
+thn_hlg	!text "medikit",0
 thn_ag	!text "green armor",0
 thn_ab	!text "blue armor",0
 thn_bullets	!text "ammo box",0

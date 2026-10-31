@@ -227,7 +227,7 @@ let bindJoint = -1;
 let clipIndex = 0;
 let frameLocal = 0;
 let mdlScale = DEFAULT_MDL_SCALE;
-let weaponKey = "axe";
+let weaponKey = "shot2";
 let weaponFrame = 0;
 let itemMeshKey = "backpack";
 /** Collapsed room ids in the Objects tree. */
@@ -840,7 +840,7 @@ function applyEditorState(ed) {
     rememberSelectedRoom();
     selectedVerts = [...ed.selectedVerts];
     setMdlScale(ed.mdlScale);
-    weaponKey = WEAPON_KEYS.includes(ed.weapon) ? ed.weapon : "axe";
+    weaponKey = WEAPON_KEYS.includes(ed.weapon) ? ed.weapon : "shot2";
     weaponFrame = Math.max(0, ed.weaponFrame | 0);
     setOverlayOn(ed.overlayOn);
     setOrthoMode(ed.orthoMode);
@@ -2177,8 +2177,9 @@ function renderWeaponInspector(root) {
       ? `${folder} · ${mdl.numVerts} verts · ${mdl.frames.length} frames`
       : `${mdl.numVerts} verts · ${mdl.frames.length} frames`;
   } else if (sharewareWeaponMissing.includes(weaponKey)) {
-    status.textContent = folder
-      ? `${WEAPON_MDL_PATHS[weaponKey]} is not in ${folder}`
+    const mdlPath = WEAPON_MDL_PATHS[weaponKey];
+    status.textContent = folder && mdlPath
+      ? `${mdlPath} is not in ${folder}`
       : "View-model not in the opened PAK";
   } else {
     status.textContent = folder

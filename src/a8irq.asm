@@ -455,10 +455,13 @@ a8_keys
 	bne .nku
 	lda $d209
 	and #$3f
-	cmp #$1f				; 1 axe
+	cmp #$1f				; 1 fist / chainsaw
 	bne .k2
+	lda wpn1_held
+	bne .nk
 	lda #1
-	sta in_wpn_axe
+	sta wpn1_held
+	sta in_wpn_1
 	rts
 .k2
 	cmp #$1e				; 2 pistol
@@ -479,10 +482,10 @@ a8_keys
 	sta in_wpn_chain
 	rts
 .k5
-	cmp #$1d				; 5 grenade
+	cmp #$1d				; 5 rocket
 	bne .ks
 	lda #1
-	sta in_wpn_gren
+	sta in_wpn_rkt
 	rts
 .ks
 	ldx #0					; Shift-S quicksave, Shift-L quickload.
@@ -504,6 +507,7 @@ a8_keys
 .nku
 	lda #0
 	sta qk_held
+	sta wpn1_held
 .nk
 	rts
 
@@ -691,10 +695,10 @@ snapshot_input
 	bcc .si_ms
 	ldx #3
 -
-	lda in_wpn_axe,x
-	sta key_wpn_axe,x
+	lda in_wpn_1,x
+	sta key_wpn_1,x
 	lda #0
-	sta in_wpn_axe,x
+	sta in_wpn_1,x
 	dex
 	bpl -
 	lda in_wpn_pist

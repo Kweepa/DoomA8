@@ -31,19 +31,14 @@ PNG_DIR = ROOT / "assets" / "weapons"
 OUT = ROOT / "src" / "weapon_spr.asm"
 SHEET = PNG_DIR / "sheet.png"
 
-AXE_KEY = "axe"
 EDIT_RE = re.compile(r"^([a-z0-9]+)_(\d+)_edit\.png$", re.I)
 
 # label, png, viewport-relative hires x (VIC x − 88), dy added to weapon y.
-# Same signed offset as wpn_flashdy / place_flash: −FLASH_DY, −FLASH_DY_GUN, FLASH_DY_NAIL.
 FLASHES = [
     ("spr_muzzle_b", "muzzle_flash.png", 172 - 88, -20),
-    ("spr_spark_b", "axe_flash.png", 172 - 88, -10),
-    ("spr_chain_fl_b", "chain_flash_left.png", 160 - 88, -15),
-    ("spr_chain_fr_b", "chain_flash_right.png", 184 - 88, -15),
 ]
 
-# Weapon order in tables: axe, shot, chain, gren, pistol.
+# Weapon order in tables: fist, shot, chain, rocket, pistol, saw.
 # pistol_lines.png and shotgun_lines.png are 2×1 pixels. Even origin,
 # so each pair lands on one mode-E pixel. Pistol columns 12–13 and
 # shotgun columns 20–21 sit on the muzzle stem (clock 47).
@@ -133,6 +128,28 @@ def line_canvas(name: str, ox: int, width: int, height: int | None = None) -> li
     return pix
 
 
+def line_png(name: str) -> list[list[int]]:
+    """Native-size line art. Wider than the old 48-wide canvas."""
+    path = PNG_DIR / name
+    if not path.is_file():
+        raise SystemExit(f"missing {path}")
+    from PIL import Image
+
+    im = Image.open(path).convert("RGB")
+    iw, ih = im.size
+    if iw <= 0 or ih <= 0 or iw > 256 or ih > 127:
+        raise SystemExit(f"{path.name}: {iw}×{ih} outside a mode-E rect")
+    pix = [[0] * iw for _ in range(ih)]
+    src = im.load()
+    for y in range(ih):
+        for x in range(iw):
+            r, g, b = src[x, y][:3]
+            if r > 16 or g > 16 or b > 16:
+                pix[y][x] = 1
+    print(f"  occupancy {path.stem}: {path.name} {iw}×{ih}")
+    return pix
+
+
 def pistol_canvas() -> list[list[int]]:
     return line_canvas("pistol_lines.png", PISTOL_OX, 24)
 
@@ -161,9 +178,11 @@ def write_sheet(rows: list[list[tuple[str, list[list[int]], list[int]]]]) -> Non
         return
     pad = 8
     label_h = 16
+    cell_w = max((len(pix[0]) for row in rows for _, pix, _ in row), default=W)
+    cell_h = max((len(pix) for row in rows for _, pix, _ in row), default=H)
     cols = max((len(row) for row in rows), default=1)
-    img_w = cols * (W + pad) + pad
-    img_h = len(rows) * (H + label_h + pad) + pad
+    img_w = cols * (cell_w + pad) + pad
+    img_h = len(rows) * (cell_h + label_h + pad) + pad
     im = Image.new("RGB", (img_w, img_h), (12, 12, 14))
     draw = ImageDraw.Draw(im)
     try:
@@ -175,11 +194,12 @@ def write_sheet(rows: list[list[tuple[str, list[list[int]], list[int]]]]) -> Non
         x = pad
         for name, pix, packed in row:
             draw.text((x, y), name, fill=(212, 160, 23), font=font)
-            cell_im = Image.new("RGB", (W, H), (10, 10, 12))
+            cell_im = Image.new("RGB", (cell_w, cell_h), (10, 10, 12))
             px = cell_im.load()
-            for yy in range(H):
-                for xx in range(W):
-                    if pix[yy][xx]:
+            for yy in range(len(pix)):
+                row_px = pix[yy]
+                for xx in range(len(row_px)):
+                    if row_px[xx]:
                         px[xx, yy] = (232, 228, 216)
             cy = y + label_h
             im.paste(cell_im, (x, cy))
@@ -189,8 +209,8 @@ def write_sheet(rows: list[list[tuple[str, list[list[int]], list[int]]]]) -> Non
             rx0 = x + xb * 8
             ry0 = cy + yb
             draw.rectangle((rx0, ry0, rx0 + bw * 8 - 1, ry0 + bh - 1), outline=(212, 160, 23))
-            x += W + pad
-        y += label_h + H + pad
+            x += cell_w + pad
+        y += label_h + cell_h + pad
     SHEET.parent.mkdir(parents=True, exist_ok=True)
     im.save(SHEET)
     print(f"Wrote {SHEET.relative_to(ROOT)}")
@@ -210,25 +230,25 @@ def rect_note(data: list[int]) -> str:
 def main() -> None:
     if not DOC.is_file():
         raise SystemExit(f"missing {DOC}")
-    doc = json.loads(DOC.read_text(encoding="utf-8"))
-    weapons = doc.get("weapons") or {}
-
-    rock_frames = item_frames(weapons, "rock")
-    axe_frames = item_frames(weapons, AXE_KEY)
-
     shot_pix = shotgun_canvas()
     cock_pix = cock_canvas()
-    rock_pix = load_pix("rock", rock_frames[0])
-    axe_pix = load_pix("axe", axe_frames[0])
-    chain_pix = load_pix("chain", 0)
     pist_pix = pistol_canvas()
+    fist_pix = line_png("fist_lefthand_lines.png")
+    hand_pix = line_png("fist_righthand_lines.png")
+    saw_pix = line_png("chainsaw_lines.png")
+    chain_pix = line_png("chaingun_a_lines.png")
+    chain2_pix = line_png("chaingun_b_lines.png")
+    rkt_pix = line_png("rocketlauncher_lines.png")
 
-    axe_b = pack_clipped(axe_pix, black=True, name="axe")
     shot_b = pack_clipped(shot_pix, black=True, name="shot")
     cock_b = pack_clipped(cock_pix, black=True, name="cock")
-    rock_b = pack_clipped(rock_pix, black=True, name="rock")
     pist_b = pack_clipped(pist_pix, black=True, name="pist")
+    fist_b = pack_clipped(fist_pix, black=True, name="fist")
+    hand_b = pack_clipped(hand_pix, black=True, name="hand")
+    saw_b = pack_clipped(saw_pix, black=True, name="saw")
     chain_b = pack_clipped(chain_pix, black=True, name="chain")
+    chain2_b = pack_clipped(chain2_pix, black=True, name="chain2")
+    rkt_b = pack_clipped(rkt_pix, black=True, name="rkt")
     if shot_b[0] != 0 or shot_b[1] != 0 or shot_b[2] != 5 or shot_b[3] != 32:
         raise SystemExit(f"shotgun rect {shot_b[:4]}, expected 40x32 at 0,0")
     if cock_b[0] != 2 or cock_b[1] != 0 or cock_b[2] != 4 or cock_b[3] != 42:
@@ -238,51 +258,62 @@ def main() -> None:
         for label, png, ox, dy in FLASHES
     ]
 
+    # Frame order: fist, hand, shot, cock, chain, chain B, rocket, pist, saw.
+    # wpn_fr_base is per weapon id. Chain B is base+1. Cock is the shotgun's +1.
     parts = [
         "; Generated by tools/genweapons.py from assets/weapons — do not edit",
         "; One rect: x_byte, y, width, height, then width*height row-major bytes.",
         "; X is a multiple of 8 hires (phase 0). Bodies are inverted (ink %00, clear %11).",
         "; Flashes are ink %11 / clear %00. Phase 1 ORs line colour; phase 2 writes %10.",
         "",
-        "; Frame pointers: axe, shot, cock, chain, rock, pist.",
+        "; Frame pointers: fist, hand, shot, cock, chain, chain B, rocket, pist, saw.",
         "wpn_fr_lo",
-        "\t!byte <spr_axe_b, <spr_shot_b, <spr_shot_cock_b, <spr_chain_b, <spr_rock_b, <spr_pist_b",
+        "\t!byte <spr_fist_b, <spr_hand_b, <spr_shot_b, <spr_shot_cock_b, <spr_chain_b, <spr_chain2_b, <spr_rkt_b, <spr_pist_b, <spr_saw_b",
         "wpn_fr_hi",
-        "\t!byte >spr_axe_b, >spr_shot_b, >spr_shot_cock_b, >spr_chain_b, >spr_rock_b, >spr_pist_b",
+        "\t!byte >spr_fist_b, >spr_hand_b, >spr_shot_b, >spr_shot_cock_b, >spr_chain_b, >spr_chain2_b, >spr_rkt_b, >spr_pist_b, >spr_saw_b",
         "wpn_fr_base",
-        "\t!byte 0, 1, 3, 4, 5",
+        "\t!byte 0, 2, 4, 6, 7, 8",
         "wpn_fl4_lo",
-        "\t!byte <spr_spark_b, <spr_muzzle_b, <spr_chain_fl_b, <spr_muzzle_b, <spr_muzzle_b",
+        "\t!byte <spr_muzzle_b, <spr_muzzle_b, <spr_muzzle_b, <spr_muzzle_b, <spr_muzzle_b, <spr_muzzle_b",
         "wpn_fl4_hi",
-        "\t!byte >spr_spark_b, >spr_muzzle_b, >spr_chain_fl_b, >spr_muzzle_b, >spr_muzzle_b",
+        "\t!byte >spr_muzzle_b, >spr_muzzle_b, >spr_muzzle_b, >spr_muzzle_b, >spr_muzzle_b, >spr_muzzle_b",
         "",
     ]
-    parts += emit_bytes("spr_axe_b", axe_b)
+    parts += emit_bytes("spr_fist_b", fist_b)
+    parts += emit_bytes("spr_hand_b", hand_b)
     parts += emit_bytes("spr_shot_b", shot_b)
     parts += emit_bytes("spr_shot_cock_b", cock_b)
-    parts += emit_bytes("spr_rock_b", rock_b)
-    parts += emit_bytes("spr_pist_b", pist_b)
     parts += emit_bytes("spr_chain_b", chain_b)
+    parts += emit_bytes("spr_chain2_b", chain2_b)
+    parts += emit_bytes("spr_rkt_b", rkt_b)
+    parts += emit_bytes("spr_pist_b", pist_b)
+    parts += emit_bytes("spr_saw_b", saw_b)
     for label, data in flashes:
         parts += emit_bytes(label, data)
 
     OUT.write_text("\n".join(parts) + "\n", encoding="utf-8")
     print(f"Wrote {OUT.relative_to(ROOT)}")
-    print(f"  axe {rect_note(axe_b)}  shot {rect_note(shot_b)}  cock {rect_note(cock_b)}")
-    print(f"  rock {rect_note(rock_b)}  pist {rect_note(pist_b)}  chain {rect_note(chain_b)}")
+    print(f"  fist {rect_note(fist_b)}  hand {rect_note(hand_b)}  saw {rect_note(saw_b)}")
+    print(f"  chain {rect_note(chain_b)}  chain2 {rect_note(chain2_b)}  rkt {rect_note(rkt_b)}")
+    print(f"  shot {rect_note(shot_b)}  cock {rect_note(cock_b)}  pist {rect_note(pist_b)}")
     for label, data in flashes:
         print(f"  {label}: {rect_note(data)}")
 
     write_sheet(
         [
             [
-                ("axe", axe_pix, axe_b),
+                ("fist", fist_pix, fist_b),
+                ("hand", hand_pix, hand_b),
+                ("saw", saw_pix, saw_b),
+                ("chain", chain_pix, chain_b),
+                ("chain2", chain2_pix, chain2_b),
+            ],
+            [
+                ("rocket", rkt_pix, rkt_b),
                 ("shot2", shot_pix, shot_b),
                 ("cock", cock_pix, cock_b),
-                ("rock", rock_pix, rock_b),
                 ("pist", pist_pix, pist_b),
             ],
-            [("chain", chain_pix, chain_b)],
         ]
     )
 

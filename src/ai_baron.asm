@@ -155,20 +155,20 @@ ai_baron_entry
 	stx obj_i
 	+lda_mx en_type
 	sta ent_type
-	ldy #GREN_WRIST_L
+	ldy #RKT_WRIST_L
 	jsr ent_vert_world
 	lda org_yh
 	pha
-	ldy #GREN_WRIST_R
+	ldy #RKT_WRIST_R
 	jsr ent_vert_world
 	pla
 	cmp org_yh
 	bcc .fire_hand
 	beq .fire_hand
-	ldy #GREN_WRIST_L
+	ldy #RKT_WRIST_L
 	jsr ent_vert_world
 .fire_hand
-	jsr gren_alloc
+	jsr rkt_alloc
 	bcc .throw_rts
 	stx obj_i
 	lda cam_xh
@@ -182,10 +182,10 @@ ai_baron_entry
 	jsr atan2_yaw
 	sta rot2
 	ldx obj_i
-	lda #GREN_OWN_EN
-	jsr gren_fill_slot
+	lda #RKT_OWN_EN
+	jsr rkt_fill_slot
 	ldx obj_i
-	lda #GREN_F_FIREBALL | GREN_F_BARON
+	lda #RKT_F_FIREBALL | RKT_F_BARON
 	sta gr_flags,x
 	jmp .z_aim
 .throw_rts
@@ -302,13 +302,13 @@ ai_baron_entry
 	lda gr_on,x
 	beq .fl_n
 	lda gr_flags,x
-	and #GREN_F_FIREBALL
+	and #RKT_F_FIREBALL
 	beq .fl_n
 	sec
 	rts
 .fl_n
 	inx
-	cpx #GREN_MAX
+	cpx #RKT_MAX
 	bcc .fl
 	clc
 	rts

@@ -15,34 +15,41 @@ stamp_red	!byte 0			; 1 = pixel %10
 stamp_bl	!byte 0			; world-sprite byte column, signed
 stamp_bh	!byte 0
 stamp_tmp	!byte 0
+stamp_y0	!byte 0			; viewport Y restored by stamp_at_x
 
 stamp_view
-	lda wpn_x
-	sec
-	sbc #VIEW_SPR_X0
-	lsr
-	lsr
-	lsr
-	sta stamp_xb
-	lda wpn_y
+	jsr wpn_y_bob
+	jsr saw_dy
 	sec
 	sbc #VIEW_SPR_Y0
-	sta stamp_y
+	sta stamp_y0
 	ldx cur_weapon
+	cpx #WPN_FIST
+	beq .sv_fist
+	lda wpn_x
+	jsr stamp_at_x
 	lda wpn_fr_base,x
 	clc
 	adc wpn_fr
 	tax
 	lda wpn_fr_lo,x
-	sta init_ptr
-	lda wpn_fr_hi,x
-	sta init_ptr+1
-	lda #1
-	sta stamp_and
-	lda #0
-	sta stamp_red
-	jsr blit_rect
-
+	ldy wpn_fr_hi,x
+	jsr stamp_body
+	jmp .sv_flash
+.sv_fist
+	lda wpn_x
+	jsr stamp_at_x
+	lda wpn_pose
+	bne .sv_punch
+	lda #<spr_hand_b
+	ldy #>spr_hand_b
+	bne .sv_fist_body
+.sv_punch
+	lda #<spr_fist_b
+	ldy #>spr_fist_b
+.sv_fist_body
+	jsr stamp_body
+.sv_flash
 	lda wpn_pose
 	cmp #POSE_COCK
 	beq .no5
@@ -58,9 +65,9 @@ stamp_view
 .no4
 	lda flash5_phase
 	beq .no5
-	lda #<spr_chain_fr_b
+	lda #<spr_muzzle_b
 	sta init_ptr
-	lda #>spr_chain_fr_b
+	lda #>spr_muzzle_b
 	sta init_ptr+1
 	lda flash5_phase
 	jsr stamp_flash
@@ -97,11 +104,66 @@ stamp_flash
 	lda #0
 	sta stamp_and
 	sta stamp_xb
-	lda wpn_y
+	jsr wpn_y_bob
 	sec
 	sbc #VIEW_SPR_Y0
 	sta stamp_y
 	jmp blit_rect
+
+; A = screen X (wpn_x). Restores the saved viewport Y.
+stamp_at_x
+	sec
+	sbc #VIEW_SPR_X0
+	lsr
+	lsr
+	lsr
+	sta stamp_xb
+	lda stamp_y0
+	sta stamp_y
+	rts
+
+; A = lo, Y = hi. Blits one body rect. Clobbers stamp_xb / stamp_y.
+stamp_body
+	sta init_ptr
+	sty init_ptr+1
+	lda #1
+	sta stamp_and
+	lda #0
+	sta stamp_red
+	jmp blit_rect
+
+; A = bobbed wpn_y. Chainsaw drops saw_amp when saw_flip bit 0 is set.
+; Down only, so the outline never lifts off the viewport bottom.
+saw_dy
+	ldx cur_weapon
+	cpx #WPN_SAW
+	bne .sd_rts
+	ldx saw_flip
+	cpx #1
+	beq .sd_add
+	cpx #3
+	bne .sd_rts
+.sd_add
+	clc
+	adc saw_amp
+.sd_rts
+	rts
+
+; A = wpn_y plus the walk bob. Phase 0 (rest, firing, airborne) adds 0.
+; (SINTAB[0..127] + 8) >> 5 is 0 at rest and 4 at the crest.
+wpn_y_bob
+	ldy wpn_bob_ph
+	lda SINTAB,y
+	clc
+	adc #8
+	lsr
+	lsr
+	lsr
+	lsr
+	lsr
+	clc
+	adc wpn_y
+	rts
 
 ; init_ptr = one rect. stamp_xb / stamp_y are the anchor; the header
 ; x_byte and y are added. Rows at y >= 128 are skipped so a stock can

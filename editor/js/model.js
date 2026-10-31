@@ -125,12 +125,11 @@ export const ITEM_ORBIT_DIST_MIN = 8;
 export const ITEM_ORBIT_DIST_MAX = 80;
 export const DOC_VERSION = 10;
 export const DEFAULT_WEAPON_SCALE = 0.4;
-export const WEAPON_KEYS = ["axe", "shot2", "chain", "rock"];
+export const WEAPON_KEYS = ["shot2", "chain", "rock"];
 export const WEAPON_LABELS = {
-  axe: "Axe",
   shot2: "Super shotgun",
-  nail: "Nailgun",
-  rock: "Grenade launcher",
+  chain: "Chaingun",
+  rock: "Rocket launcher",
 };
 
 /** Fixed enemy cue set. sight/wince/death play generically; melee/shoot bind to clips. */
@@ -635,10 +634,6 @@ export const BACKPACK_SIDE = BACKPACK_HEIGHT / GOLDEN_RATIO;
 export const BACKPACK_DEPTH = (BACKPACK_SIDE * Math.sqrt(3)) / 2;
 
 const PICKUP_ALIAS = {
-  nailgun: "chaingun",
-  nails: "ammo box",
-  "grenade launcher": "rocket launcher",
-  grenades: "box of rockets",
   "health 25%": "small health",
   "health 50%": "large health",
   armour: "green armor",
@@ -1178,10 +1173,6 @@ export function parseItemMeshes(raw) {
   const src = { ...raw };
   const meshAlias = {
     "health 25%": "small health",
-    grenades: "box of rockets",
-    grenades: "box of rockets",
-    nailgun: "chaingun",
-    "grenade launcher": "rocket launcher",
     "silver key": "yellow keycard",
     "gold key": "blue keycard",
     "rune of earth magic": "red keycard",
@@ -3458,7 +3449,7 @@ export function defaultEditorState() {
     layoutCamera: { x: 28, y: 10, z: -6, yaw: 0.35, pitch: -0.2, speed: 28 },
     animOrbit: { yaw: 0.5, pitch: 0.15, dist: 48 },
     mdlScale: DEFAULT_MDL_SCALE,
-    weapon: "axe",
+    weapon: "shot2",
     weaponFrame: 0,
     overlayOn: true,
     orthoMode: "top",

@@ -28,7 +28,7 @@ They run a room-scoped state machine (idle / patrol / alert / approach / attack 
 
 Yaw is rolled(!) into the world rotation to avoid a double rotate. Perspective and rotation use 8-bit **log / antilog LUTs** (`alog(log|x| + log|cos θ|)`).
 
-**Axe** is melee. **Super shotgun** is a hitscan with range falloff, blood on a hit and a wall splat on a miss. **Chaingun** is a tighter hitscan (smaller cone, lower damage, same LOS / splat path). **Grenade launcher** throws a bouncing grenade with splash damage. The blast is a half-dome of charset pixels: six unique directions, the other three quadrants filled with 90° Y rotates.
+**Fist** is two rectangles (left fist, right hand) and is always owned. **Chainsaw** is one vibrating rectangle, granted by the pickup; key 1 toggles the two. **Super shotgun** is a hitscan with range falloff, blood on a hit and a wall splat on a miss. **Chaingun** is a faster centered hitscan that uses the pistol muzzle and swaps two body frames. **Rocket launcher** throws a bouncing rocket with splash damage. The blast is a half-dome of charset pixels: six unique directions, the other three quadrants filled with 90° Y rotates.
 
 The player weapon is stamped into the mode-E bitmap (body, muzzle, enemy muzzle, impact splat). Bob and recoil move that stamp.
 

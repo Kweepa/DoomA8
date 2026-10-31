@@ -1,10 +1,10 @@
-; Bouncing grenades: player grenade launcher. Faction owner (contact skips
+; Bouncing rockets: player rocket launcher. Faction owner (contact skips
 ; allies; splash does not). One explosion at a time via fx_on.
 ; Fireballs are imp and baron shots: no bounce, direct hit only.
-!zone grenade
+!zone rocket
 
-init_grenades
-	ldx #GREN_MAX - 1
+init_rockets
+	ldx #RKT_MAX - 1
 	lda #0
 .ig
 	sta gr_on,x
@@ -13,13 +13,13 @@ init_grenades
 	rts
 
 ; C=1 X=free slot; C=0 full
-gren_alloc
+rkt_alloc
 	ldx #0
 .ga
 	lda gr_on,x
 	beq .ga_ok
 	inx
-	cpx #GREN_MAX
+	cpx #RKT_MAX
 	bcc .ga
 	clc
 	rts
@@ -27,8 +27,8 @@ gren_alloc
 	sec
 	rts
 
-; A = yaw. Y = horizontal speed. X = slot. Upward GREN_SPEED_Y.
-gren_set_vel
+; A = yaw. Y = horizontal speed. X = slot. Upward RKT_SPEED_Y.
+rkt_set_vel
 	stx obj_i
 	sta rot2
 	sty rot0
@@ -48,14 +48,14 @@ gren_set_vel
 	sta gr_vzh,x
 	lda #0
 	sta gr_vzl,x
-	lda #GREN_SPEED_Y
+	lda #RKT_SPEED_Y
 	sta gr_vyh,x
 	lda #0
 	sta gr_vyl,x
 	rts
 
 ; X=slot. org_* = pos. rot2 = aim yaw. A = owner.
-gren_fill_slot
+rkt_fill_slot
 	sta gr_owner,x
 	lda org_xl
 	sta gr_xl,x
@@ -74,23 +74,23 @@ gren_fill_slot
 	sta gr_acc,x
 	sta gr_fuse_l,x
 	sta gr_fuse_h,x
-	lda #<GREN_LIFE_MS
+	lda #<RKT_LIFE_MS
 	sta gr_life_l,x
-	lda #>GREN_LIFE_MS
+	lda #>RKT_LIFE_MS
 	sta gr_life_h,x
 	lda #1
 	sta gr_on,x
-	ldy #GREN_SPEED
+	ldy #RKT_SPEED
 	lda gr_owner,x
 	bne +
-	ldy #GREN_SPEED_PL
+	ldy #RKT_SPEED_PL
 +
 	lda rot2
-	jmp gren_set_vel
+	jmp rkt_set_vel
 
 ; Player center: cam xz, Y = feet + 2 (eye − (EYE_HEIGHT − 2)).
-spawn_player_grenade
-	jsr gren_alloc
+spawn_player_rocket
+	jsr rkt_alloc
 	bcc .spg_rts
 	stx obj_i
 	lda cam_xl
@@ -110,19 +110,19 @@ spawn_player_grenade
 	ldx obj_i
 	lda yaw
 	sta rot2
-	lda #GREN_OWN_PL
-	jsr gren_fill_slot
+	lda #RKT_OWN_PL
+	jsr rkt_fill_slot
 .spg_rts
 	rts
 
-update_grenades
+update_rockets
 	ldx #0
 .ug
-	cpx #GREN_MAX
+	cpx #RKT_MAX
 	bcs .ug_rts
 	lda gr_on,x
 	beq .ug_n
-	jsr gren_tick
+	jsr rkt_tick
 	ldx obj_i
 .ug_n
 	inx
@@ -130,7 +130,7 @@ update_grenades
 .ug_rts
 	rts
 
-gren_tick
+rkt_tick
 	stx obj_i
 	lda room_idx
 	sta col_room
@@ -145,64 +145,64 @@ gren_tick
 	lda proc_tmp1
 	bne .gt_step
 	lda proc_tmp0
-	cmp #GREN_TICK_MS
+	cmp #RKT_TICK_MS
 	bcc .gt_tdone
 .gt_step
 	sec
 	lda proc_tmp0
-	sbc #GREN_TICK_MS
+	sbc #RKT_TICK_MS
 	sta proc_tmp0
 	lda proc_tmp1
 	sbc #0
 	sta proc_tmp1
 	ldx obj_i
 	lda gr_flags,x
-	and #GREN_F_FIREBALL
+	and #RKT_F_FIREBALL
 	bne .gt_move
 	sec
 	lda gr_vyl,x
-	sbc #<GREN_GRAV
+	sbc #<RKT_GRAV
 	sta gr_vyl,x
 	lda gr_vyh,x
-	sbc #>GREN_GRAV
+	sbc #>RKT_GRAV
 	sta gr_vyh,x
 .gt_move
-	jsr gren_move_x
-	jsr gren_move_z
-	jsr gren_move_y
+	jsr rkt_move_x
+	jsr rkt_move_z
+	jsr rkt_move_y
 	ldx obj_i
 	lda gr_owner,x
 	bne .gt_vspl
-	jsr gren_hit_enemies
+	jsr rkt_hit_enemies
 	jmp .gt_hitd
 .gt_vspl
-	jsr gren_hit_player
+	jsr rkt_hit_player
 .gt_hitd
 	ldx obj_i
 	lda gr_on,x
 	beq .gt_rts
 	lda gr_flags,x
-	and #GREN_F_PEND
+	and #RKT_F_PEND
 	bne .gt_tdone
 	jmp .gt_tick
 .gt_tdone
 	ldx obj_i
 	lda proc_tmp0
 	sta gr_acc,x
-	jsr gren_contact
+	jsr rkt_contact
 	ldx obj_i
 	lda gr_on,x
 	beq .gt_rts
 	lda gr_flags,x
-	and #GREN_F_PEND
+	and #RKT_F_PEND
 	beq .gt_fuse
 	lda fx_on
 	bne .gt_life
-	jsr gren_explode
+	jsr rkt_explode
 	jmp .gt_rts
 .gt_fuse
 	lda gr_flags,x
-	and #GREN_F_BOUNCE
+	and #RKT_F_BOUNCE
 	beq .gt_life
 	sec
 	lda gr_fuse_l,x
@@ -212,7 +212,7 @@ gren_tick
 	sbc dt_msh
 	sta gr_fuse_h,x
 	bcs .gt_life
-	jsr gren_explode
+	jsr rkt_explode
 	jmp .gt_rts
 .gt_life
 	ldx obj_i
@@ -224,14 +224,14 @@ gren_tick
 	sbc dt_msh
 	sta gr_life_h,x
 	bcs .gt_rts
-	jsr gren_explode
+	jsr rkt_explode
 .gt_rts
 	rts
 
-gren_asr_ay
+rkt_asr_ay
 	sta nlo
 	sty nhi
-gren_asr5
+rkt_asr5
 	ldy #5
 .ga5
 	lda nhi
@@ -246,14 +246,14 @@ gren_asr5
 	!error "gr_v* layout"
 }
 ; A = <vel_lo (Y unused). Negate and asr1.
-gren_bounce
+rkt_bounce
 	pha
 	ldx obj_i
 	lda gr_flags,x
-	and #GREN_F_FIREBALL
+	and #RKT_F_FIREBALL
 	beq .gb_n
 	pla
-	jmp gren_clear
+	jmp rkt_clear
 .gb_n
 	pla
 	; A = <gr_v?l. The arrays are 4 apart per slot, axes 8 apart, hi = lo + 4,
@@ -275,22 +275,22 @@ gren_bounce
 	ror gr_vxl,x
 	ldx obj_i
 	lda gr_flags,x
-	and #GREN_F_BOUNCE
+	and #RKT_F_BOUNCE
 	bne .gmb_rts
 	lda gr_flags,x
-	ora #GREN_F_BOUNCE
+	ora #RKT_F_BOUNCE
 	sta gr_flags,x
-	lda #<GREN_FUSE_MS
+	lda #<RKT_FUSE_MS
 	sta gr_fuse_l,x
-	lda #>GREN_FUSE_MS
+	lda #>RKT_FUSE_MS
 	sta gr_fuse_h,x
 .gmb_rts
 	rts
 
 ; Signed ASR vx and vz (floor hop only).
-gren_floor_xz
+rkt_floor_xz
 	ldx obj_i
-	ldy #GREN_FLOOR_XZ_ASR
+	ldy #RKT_FLOOR_XZ_ASR
 .gfx
 	lda gr_vxh,x
 	cmp #$80
@@ -298,7 +298,7 @@ gren_floor_xz
 	ror gr_vxl,x
 	dey
 	bne .gfx
-	ldy #GREN_FLOOR_XZ_ASR
+	ldy #RKT_FLOOR_XZ_ASR
 .gfz
 	lda gr_vzh,x
 	cmp #$80
@@ -308,11 +308,11 @@ gren_floor_xz
 	bne .gfz
 	rts
 
-gren_move_x
+rkt_move_x
 	ldx obj_i
 	lda gr_vxl,x
 	ldy gr_vxh,x
-	jsr gren_asr_ay
+	jsr rkt_asr_ay
 	clc
 	lda gr_xl,x
 	adc nlo
@@ -324,13 +324,13 @@ gren_move_x
 	lda gr_zh,x
 	sta col_z
 	lda #0
-	beq gren_xz_done
+	beq rkt_xz_done
 
-gren_move_z
+rkt_move_z
 	ldx obj_i
 	lda gr_vzl,x
 	ldy gr_vzh,x
-	jsr gren_asr_ay
+	jsr rkt_asr_ay
 	clc
 	lda gr_zl,x
 	adc nlo
@@ -343,19 +343,19 @@ gren_move_z
 	lda save_xh
 	sta col_z
 	lda #1
-gren_xz_done
+rkt_xz_done
 	sta pv2
-	jsr gren_pos_ok
+	jsr rkt_pos_ok
 	bcs .ok
 	lda pv2
 	bne .bz
 	lda #<gr_vxl
 	ldy #<gr_vxh
-	jmp gren_bounce
+	jmp rkt_bounce
 .bz
 	lda #<gr_vzl
 	ldy #<gr_vzh
-	jmp gren_bounce
+	jmp rkt_bounce
 .ok
 	ldx obj_i
 	lda pv2
@@ -372,11 +372,11 @@ gren_xz_done
 	sta gr_zh,x
 	rts
 
-gren_move_y
+rkt_move_y
 	ldx obj_i
 	lda gr_vyl,x
 	ldy gr_vyh,x
-	jsr gren_asr_ay
+	jsr rkt_asr_ay
 	clc
 	lda gr_yl,x
 	adc nlo
@@ -394,13 +394,13 @@ gren_move_y
 	cmp save_xh
 	beq .gmy_ceil
 	bcc .gmy_ceil
-	jmp gren_try_y
+	jmp rkt_try_y
 .gmy_ceil
 	lda #<gr_vyl
 	ldy #<gr_vyh
-	jmp gren_bounce
+	jmp rkt_bounce
 .gmy_down
-	jsr gren_col_xz
+	jsr rkt_col_xz
 	ldx obj_i
 	lda gr_yh,x
 	sta fb_probe_y
@@ -410,23 +410,23 @@ gren_move_y
 	jsr floor_below_y
 	pla
 	sta proc_tmp0			; PLA/STA keep C
-	bcc gren_try_y
+	bcc rkt_try_y
 	lda proc_tmp2
 	cmp save_xh
 	beq .gmy_land
-	bcc gren_try_y
+	bcc rkt_try_y
 .gmy_land
 	ldx obj_i
 	lda #0
 	sta gr_yl,x
 	lda proc_tmp2
 	sta gr_yh,x
-	jsr gren_floor_xz
+	jsr rkt_floor_xz
 	lda #<gr_vyl
 	ldy #<gr_vyh
-	jmp gren_bounce
+	jmp rkt_bounce
 
-gren_try_y
+rkt_try_y
 	ldx obj_i
 	lda gr_yl,x
 	sta pv0
@@ -436,8 +436,8 @@ gren_try_y
 	sta gr_yl,x
 	lda save_xh
 	sta gr_yh,x
-	jsr gren_col_xz
-	jsr gren_solid_at
+	jsr rkt_col_xz
+	jsr rkt_solid_at
 	ldx obj_i
 	bcc .gty_ok
 	lda pv0
@@ -446,11 +446,11 @@ gren_try_y
 	sta gr_yh,x
 	lda #<gr_vyl
 	ldy #<gr_vyh
-	jmp gren_bounce
+	jmp rkt_bounce
 .gty_ok
 	rts
 
-gren_col_xz
+rkt_col_xz
 	ldx obj_i
 	lda gr_xh,x
 	sta col_x
@@ -458,9 +458,9 @@ gren_col_xz
 	sta col_z
 	rts
 
-; C=1 allowed (room colliders only — doors do not pass grenades)
-gren_pos_ok
-	; Grenades are points: the PLAYER_R wall margin killed them at the launcher.
+; C=1 allowed (room colliders only — doors do not pass rockets)
+rkt_pos_ok
+	; Rockets are points: the PLAYER_R wall margin killed them at the launcher.
 	lda col_room
 	jsr room_mul3
 	tax
@@ -473,7 +473,7 @@ gren_pos_ok
 	jsr point_in_rc_xz
 	bcc .gpo_no
 .gpo_sol
-	jsr gren_solid_at
+	jsr rkt_solid_at
 	bcs .gpo_no
 	sec
 	rts
@@ -481,8 +481,8 @@ gren_pos_ok
 	clc
 	rts
 
-; Point as player AABB of height PLAYER_H at grenade Y (feet).
-gren_solid_at
+; Point as player AABB of height PLAYER_H at rocket Y (feet).
+rkt_solid_at
 	lda cam_yh
 	pha
 	ldx obj_i
@@ -496,13 +496,13 @@ gren_solid_at
 	sta cam_yh
 	rts
 
-gren_contact
+rkt_contact
 	ldx obj_i
 	lda gr_owner,x
-	bne gren_hit_player
+	bne rkt_hit_player
 
-gren_hit_enemies
-	jsr gren_touch_barrel
+rkt_hit_enemies
+	jsr rkt_touch_barrel
 	ldx obj_i
 	lda gr_on,x
 	beq .ghe_rts
@@ -519,8 +519,8 @@ gren_hit_enemies
 	+lda_mx en_z
 	sta pv1
 	ldx enemy_idx
-	lda #GREN_HIT_R + 1
-	jsr gren_near_lim
+	lda #RKT_HIT_R + 1
+	jsr rkt_near_lim
 	bcs .ghe_n
 	ldx enemy_idx
 	+lda_mx en_y
@@ -529,10 +529,10 @@ gren_hit_enemies
 	clc
 	adc pv0
 	sta pv1
-	jsr gren_in_y
+	jsr rkt_in_y
 	bcc .ghe_n
 	ldx enemy_idx
-	jmp gren_explode
+	jmp rkt_explode
 .ghe_n
 	ldx enemy_idx
 	inx
@@ -540,13 +540,13 @@ gren_hit_enemies
 .ghe_rts
 	rts
 
-gren_hit_player
+rkt_hit_player
 	ldx obj_i
 	lda cam_xh
 	sta pv0
 	lda cam_zh
 	sta pv1
-	jsr gren_near_xz
+	jsr rkt_near_xz
 	bcs .ghp_rts
 	lda cam_yh
 	sec
@@ -555,20 +555,20 @@ gren_hit_player
 	clc
 	adc #PLAYER_H
 	sta pv1
-	jsr gren_in_y
+	jsr rkt_in_y
 	bcc .ghp_rts
 	ldx obj_i
 	lda gr_flags,x
-	and #GREN_F_FIREBALL
-	bne gren_fireball_hit
-	jmp gren_explode
+	and #RKT_F_FIREBALL
+	bne rkt_fireball_hit
+	jmp rkt_explode
 .ghp_rts
 	rts
 
-gren_fireball_hit
+rkt_fireball_hit
 	ldx obj_i
 	lda gr_flags,x
-	and #GREN_F_BARON
+	and #RKT_F_BARON
 	beq +
 	lda #30
 	bne ++
@@ -581,37 +581,37 @@ gren_fireball_hit
 	clc
 	adc rot0
 	jsr take_damage
-	jmp gren_clear
+	jmp rkt_clear
 
-gren_clear
+rkt_clear
 	ldx obj_i
 	lda #0
 	sta gr_on,x
 	rts
 
-; pv0/pv1 = other x/z. C=1 miss. Limit is GREN_HIT_R+1.
-gren_near_xz
-	lda #GREN_HIT_R + 1
+; pv0/pv1 = other x/z. C=1 miss. Limit is RKT_HIT_R+1.
+rkt_near_xz
+	lda #RKT_HIT_R + 1
 ; A = exclusive chebyshev limit. C=1 miss.
-gren_near_lim
+rkt_near_lim
 	sta pv2
 	ldx obj_i
 	lda gr_xh,x
 	sec
 	sbc pv0
-	jsr gren_abs
+	jsr rkt_abs
 	cmp pv2
 	bcs .gnx_no
 	lda gr_zh,x
 	sec
 	sbc pv1
-	jsr gren_abs
+	jsr rkt_abs
 	cmp pv2
 .gnx_no
 	rts
 
 ; pv0 inclusive, pv1 exclusive. C=1 inside.
-gren_in_y
+rkt_in_y
 	ldx obj_i
 	lda gr_yh,x
 	cmp pv0
@@ -624,7 +624,7 @@ gren_in_y
 	clc
 	rts
 
-gren_abs
+rkt_abs
 	bpl +
 	eor #$ff
 	clc
@@ -632,22 +632,22 @@ gren_abs
 +
 	rts
 
-gren_explode
+rkt_explode
 	ldx obj_i
 	lda gr_flags,x
-	and #GREN_F_FIREBALL
+	and #RKT_F_FIREBALL
 	beq +
-	jmp gren_clear
+	jmp rkt_clear
 +
 	lda fx_on
 	beq .gex_go
 	lda gr_flags,x
-	ora #GREN_F_PEND
+	ora #RKT_F_PEND
 	sta gr_flags,x
 	rts
 .gex_go
-	jsr gren_place
-	jsr gren_splash
+	jsr rkt_place
+	jsr rkt_splash
 	jsr start_explosion
 	lda #SOUND_RXPLOD
 	jsr play_sound
@@ -656,7 +656,7 @@ gren_explode
 	sta gr_on,x
 	rts
 
-gren_place
+rkt_place
 	ldx obj_i
 	lda gr_xl,x
 	sta fx_oxl
@@ -676,16 +676,16 @@ gren_place
 	rts
 
 ; Chebyshev 3D vs blast origin ent_wx/wy/wz. pv0/1/2 = target. nlo = d.
-gren_cheby
+rkt_cheby
 	lda ent_wx
 	sec
 	sbc pv0
-	jsr gren_abs
+	jsr rkt_abs
 	sta nlo
 	lda ent_wy
 	sec
 	sbc pv1
-	jsr gren_abs
+	jsr rkt_abs
 	cmp nlo
 	bcc +
 	sta nlo
@@ -693,7 +693,7 @@ gren_cheby
 	lda ent_wz
 	sec
 	sbc pv2
-	jsr gren_abs
+	jsr rkt_abs
 	cmp nlo
 	bcc +
 	sta nlo
@@ -701,7 +701,7 @@ gren_cheby
 	lda nlo
 	rts
 
-gren_splash
+rkt_splash
 	ldx #0
 .gsp_lp
 	cpx	map_nenemies
@@ -716,13 +716,13 @@ gren_splash
 	sta pv1
 	+lda_mx en_z
 	sta pv2
-	jsr gren_cheby
-	cmp #GREN_RAD
+	jsr rkt_cheby
+	cmp #RKT_RAD
 	bcs .gsp_n
 	jsr rnd8
 	and #31
 	clc
-	adc #GREN_DMG_BASE
+	adc #RKT_DMG_BASE
 	ldx enemy_idx
 	jsr damage_enemy
 .gsp_n
@@ -732,10 +732,10 @@ gren_splash
 .gsp_rts
 	rts
 
-; Player grenade only (caller is gren_hit_enemies). Overlap consumes the
-; grenade with its own splash, then detonates the barrel. Not gren_explode:
+; Player rocket only (caller is rkt_hit_enemies). Overlap consumes the
+; rocket with its own splash, then detonates the barrel. Not rkt_explode:
 ; that pends on fx_on and would wait out the chain.
-gren_touch_barrel
+rkt_touch_barrel
 	ldx #0
 .gtb
 	cpx	map_nthings
@@ -757,7 +757,7 @@ gren_touch_barrel
 	sta col_x
 	lda gr_zh,y
 	sta col_z
-	lda #GREN_HIT_R
+	lda #RKT_HIT_R
 	jsr near_box_xz
 	bcc .gtb_n
 	+lda_mx th_y
@@ -767,7 +767,7 @@ gren_touch_barrel
 	sta pv1
 	txa
 	pha
-	jsr gren_in_y
+	jsr rkt_in_y
 	pla
 	tax
 	bcc .gtb_n
@@ -775,9 +775,9 @@ gren_touch_barrel
 	pha
 	txa
 	pha
-	jsr gren_place
-	jsr gren_clear
-	jsr gren_splash
+	jsr rkt_place
+	jsr rkt_clear
+	jsr rkt_splash
 	pla
 	tax
 	jsr barrel_explode
@@ -802,7 +802,7 @@ barrel_explode
 	sta th_taken,x
 	jsr barrel_clr_bit
 	jsr barrel_place
-	jsr gren_splash
+	jsr rkt_splash
 	jsr barrel_queue
 	jsr start_explosion
 	lda #SOUND_RXPLOD
@@ -843,7 +843,7 @@ barrel_pv
 	sta pv2
 	rts
 
-; Live barrels whose centres are inside GREN_RAD of ent_w*.
+; Live barrels whose centres are inside RKT_RAD of ent_w*.
 barrel_queue
 	ldx #0
 .bq
@@ -855,8 +855,8 @@ barrel_queue
 	cmp #TH_BARREL
 	bne .bq_n
 	jsr barrel_pv
-	jsr gren_cheby
-	cmp #GREN_RAD
+	jsr rkt_cheby
+	cmp #RKT_RAD
 	bcs .bq_n
 	jsr barrel_set_bit
 .bq_n
@@ -947,12 +947,12 @@ barrel_clr_bit
 barrel_bit
 	!byte $01, $02, $04, $08, $10, $20, $40, $80
 
-draw_grenades
-	jsr draw_grenades_red
+draw_rockets
+	jsr draw_rockets_red
 	ldx #0
 	stx pv0
 .dgr
-	cpx #GREN_MAX
+	cpx #RKT_MAX
 	bcs .dgr_rts
 	lda gr_on,x
 	beq .dgr_n
@@ -963,7 +963,7 @@ draw_grenades
 	jsr load_view_trig
 	ldx obj_i
 .dgr_go
-	jsr gren_draw_one
+	jsr rkt_draw_one
 	jmp .dgr_ld
 .dgr_ld
 	ldx obj_i
@@ -971,15 +971,15 @@ draw_grenades
 	inx
 	bne .dgr
 .dgr_rts
-	jmp gren_red_off
+	jmp rkt_red_off
 
-; Every grenade draws red. Restore ora before return so later lines stay paper.
-draw_grenades_red
+; Every rocket draws red. Restore ora before return so later lines stay paper.
+draw_rockets_red
 	lda #$49
-	bne gren_red_ops
-gren_red_off
+	bne rkt_red_ops
+rkt_red_off
 	lda #$09
-gren_red_ops
+rkt_red_ops
 	sta esd0+2
 	sta esd1+2
 	sta esd2+2
@@ -998,9 +998,9 @@ gren_red_ops
 	sta etu3+2
 	rts
 
-; One projected centre, then a screen triangle of half-extent GREN_R.
+; One projected centre, then a screen triangle of half-extent RKT_R.
 ; Edges are clipped; off-screen corners are not pulled onto the border.
-gren_draw_one
+rkt_draw_one
 	stx obj_i
 	lda gr_xl,x
 	sta org_xl
@@ -1026,7 +1026,7 @@ gren_draw_one
 	sta gdo_cy
 	lda oy0h
 	sta gdo_cyh
-	lda #GREN_R
+	lda #RKT_R
 	sta ylo
 	lda #0
 	sta yhi
@@ -1130,4 +1130,4 @@ gdo_cy	!byte 0
 gdo_cyh	!byte 0
 gdo_r	!byte 0
 
-grenade_end = *
+rocket_end = *

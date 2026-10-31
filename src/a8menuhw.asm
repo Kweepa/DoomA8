@@ -1408,7 +1408,7 @@ a8_game_dl
 	!byte $70				; 8 blanks
 	!byte $02				; shells
 	!byte $02				; shells
-	!byte $82				; grenades + DLI
+	!byte $82				; rockets + DLI
 	!byte $70				; 8 blanks
 	!byte $02				; message
 	!byte $02				; seam

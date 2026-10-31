@@ -58,7 +58,7 @@ world_init
 	jsr proc_init
 	jsr init_things
 	jsr init_enemies
-	jsr init_grenades
+	jsr init_rockets
 	jsr init_drops
 	lda spawn_y
 	sta floor_y
@@ -882,7 +882,7 @@ crates_block
 	jsr player_overlaps_y
 	bcc .cb_n
 	cpy #0
-	beq .cb_wall			; grenade — volume wall
+	beq .cb_wall			; rocket — volume wall
 	sec
 	lda cam_yh
 	sbc #EYE_HEIGHT			; feet
@@ -919,7 +919,7 @@ crates_block
 ; ------------------------------------------------------------------
 ; solid_at — col_x/col_z blocked by crate, solid platform, or closed door?
 ; C=1 blocked. Y=1: crate rise <= STEP_UP is not a wall (player/enemy).
-; Y=0: crate volume always solid (grenade).
+; Y=0: crate volume always solid (rocket).
 ; solid_at uses room_idx; solid_at_col uses col_room (already set).
 ; ------------------------------------------------------------------
 solid_at
@@ -1741,8 +1741,8 @@ neg_a
 
 ; ------------------------------------------------------------------
 ; Proximity: a blocked move into a use switch. Backpacks every frame.
-; The blocked axis has to be the one that meets the switch from outside
-; its AABB, so a door transit or an enemy beside the pad does not throw it.
+; The block has to be on the face axis, from the air side of that face,
+; so a door transit or an enemy beside the pad does not throw it.
 ; ------------------------------------------------------------------
 SW_USE_RANGE	= 4			; max XZ distance to switch AABB
 
@@ -1974,13 +1974,13 @@ gb_mode
 
 gb_ptr_lo
 	!byte <player_hp, <player_hp, 0, 0, <ammo_bullets
-	!byte <ammo_shells, <ammo_grenades, <ammo_shells, <ammo_bullets, 0
-	!byte <ammo_grenades, 0, 0, 0, 0
+	!byte <ammo_shells, <ammo_rockets, <ammo_shells, <ammo_bullets, 0
+	!byte <ammo_rockets, 0, 0, 0, 0
 	!byte <player_hp, 0, 0, 0
 gb_ptr_hi
 	!byte >player_hp, >player_hp, 0, 0, >ammo_bullets
-	!byte >ammo_shells, >ammo_grenades, >ammo_shells, >ammo_bullets, 0
-	!byte >ammo_grenades, 0, 0, 0, 0
+	!byte >ammo_shells, >ammo_rockets, >ammo_shells, >ammo_bullets, 0
+	!byte >ammo_rockets, 0, 0, 0, 0
 	!byte >player_hp, 0, 0, 0
 
 gb_add
@@ -2003,14 +2003,14 @@ gb_dbl
 
 gb_bits
 	!byte 0, 0, 0, 0, 0
-	!byte 0, 0, HAVE_SHOT, HAVE_CHAIN, HAVE_AXE
-	!byte HAVE_GREN, 0, HAVE_RED, HAVE_YELLOW, HAVE_BLUE
+	!byte 0, 0, HAVE_SHOT, HAVE_CHAIN, HAVE_SAW
+	!byte HAVE_ROCKET, 0, HAVE_RED, HAVE_YELLOW, HAVE_BLUE
 	!byte 0, 0, 0, 0
 
 gb_wpn
 	!byte 0, 0, 0, 0, 0
-	!byte 0, 0, WPN_SHOT, WPN_CHAIN, WPN_AXE
-	!byte WPN_GREN, 0, 0, 0, 0
+	!byte 0, 0, WPN_SHOT, WPN_CHAIN, WPN_SAW
+	!byte WPN_ROCKET, 0, 0, 0, 0
 	!byte 0, 0, 0, 0
 
 gb_snd
@@ -2173,53 +2173,66 @@ pickup_sound
 	lda #SOUND_ITEMUP
 	jmp play_sound
 
-; C=1 if door_blk is pushing into the switch AABB from outside on that axis.
+; C=1 if door_blk pushes into sw_face from the air side. X preserved.
+; The slab cell counts: a crate stops the center on the face, a wall outside it.
 ; box_* is the switch (left by .prox_switch). wish_* is this frame's wish.
+; sw_face bit1 = X axis, bit0 = min-side face. Y = 0 or 2 indexes box_x/box_z.
 .sw_push
+	+lda_mx sw_face
+	pha
+	and #2
+	beq .sp_z
 	lda door_blk
 	lsr
-	bcc .sp_z
+	bcc .sp_pop
 	lda wish_dx
 	ora wish_dxh
-	beq .sp_z
+	beq .sp_pop
 	lda wish_dxh
-	bmi .sp_xm
-	lda cam_xh			; +X: switch strictly east
-	cmp box_x
-	bcc .sp_yes
-	bcs .sp_z
-.sp_xm
-	clc				; -X: switch entirely west of the player
-	lda box_x
-	adc box_sx
-	cmp cam_xh
-	bcc .sp_yes
-	beq .sp_yes
+	ldy #0
+	jmp .sp_sgn
 .sp_z
 	lda door_blk
 	and #2
-	beq .sp_no
+	beq .sp_pop
 	lda wish_dz
 	ora wish_dzh
-	beq .sp_no
+	beq .sp_pop
 	lda wish_dzh
-	bmi .sp_zm
-	lda cam_zh			; +Z: switch strictly north
-	cmp box_z
-	bcc .sp_yes
-	bcs .sp_no
-.sp_zm
-	clc				; -Z: switch entirely south of the player
-	lda box_z
-	adc box_sz
-	cmp cam_zh
-	bcc .sp_yes
-	beq .sp_yes
+	ldy #2
+.sp_sgn
+	asl				; C = wish sign
+	pla				; face. C kept
+	bcs .sp_neg
+	lsr				; C = min-side face
+	bcs .sp_no			; +wish into a min face
+	clc
+	lda box_x,y
+	adc box_sx,y			; exclusive plane
+	pha
+	tya
+	lsr
+	tax				; 0 = X, 1 = Z
+	pla
+	cmp cam_xh,x
+	beq .sp_no			; cam == plane is past the face
+	ldx obj_i
+	rts				; C=1 if cam < plane
+.sp_neg
+	lsr
+	bcc .sp_no			; -wish into a max face
+	tya
+	lsr
+	tax
+	lda cam_xh,x
+	cmp box_x,y			; C=1 if cam >= plane
+	ldx obj_i
+	rts
+.sp_pop
+	pla
 .sp_no
 	clc
-	rts
-.sp_yes
-	sec
+	ldx obj_i
 	rts
 
 ; X=switch; C=1 if within SW_USE_RANGE of pad XZ, Y overlaps, facing the face

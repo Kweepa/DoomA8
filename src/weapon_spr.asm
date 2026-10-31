@@ -3,45 +3,60 @@
 ; X is a multiple of 8 hires (phase 0). Bodies are inverted (ink %00, clear %11).
 ; Flashes are ink %11 / clear %00. Phase 1 ORs line colour; phase 2 writes %10.
 
-; Frame pointers: axe, shot, cock, chain, rock, pist.
+; Frame pointers: fist, hand, shot, cock, chain, chain B, rocket, pist, saw.
 wpn_fr_lo
-	!byte <spr_axe_b, <spr_shot_b, <spr_shot_cock_b, <spr_chain_b, <spr_rock_b, <spr_pist_b
+	!byte <spr_fist_b, <spr_hand_b, <spr_shot_b, <spr_shot_cock_b, <spr_chain_b, <spr_chain2_b, <spr_rkt_b, <spr_pist_b, <spr_saw_b
 wpn_fr_hi
-	!byte >spr_axe_b, >spr_shot_b, >spr_shot_cock_b, >spr_chain_b, >spr_rock_b, >spr_pist_b
+	!byte >spr_fist_b, >spr_hand_b, >spr_shot_b, >spr_shot_cock_b, >spr_chain_b, >spr_chain2_b, >spr_rkt_b, >spr_pist_b, >spr_saw_b
 wpn_fr_base
-	!byte 0, 1, 3, 4, 5
+	!byte 0, 2, 4, 6, 7, 8
 wpn_fl4_lo
-	!byte <spr_spark_b, <spr_muzzle_b, <spr_chain_fl_b, <spr_muzzle_b, <spr_muzzle_b
+	!byte <spr_muzzle_b, <spr_muzzle_b, <spr_muzzle_b, <spr_muzzle_b, <spr_muzzle_b, <spr_muzzle_b
 wpn_fl4_hi
-	!byte >spr_spark_b, >spr_muzzle_b, >spr_chain_fl_b, >spr_muzzle_b, >spr_muzzle_b
+	!byte >spr_muzzle_b, >spr_muzzle_b, >spr_muzzle_b, >spr_muzzle_b, >spr_muzzle_b, >spr_muzzle_b
 
-spr_axe_b
-	!byte $01,$00,$05,$2a,$ff,$ff,$ff,$3f,$ff,$ff,$ff,$ff,$0f,$ff,$ff,$ff
-	!byte $fc,$cf,$ff,$ff,$ff,$fc,$cf,$ff,$ff,$ff,$fc,$cf,$ff,$ff,$ff,$f3
-	!byte $f3,$ff,$ff,$ff,$f3,$f3,$ff,$ff,$ff,$cf,$f3,$ff,$ff,$ff,$cf,$fc
-	!byte $ff,$ff,$ff,$3f,$fc,$ff,$ff,$ff,$3f,$fc,$ff,$ff,$ff,$3f,$fc,$ff
-	!byte $ff,$fc,$ff,$ff,$3f,$ff,$fc,$ff,$ff,$3f,$ff,$f3,$ff,$ff,$3f,$ff
-	!byte $f3,$ff,$ff,$cf,$ff,$cc,$ff,$ff,$cf,$ff,$cc,$ff,$ff,$cf,$ff,$cc
-	!byte $ff,$ff,$f3,$ff,$3c,$ff,$ff,$f3,$ff,$3c,$ff,$ff,$f3,$fc,$fc,$0f
-	!byte $ff,$f3,$fc,$fc,$00,$0f,$fc,$ff,$3c,$3f,$c0,$0c,$ff,$3c,$0f,$ff
-	!byte $c0,$ff,$3c,$0f,$ff,$f3,$ff,$3c,$33,$ff,$0f,$ff,$3c,$33,$fc,$3f
-	!byte $ff,$3c,$3c,$f0,$ff,$ff,$3c,$cc,$cf,$ff,$ff,$3c,$c0,$3f,$ff,$ff
-	!byte $c3,$c0,$3f,$ff,$ff,$c3,$c0,$3f,$ff,$ff,$c3,$c0,$3f,$ff,$ff,$c3
-	!byte $c0,$3f,$ff,$ff,$c3,$c0,$0f,$ff,$ff,$c3,$30,$cf,$ff,$ff,$c0,$f3
-	!byte $0f,$ff,$ff,$c0,$fc,$0f,$ff,$ff,$f3,$fc,$0f,$ff,$ff,$f3,$fc,$0f
-	!byte $ff,$ff,$ff,$fc,$33,$ff
+spr_fist_b
+	!byte $00,$00,$08,$20,$ff,$ff,$ff,$ff,$ff,$ff,$c3,$ff,$ff,$ff,$ff,$ff
+	!byte $ff,$fc,$33,$ff,$ff,$ff,$ff,$ff,$ff,$c3,$fc,$0f,$ff,$ff,$ff,$ff
+	!byte $fc,$3f,$ff,$cf,$ff,$ff,$ff,$ff,$c3,$ff,$ff,$f3,$ff,$ff,$ff,$ff
+	!byte $3f,$ff,$ff,$f3,$ff,$ff,$ff,$ff,$3f,$ff,$ff,$fc,$ff,$ff,$ff,$f0
+	!byte $ff,$ff,$ff,$fc,$ff,$ff,$ff,$f3,$ff,$ff,$ff,$fc,$ff,$ff,$ff,$cf
+	!byte $ff,$ff,$fc,$fc,$ff,$ff,$ff,$3f,$ff,$ff,$fc,$fc,$ff,$ff,$ff,$3f
+	!byte $ff,$ff,$fc,$f3,$ff,$ff,$fc,$ff,$ff,$ff,$fc,$c3,$ff,$ff,$f3,$ff
+	!byte $ff,$ff,$fc,$33,$ff,$ff,$cf,$ff,$ff,$ff,$ff,$c3,$ff,$ff,$cf,$ff
+	!byte $ff,$ff,$ff,$f3,$ff,$ff,$3f,$ff,$ff,$ff,$ff,$f3,$ff,$fc,$ff,$ff
+	!byte $ff,$ff,$ff,$f3,$ff,$f3,$ff,$ff,$ff,$0f,$ff,$f3,$ff,$f3,$ff,$ff
+	!byte $fc,$f0,$ff,$f3,$ff,$cf,$ff,$ff,$fc,$ff,$00,$0f,$ff,$cf,$ff,$ff
+	!byte $f3,$ff,$ff,$ff,$ff,$3f,$ff,$ff,$f3,$ff,$ff,$ff,$ff,$3f,$ff,$ff
+	!byte $cf,$ff,$ff,$ff,$fc,$ff,$ff,$ff,$cf,$ff,$ff,$ff,$f3,$ff,$ff,$ff
+	!byte $cf,$ff,$ff,$ff,$f3,$ff,$ff,$ff,$cf,$ff,$ff,$ff,$f3,$ff,$ff,$ff
+	!byte $3f,$ff,$ff,$ff,$cf,$ff,$ff,$ff,$3f,$ff,$ff,$ff,$cf,$ff,$ff,$ff
+	!byte $3f,$ff,$ff,$ff,$3f,$ff,$ff,$ff,$3f,$ff,$ff,$ff,$3f,$ff,$ff,$ff
+	!byte $3f,$ff,$ff,$ff
+
+spr_hand_b
+	!byte $00,$00,$07,$15,$ff,$ff,$0f,$0f,$ff,$ff,$ff,$ff,$ff,$33,$30,$ff
+	!byte $ff,$ff,$ff,$ff,$3c,$3f,$3f,$ff,$ff,$ff,$ff,$3f,$3f,$cf,$ff,$ff
+	!byte $ff,$ff,$cf,$cf,$cf,$ff,$ff,$ff,$ff,$cf,$f3,$f0,$ff,$ff,$ff,$ff
+	!byte $f3,$fc,$ff,$3f,$ff,$ff,$ff,$f3,$fc,$ff,$3f,$ff,$ff,$ff,$fc,$ff
+	!byte $3f,$cf,$ff,$ff,$ff,$fc,$ff,$ff,$cf,$ff,$ff,$ff,$ff,$3f,$ff,$f3
+	!byte $ff,$ff,$ff,$ff,$3f,$ff,$fc,$ff,$ff,$ff,$ff,$cf,$ff,$fc,$ff,$ff
+	!byte $ff,$ff,$cf,$ff,$ff,$3f,$ff,$ff,$ff,$cf,$ff,$ff,$3f,$ff,$ff,$ff
+	!byte $cf,$ff,$ff,$cf,$c0,$ff,$ff,$f3,$ff,$ff,$f3,$3f,$0f,$ff,$f3,$ff
+	!byte $ff,$f3,$3f,$f3,$ff,$f3,$ff,$ff,$f3,$03,$fc,$ff,$f3,$ff,$ff,$fc
+	!byte $3c,$fc,$ff,$cf,$ff,$ff,$fc
 
 spr_shot_b
 	!byte $00,$00,$05,$20,$ff,$ff,$fc,$ff,$ff,$ff,$ff,$fc,$ff,$ff,$ff,$ff
-	!byte $fc,$ff,$ff,$ff,$ff,$f0,$3f,$ff,$ff,$ff,$f0,$3f,$ff,$ff,$ff,$f3
-	!byte $3f,$ff,$ff,$ff,$cf,$cf,$ff,$ff,$ff,$cf,$cf,$ff,$ff,$ff,$cf,$cf
-	!byte $ff,$ff,$ff,$cf,$cf,$ff,$ff,$ff,$c0,$0f,$ff,$ff,$fc,$3f,$f3,$ff
-	!byte $ff,$c0,$3f,$f3,$ff,$ff,$3c,$ff,$fc,$ff,$ff,$3c,$ff,$fc,$ff,$fc
-	!byte $fc,$cf,$cc,$ff,$fc,$fc,$c3,$0c,$ff,$fc,$fc,$cc,$cc,$ff,$fc,$fc
-	!byte $cf,$cf,$3f,$fc,$f3,$cc,$cf,$3f,$fc,$f3,$c3,$0f,$3f,$fc,$f3,$ff
-	!byte $ff,$3f,$fc,$f3,$ff,$ff,$cf,$f3,$cf,$fc,$ff,$cf,$f3,$cf,$fc,$ff
-	!byte $cf,$f3,$0f,$ff,$ff,$cf,$c0,$cf,$fc,$ff,$cf,$cf,$cf,$fc,$ff,$cf
-	!byte $cc,$0f,$fc,$ff,$f3,$c3,$3f,$fc,$ff,$f3,$cf,$3f,$fc,$ff,$f3,$cf
+	!byte $f0,$3f,$ff,$ff,$ff,$f0,$3f,$ff,$ff,$ff,$f3,$3f,$ff,$ff,$ff,$cf
+	!byte $cf,$ff,$ff,$ff,$cf,$cf,$ff,$ff,$ff,$cf,$cf,$ff,$ff,$ff,$cf,$cf
+	!byte $ff,$ff,$ff,$c0,$0f,$ff,$ff,$fc,$3f,$f3,$ff,$ff,$c0,$3f,$f3,$ff
+	!byte $ff,$3c,$ff,$fc,$ff,$ff,$3c,$ff,$fc,$ff,$fc,$fc,$ff,$fc,$ff,$fc
+	!byte $fc,$c3,$0c,$ff,$fc,$fc,$cc,$cc,$ff,$fc,$fc,$cf,$cf,$3f,$fc,$f3
+	!byte $c0,$0f,$3f,$fc,$f3,$3f,$f3,$3f,$fc,$f3,$ff,$ff,$3f,$fc,$f3,$ff
+	!byte $ff,$cf,$f3,$cf,$fc,$ff,$cf,$f3,$cf,$fc,$ff,$cf,$f3,$0f,$ff,$ff
+	!byte $cf,$c0,$cf,$fc,$ff,$cf,$cf,$cf,$fc,$ff,$cf,$cc,$0f,$fc,$ff,$f3
+	!byte $c3,$3f,$fc,$ff,$f3,$cf,$3f,$fc,$ff,$f3,$cf,$3f,$fc,$ff,$f3,$cf
 	!byte $3f,$fc,$ff,$f3
 
 spr_shot_cock_b
@@ -57,18 +72,49 @@ spr_shot_cock_b
 	!byte $cf,$ff,$f3,$ff,$cf,$ff,$f3,$ff,$cf,$ff,$f3,$ff,$cf,$ff,$fc,$ff
 	!byte $cf,$ff,$fc,$ff,$cf,$ff,$fc,$ff,$cf,$ff,$fc,$ff
 
-spr_rock_b
-	!byte $01,$00,$04,$2a,$ff,$f0,$0f,$ff,$ff,$f3,$cf,$ff,$ff,$f3,$cf,$ff
-	!byte $ff,$c3,$c3,$ff,$ff,$c3,$c3,$ff,$ff,$c3,$c3,$ff,$ff,$33,$cc,$ff
-	!byte $ff,$33,$cc,$ff,$ff,$33,$cc,$ff,$ff,$33,$cc,$ff,$ff,$33,$cc,$ff
-	!byte $ff,$33,$cc,$ff,$ff,$33,$f0,$ff,$ff,$33,$f0,$ff,$fc,$f3,$f3,$3f
-	!byte $fc,$f3,$f3,$3f,$fc,$f0,$03,$3f,$fc,$c3,$f3,$3f,$fc,$c3,$f3,$3f
-	!byte $fc,$c3,$f0,$3f,$fc,$33,$f0,$3f,$fc,$33,$f0,$3f,$fc,$f3,$f3,$3f
-	!byte $f0,$f3,$f3,$0f,$f0,$f3,$f3,$0f,$f3,$cf,$f3,$cf,$f3,$cf,$f3,$cf
-	!byte $f3,$cf,$f3,$cf,$f3,$cf,$f3,$cf,$f3,$cf,$f3,$cf,$f3,$cf,$f3,$cf
-	!byte $f3,$cf,$f3,$cf,$f3,$cf,$fc,$f3,$cf,$cf,$fc,$f3,$cf,$cf,$fc,$f3
-	!byte $cf,$cf,$fc,$f3,$cf,$cf,$fc,$f3,$cf,$cf,$fc,$f3,$cf,$cf,$fc,$f3
-	!byte $cf,$cf,$fc,$f3,$cf,$cf,$fc,$f3,$cf,$cf,$fc,$f3
+spr_chain_b
+	!byte $00,$00,$06,$20,$ff,$ff,$fc,$3f,$ff,$ff,$ff,$ff,$f3,$cf,$ff,$ff
+	!byte $ff,$ff,$c0,$03,$ff,$ff,$ff,$f0,$3f,$fc,$0f,$ff,$ff,$f3,$fc,$3f
+	!byte $cf,$ff,$ff,$cf,$f3,$cf,$f3,$ff,$ff,$cf,$f3,$cf,$f3,$ff,$ff,$3c
+	!byte $33,$cc,$3c,$ff,$ff,$33,$33,$cc,$cc,$ff,$fc,$cf,$33,$cc,$f3,$3f
+	!byte $fc,$cf,$33,$cc,$f3,$3f,$fc,$cf,$33,$cc,$f3,$3f,$f3,$cf,$33,$cc
+	!byte $f3,$3f,$f3,$cf,$33,$cc,$f3,$cf,$f3,$cf,$30,$0c,$f3,$cf,$f3,$cc
+	!byte $0f,$f0,$33,$cf,$f3,$c3,$ff,$ff,$c3,$cf,$f3,$cf,$ff,$ff,$f3,$cf
+	!byte $f3,$33,$f0,$0f,$fc,$cf,$f0,$fc,$0f,$f0,$3f,$0f,$f0,$f3,$fc,$3f
+	!byte $cf,$0f,$f3,$cf,$f3,$cf,$f3,$cf,$cf,$3f,$cf,$f3,$fc,$f3,$cc,$f3
+	!byte $cf,$f3,$cf,$33,$c3,$cc,$cf,$f3,$33,$c3,$c3,$3c,$cf,$f3,$3c,$c3
+	!byte $0f,$3c,$cf,$f3,$3c,$f0,$0c,$fc,$cf,$f3,$3f,$30,$3c,$fc,$cf,$f3
+	!byte $3f,$3c,$3c,$fc,$00,$00,$3f,$3c,$3c,$03,$ff,$ff,$c0,$3c,$30,$ff
+	!byte $ff,$ff,$ff,$0c
+
+spr_chain2_b
+	!byte $00,$02,$06,$1e,$ff,$ff,$0f,$f0,$ff,$ff,$ff,$fc,$c0,$03,$3f,$ff
+	!byte $ff,$fc,$3f,$fc,$3f,$ff,$ff,$f3,$ff,$ff,$cf,$ff,$ff,$cf,$cf,$f3
+	!byte $f3,$ff,$ff,$cf,$33,$cc,$f3,$ff,$ff,$3c,$f3,$cf,$3c,$ff,$ff,$3c
+	!byte $f3,$cf,$3c,$ff,$fc,$fc,$f3,$cf,$3f,$3f,$fc,$fc,$f3,$cf,$3f,$3f
+	!byte $fc,$3c,$f3,$cf,$3c,$3f,$f3,$3c,$f3,$cf,$3c,$3f,$f3,$3c,$f3,$cf
+	!byte $3c,$cf,$f3,$3c,$f0,$0f,$3c,$cf,$f3,$3c,$0f,$f0,$3c,$cf,$f3,$33
+	!byte $ff,$3f,$cc,$cf,$f3,$0f,$ff,$ff,$f0,$cf,$f3,$3f,$f0,$0f,$fc,$cf
+	!byte $f0,$fc,$0f,$f0,$3f,$0f,$f0,$f3,$ff,$ff,$cf,$0f,$f3,$cf,$ff,$ff
+	!byte $f3,$cf,$cf,$3f,$0f,$f0,$fc,$f3,$cc,$fc,$f3,$cf,$3f,$33,$c3,$f3
+	!byte $f3,$cf,$cf,$c3,$c3,$f3,$f3,$cf,$cf,$c3,$0f,$f3,$f3,$cf,$cf,$f0
+	!byte $0c,$f3,$f3,$cf,$cf,$30,$3c,$f3,$f3,$cf,$cf,$3c,$3c,$f0,$00,$00
+	!byte $0f,$3c,$3c,$03,$ff,$ff,$c0,$3c
+
+spr_rkt_b
+	!byte $00,$00,$06,$20,$ff,$ff,$f0,$0f,$ff,$ff,$ff,$ff,$cf,$f3,$ff,$ff
+	!byte $ff,$ff,$3f,$fc,$ff,$ff,$ff,$ff,$3c,$3c,$ff,$ff,$ff,$fc,$ff,$ff
+	!byte $3f,$ff,$ff,$f3,$f0,$0f,$cf,$ff,$ff,$f3,$cf,$f3,$cf,$ff,$ff,$cf
+	!byte $f0,$0f,$f3,$ff,$ff,$cf,$cf,$f3,$f3,$ff,$ff,$cf,$30,$0c,$f3,$ff
+	!byte $ff,$3f,$ff,$ff,$fc,$ff,$ff,$3f,$c0,$03,$fc,$ff,$ff,$3f,$3f,$fc
+	!byte $fc,$ff,$ff,$3f,$f3,$cf,$fc,$ff,$ff,$3f,$ff,$ff,$fc,$ff,$ff,$3f
+	!byte $ff,$ff,$fc,$ff,$ff,$cf,$fc,$3f,$f3,$ff,$ff,$cf,$f0,$0f,$f3,$ff
+	!byte $fc,$3f,$ff,$ff,$fc,$3f,$fc,$ff,$ff,$ff,$ff,$3f,$fc,$ff,$ff,$ff
+	!byte $ff,$3f,$f3,$ff,$ff,$ff,$ff,$cf,$f3,$ff,$ff,$ff,$ff,$cf,$f3,$ff
+	!byte $ff,$ff,$ff,$cf,$f3,$ff,$c0,$03,$ff,$cf,$fc,$ff,$f0,$0f,$ff,$3f
+	!byte $fc,$ff,$ff,$ff,$ff,$3f,$fc,$ff,$ff,$ff,$ff,$3f,$fc,$ff,$ff,$ff
+	!byte $ff,$3f,$f3,$ff,$ff,$ff,$ff,$cf,$f3,$ff,$ff,$ff,$ff,$cf,$f3,$ff
+	!byte $ff,$ff,$ff,$cf
 
 spr_pist_b
 	!byte $01,$00,$04,$20,$ff,$fc,$ff,$ff,$ff,$f0,$3f,$ff,$ff,$cc,$cf,$ff
@@ -81,41 +127,30 @@ spr_pist_b
 	!byte $f3,$ff,$fc,$ff,$f3,$ff,$fc,$ff,$f3,$ff,$fc,$ff,$cf,$ff,$fc,$ff
 	!byte $cf,$ff,$fc,$ff
 
-spr_chain_b
-	!byte $00,$00,$06,$2a,$ff,$c0,$03,$c0,$0f,$ff,$ff,$cf,$f3,$cf,$f3,$ff
-	!byte $ff,$cf,$f3,$cf,$f3,$ff,$ff,$cf,$f3,$cf,$f3,$ff,$ff,$00,$03,$c0
-	!byte $03,$ff,$ff,$30,$f3,$cc,$33,$ff,$ff,$30,$f3,$cc,$c3,$ff,$ff,$30
-	!byte $f3,$cc,$c3,$ff,$ff,$30,$c3,$cf,$03,$ff,$ff,$30,$c0,$03,$03,$ff
-	!byte $ff,$0c,$c3,$03,$03,$ff,$ff,$0c,$c3,$03,$03,$ff,$ff,$0c,$c3,$33
-	!byte $30,$ff,$ff,$0c,$c3,$33,$30,$ff,$fc,$00,$00,$00,$00,$ff,$fc,$3f
-	!byte $ff,$ff,$fc,$ff,$fc,$3f,$ff,$ff,$fc,$ff,$fc,$3f,$ff,$ff,$fc,$3f
-	!byte $fc,$ff,$ff,$ff,$fc,$3f,$f0,$ff,$ff,$ff,$ff,$3f,$f0,$00,$00,$00
-	!byte $00,$3f,$f0,$ff,$ff,$ff,$ff,$0f,$f0,$ff,$ff,$ff,$ff,$0f,$f0,$00
-	!byte $00,$00,$00,$0f,$cc,$cf,$0f,$cc,$f3,$0f,$cc,$0f,$0f,$cc,$f3,$0f
-	!byte $c0,$0f,$0f,$cc,$f0,$33,$c3,$c3,$0f,$cc,$c3,$03,$c3,$c3,$0f,$cc
-	!byte $c3,$03,$03,$cc,$0f,$cc,$c3,$c3,$03,$cc,$0f,$cc,$33,$c3,$33,$cc
-	!byte $0f,$cc,$30,$00,$30,$0c,$0f,$cc,$f3,$cc,$03,$0c,$cf,$cc,$f0,$c0
-	!byte $03,$0c,$cf,$cf,$0c,$30,$03,$30,$cf,$cf,$0c,$30,$33,$30,$cf,$f3
-	!byte $0c,$30,$30,$f0,$cf,$f3,$0c,$03,$00,$00,$cf,$f3,$00,$03,$c0,$cc
-	!byte $cf,$f3,$30,$33,$f0,$0c,$cf,$f3,$3c,$0f,$f0,$fc,$cf,$f3,$3f,$ff
+spr_saw_b
+	!byte $00,$00,$08,$28,$ff,$ff,$ff,$ff,$ff,$cf,$ff,$ff,$ff,$ff,$ff,$ff
+	!byte $ff,$f3,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$cf,$ff,$ff,$ff,$ff,$ff,$ff
+	!byte $ff,$f3,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$cf,$ff,$ff,$ff,$ff,$ff,$ff
+	!byte $ff,$f3,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$cf,$ff,$ff,$ff,$ff,$ff,$ff
+	!byte $ff,$f3,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$cc,$ff,$ff,$ff,$ff,$ff,$ff
+	!byte $ff,$f3,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$fc,$ff,$ff,$ff,$ff,$ff,$ff
+	!byte $ff,$f3,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$fc,$ff,$ff,$ff,$ff,$ff,$ff
+	!byte $ff,$f3,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$fc,$ff,$ff,$ff,$ff,$ff,$ff
+	!byte $ff,$f3,$ff,$ff,$ff,$ff,$ff,$00,$00,$00,$3f,$ff,$ff,$ff,$c0,$ff
+	!byte $ff,$ff,$3f,$ff,$ff,$ff,$3f,$ff,$ff,$ff,$c0,$ff,$ff,$fc,$ff,$ff
+	!byte $ff,$ff,$ff,$3f,$ff,$f3,$ff,$ff,$ff,$ff,$ff,$cf,$ff,$f3,$ff,$ff
+	!byte $ff,$ff,$ff,$cf,$ff,$cf,$fc,$00,$00,$00,$ff,$cf,$ff,$cf,$f3,$ff
+	!byte $ff,$ff,$03,$cf,$ff,$cf,$cf,$ff,$ff,$fc,$cc,$f3,$ff,$cf,$0f,$ff
+	!byte $ff,$ff,$3c,$f3,$ff,$cc,$cf,$ff,$ff,$fc,$cc,$f3,$ff,$c3,$f3,$ff
+	!byte $ff,$00,$00,$f3,$ff,$c3,$fc,$ff,$c0,$ff,$fc,$f3,$ff,$cf,$ff,$0f
+	!byte $3f,$f0,$00,$f3,$ff,$cf,$ff,$cc,$00,$0f,$ff,$f3,$ff,$cf,$fc,$03
+	!byte $ff,$ff,$ff,$f3,$ff,$3f,$f3,$ff,$ff,$ff,$ff,$f3,$ff,$3f,$f3,$ff
+	!byte $ff,$ff,$ff,$f3,$fc,$ff,$f3,$ff,$ff,$00,$ff,$f3,$f3,$ff,$f3,$c3
+	!byte $f0,$3f,$3f,$f3,$f3,$ff,$fc,$30,$0f,$3f,$c3,$c3,$cf,$ff,$ff,$f3
+	!byte $ff,$0f,$fc,$cc,$3f,$ff,$ff,$f3,$ff,$f3,$fc,$cc,$3f,$ff,$ff,$cf
+	!byte $ff,$f3,$ff,$30
 
 spr_muzzle_b
 	!byte $0b,$f5,$02,$0c,$03,$00,$03,$00,$03,$00,$03,$c0,$0c,$c0,$0c,$c0
 	!byte $0c,$30,$30,$30,$30,$0c,$30,$30,$0c,$30,$0c,$c0
-
-spr_spark_b
-	!byte $0a,$f6,$04,$15,$00,$03,$00,$00,$00,$03,$00,$30,$00,$03,$c0,$f0
-	!byte $00,$03,$c3,$c0,$00,$03,$cc,$c0,$00,$0c,$33,$00,$0f,$cc,$03,$00
-	!byte $03,$3c,$0c,$00,$03,$00,$0c,$00,$00,$c0,$3c,$00,$00,$f0,$0c,$00
-	!byte $00,$c0,$0c,$00,$00,$c0,$cc,$00,$03,$00,$cc,$00,$03,$f3,$3c,$00
-	!byte $0f,$f3,$3c,$00,$0f,$33,$0c,$00,$0c,$0f,$0c,$00,$00,$0c,$00,$00
-	!byte $00,$0c,$00,$00,$00,$0c,$00,$00
-
-spr_chain_fl_b
-	!byte $0a,$f8,$02,$0e,$00,$0c,$00,$3c,$00,$3c,$00,$cc,$03,$0c,$03,$0c
-	!byte $0c,$0c,$3c,$03,$30,$03,$0c,$03,$00,$03,$00,$03,$00,$03,$00,$0c
-
-spr_chain_fr_b
-	!byte $0c,$f8,$02,$0e,$30,$00,$3c,$00,$3c,$00,$33,$00,$30,$c0,$30,$c0
-	!byte $30,$30,$c0,$3c,$c0,$0c,$c0,$30,$c0,$00,$c0,$00,$c0,$00,$30,$00
 

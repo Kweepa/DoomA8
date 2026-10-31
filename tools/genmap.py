@@ -378,8 +378,6 @@ def cook_one(level: dict, map_key: str) -> bytes:
         "health 25%": 0,
         "health 50%": 1,
         "armour": 2,
-        "grenades": 6,
-        "grenade launcher": 10,
         "quad damage": 16,
         "pentagram of protection": 15,
         "ring of shadows": 16,

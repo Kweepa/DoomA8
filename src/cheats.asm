@@ -238,14 +238,14 @@ apply_god
 	jmp play_sound
 
 apply_kfa
-	lda #HAVE_AXE | HAVE_SHOT | HAVE_CHAIN | HAVE_GREN | HAVE_PIST
+	lda #HAVE_SHOT | HAVE_CHAIN | HAVE_ROCKET | HAVE_PIST | HAVE_SAW
 	sta have_wpn
 	lda #AMMO_SHELLS_MAX
 	sta ammo_shells
 	lda #AMMO_BULLETS_MAX
 	sta ammo_bullets
 	lda #AMMO_GRENADES_MAX
-	sta ammo_grenades
+	sta ammo_rockets
 	lda #PLAYER_ARMOUR_MAX
 	sta player_armour
 	lda #1

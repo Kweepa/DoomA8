@@ -9,10 +9,14 @@ POSE_RECOIL = 2
 POSE_ANIM = 3
 POSE_COCK = 4
 
-AXE_NSTEPS = 4
-AXE_F_OOF = $40
-AXE_F_HIT = $20
-AXE_F_SPARK = $80
+PUNCH_MS = 360				; SquareDoom 18 ticks
+PUNCH_FIRE_MS = 800			; SquareDoom 40 ticks
+; SquareDoom draws these at 2x; ours are native size and two tiles
+; left of that image's right edge.
+FIST_HAND_X = 200			; 56 wide, two tiles left of 216
+FIST_PUNCH_X = 128			; 64 wide, two tiles left of 144
+FIST_PUNCH_Y = 218			; 32 rows end on the viewport bottom
+SAW_FIRE_MS = 100
 
 RECOIL_NSTEPS = 3
 PISTOL_RECOIL_N = 2			; −4 for 300 ms, then −6 for 160 ms
@@ -20,31 +24,28 @@ SG_COCK_DELAY = 320			; let DPSHOTGN finish (16 mid-split samples)
 COCK_NSTEPS = 3
 COCK_X = WPN_X0 - 16			; two character columns left of the gun
 
-; have_wpn bit per weapon id
+; have_wpn bit per weapon id. Fist is 0: switch_weapon allows it with no bit.
 wpn_have_bit
-	!byte HAVE_AXE, HAVE_SHOT, HAVE_CHAIN, HAVE_GREN, HAVE_PIST
+	!byte 0, HAVE_SHOT, HAVE_CHAIN, HAVE_ROCKET, HAVE_PIST, HAVE_SAW
 
 wpn_fire_ms_lo
-	!byte <0, <600, <100, <1000, <PISTOL_FIRE_MS
+	!byte <PUNCH_FIRE_MS, <600, <100, <1000, <PISTOL_FIRE_MS, <SAW_FIRE_MS
 wpn_fire_ms_hi
-	!byte >0, >600, >100, >1000, >PISTOL_FIRE_MS
+	!byte >PUNCH_FIRE_MS, >600, >100, >1000, >PISTOL_FIRE_MS, >SAW_FIRE_MS
 
 wpn_sound
-	!byte 0, SOUND_SHOTGN, SOUND_PISTOL, SOUND_RLAUNC, SOUND_PISTOL
+	!byte 0, SOUND_SHOTGN, SOUND_PISTOL, SOUND_RLAUNC, SOUND_PISTOL, 0
 
 wpn_idle_x
-	!byte WPN_X0, WPN_X0, WPN_X0, WPN_X0, WPN_X0
+	!byte FIST_HAND_X, WPN_X0, WPN_X0, WPN_X0, WPN_X0, WPN_X_SAW
 wpn_idle_y
-	!byte WPN_Y_AXEIDLE, WPN_Y_SHOTIDLE, WPN_Y_CHAINIDLE, WPN_Y_FLUSH, WPN_Y_PISTIDLE
+	!byte WPN_Y_FISTIDLE, WPN_Y_SHOTIDLE, WPN_Y_CHAINIDLE, WPN_Y_ROCKIDLE, WPN_Y_PISTIDLE, WPN_Y_SAWIDLE
 
 wpn_fr		!byte 0
 
-; added to wpn_y (signed)
+; added to wpn_y (signed). Chaingun uses the pistol muzzle, centered.
 wpn_flashdy
-	!byte -FLASH_DY, -FLASH_DY_GUN, FLASH_DY_CHAIN, -FLASH_DY_GUN, -FLASH_DY_GUN
-
-chain_flash_en
-	!byte FLASH_EN_L, FLASH_EN_R	; sprite 4 left, sprite 5 right
+	!byte 0, -FLASH_DY_GUN, -FLASH_DY_GUN, -FLASH_DY_GUN, -FLASH_DY_GUN, 0
 
 WS_EMUZ		= 0
 WS_SPLAT	= 1
@@ -96,23 +97,11 @@ fx_exp_lo
 fx_exp_hi
 	!byte >flash4_expired, >flash5_expired, >emuz_expired, >splat_expired, >fx_zero_header
 
-; Axe fire keyframes (right prepare → left/down arc). Idle is not in this table.
-axe_step_x
-	!byte 200, 144, 120, 104
-axe_step_y
-	!byte WPN_Y_FLUSH, 214, 229, 250
-axe_step_ms_lo
-	!byte <180, <50, <55, <40
-axe_step_ms_hi
-	!byte >180, >50, >55, >40
-axe_step_flags
-	!byte AXE_F_OOF, AXE_F_SPARK | AXE_F_HIT, 0, 0
-
-; Shotgun: snap up for shot, kick down, settle. Grenade: snap down, recover.
+; Shotgun: snap up for shot, kick down, settle. Rocket: snap down, recover.
 recoil_shot_y
 	!byte WPN_Y_SHOTIDLE - 10, WPN_Y_SHOTIDLE + 14, WPN_Y_SHOTIDLE + 6
-recoil_gren_y
-	!byte 232, 224, 216
+recoil_rkt_y
+	!byte WPN_Y_ROCKIDLE + 24, WPN_Y_ROCKIDLE + 16, WPN_Y_ROCKIDLE + 8
 recoil_step_ms_lo
 	!byte 16, 35, 35
 recoil_step_ms_hi
@@ -160,6 +149,7 @@ init_weapon_hw
 	sta cock_ms_l
 	sta cock_ms_h
 	sta cock_pend
+	sta wpn_bob_ph
 	sta emuz_xmsb
 	sta emuz_vx
 	sta emuz_vy
@@ -181,12 +171,13 @@ init_weapon_hw
 	sta key_fire
 	ldx #3
 -
-	sta in_wpn_axe,x
-	sta key_wpn_axe,x
+	sta in_wpn_1,x
+	sta key_wpn_1,x
 	dex
 	bpl -
 	sta in_wpn_pist
 	sta key_wpn_pist
+	sta wpn1_held
 
 
 	rts
@@ -194,10 +185,10 @@ init_weapon_hw
 ; First start: hardware + starting inventory.
 init_weapon
 	jsr init_weapon_hw
-	jsr init_grenades
+	jsr init_rockets
 	jmp reset_loadout
 
-; Axe, shotgun, pistol. 25 shells, 50 bullets. Pistol selected.
+; Pistol equipped. Fist is always owned, selected with key 1.
 reset_loadout
 	lda #HAVE_START
 	sta have_wpn
@@ -206,7 +197,7 @@ reset_loadout
 	lda #AMMO_BULLETS_START
 	sta ammo_bullets
 	lda #0
-	sta ammo_grenades
+	sta ammo_rockets
 	lda #PLAYER_HP_START
 	sta player_hp
 	lda #PLAYER_ARMOUR_START
@@ -227,11 +218,14 @@ reset_loadout
 	ldx #WPN_PIST
 	jmp switch_weapon
 
-; X = weapon id — refuse if not owned
+; X = weapon id — fist is always owned; others refuse if the bit is clear
 switch_weapon
+	cpx #WPN_FIST
+	beq .sw_own
 	lda wpn_have_bit,x
 	and have_wpn
 	beq .sw_rts
+.sw_own
 	cpx cur_weapon
 	bne .sw_do
 .sw_rts
@@ -256,6 +250,10 @@ switch_weapon
 	sta cock_ms_l
 	sta cock_ms_h
 	sta cock_pend
+	sta saw_flip
+	sta saw_bite
+	lda #1
+	sta saw_amp
 	jmp setup_weapon
 
 setup_weapon
@@ -300,9 +298,6 @@ start_flash
 	sta flash_ms_h
 	lda #COL_FLASH_Y
 	sta flash4_col
-	ldx cur_weapon
-	cpx #WPN_CHAIN
-	beq .sf_xy
 	lda #0
 	sta flash5_phase
 	sta flash5_skip
@@ -334,9 +329,13 @@ hide_flash
 
 ; ------------------------------------------------------------------
 update_weapon
-	ldy #0
+	lda key_wpn_1
+	beq .uw_sw
+	jsr select_slot1
 .uw_sw
-	lda key_wpn_axe,y
+	ldy #1
+.uw_key
+	lda key_wpn_1,y
 	beq .uw_swn
 	tya
 	tax
@@ -344,7 +343,7 @@ update_weapon
 .uw_swn
 	iny
 	cpy #4
-	bcc .uw_sw
+	bcc .uw_key
 	lda key_wpn_pist
 	beq .uw_fx
 	ldx #WPN_PIST
@@ -383,7 +382,9 @@ update_weapon
 	bne .uw_done
 .uw_shot
 	ldx cur_weapon
-	cpx #WPN_AXE
+	cpx #WPN_FIST
+	beq .uw_do_fire
+	cpx #WPN_SAW
 	beq .uw_do_fire
 	jsr try_spend_ammo
 	bcc .uw_done
@@ -396,24 +397,132 @@ update_weapon
 	lda wpn_fire_ms_hi,x
 	sta fire_rpt_h
 .uw_done
-	rts
+	jmp tick_saw_vibe
 .uw_up
 	lda cur_weapon
 	cmp #WPN_CHAIN
-	bne .uw_up_rts
+	bne .uw_up_saw
 	lda wpn_pose
 	cmp #POSE_FIRE
+	bne .uw_up_saw
+	jsr chain_idle
+.uw_up_saw
+	lda cur_weapon
+	cmp #WPN_SAW
 	bne .uw_up_rts
-	jmp chain_idle
+	lda #0
+	sta saw_bite
+	lda #1
+	sta saw_amp
 .uw_up_rts
+	jmp tick_saw_vibe
+
+; Key 1. No chainsaw: fist (already there is a no-op). Owned: toggle, or
+; the chainsaw when another gun is out.
+select_slot1
+	lda have_wpn
+	and #HAVE_SAW
+	beq .s1_fist
+	lda cur_weapon
+	cmp #WPN_FIST
+	beq .s1_saw
+	cmp #WPN_SAW
+	beq .s1_fist
+	ldx #WPN_SAW
+	jmp switch_weapon
+.s1_saw
+	ldx #WPN_SAW
+	jmp switch_weapon
+.s1_fist
+	ldx #WPN_FIST
+	jmp switch_weapon
+
+; Bit 0 is the drop. Fire toggles it every frame. Idle toggles bit 1 every
+; frame and bit 0 every other, so the idle shake is half rate. A bite
+; rerolls the drop to 2..5 on each down flip. A miss stays at 2.
+tick_saw_vibe
+	lda cur_weapon
+	cmp #WPN_SAW
+	bne .tsv_bob
+	lda key_fire
+	beq .tsv_idle
+	lda saw_flip
+	and #1
+	eor #1
+	sta saw_flip
+	beq .tsv_bob
+	lda saw_bite
+	beq .tsv_fire
+	jsr rnd8
+	and #3
+	clc
+	adc #2
+	sta saw_amp
+	jmp tick_wpn_bob
+.tsv_fire
+	lda #2
+	sta saw_amp
+	bne .tsv_bob
+.tsv_idle
+	lda saw_flip
+	eor #2
+	sta saw_flip
+	and #2
+	bne .tsv_bob
+	lda saw_flip
+	eor #1
+	sta saw_flip
+.tsv_bob
+	jmp tick_wpn_bob
+
+; Idle + a move hold: phase += dt>>2, wrapped to the positive half-sine.
+; 128 steps × 4 ms = 512 ms per dip. Fire, cock wait, falling, or no hold
+; zeros the phase so the stamp adds nothing.
+tick_wpn_bob
+	lda wpn_pose
+	bne .tbb_stop
+	lda cock_pend
+	ora cock_ms_l
+	ora cock_ms_h
+	bne .tbb_stop
+	lda pl_falling
+	bne .tbb_stop
+	ldy #7
+	lda #0
+.tbb_hold
+	ora hold_fwd,y
+	dey
+	bpl .tbb_hold
+	tax				; dey cleared Z; test the OR
+	beq .tbb_stop
+	lda dt_ms
+	sta wpn_tmp0
+	lda dt_msh
+	lsr
+	ror wpn_tmp0
+	lsr
+	ror wpn_tmp0
+	lda wpn_bob_ph
+	clc
+	adc wpn_tmp0
+	and #$7f
+	sta wpn_bob_ph
+	rts
+.tbb_stop
+	lda #0
+	sta wpn_bob_ph
 	rts
 
-; Ammo already spent (or axe). X = cur_weapon on entry to fire_shot.
+; Ammo already spent (or fist / chainsaw). X = cur_weapon on entry.
 fire_shot
 	ldx cur_weapon
-	cpx #WPN_AXE
+	cpx #WPN_FIST
+	bne .fs_saw
+	jmp start_punch
+.fs_saw
+	cpx #WPN_SAW
 	bne .fs_gun
-	jmp start_axe
+	jmp start_saw
 .fs_gun
 	lda #1
 	sta gunshot_wake
@@ -432,13 +541,13 @@ fire_shot
 	cpx #WPN_CHAIN
 	beq .fs_chain
 	cpx #WPN_PIST
-	bne .fs_gren
+	bne .fs_rkt
 	jsr pistol_hitscan
 	jmp .fs_flash
-.fs_gren
-	cpx #WPN_GREN
+.fs_rkt
+	cpx #WPN_ROCKET
 	bne .fs_flash
-	jsr spawn_player_grenade
+	jsr spawn_player_rocket
 .fs_flash
 	lda #FLASH_EN_L
 	jsr start_flash
@@ -448,13 +557,12 @@ fire_shot
 	jsr chaingun_hitscan
 	lda #POSE_FIRE
 	sta wpn_pose
-	ldx mg_frame
-	lda chain_flash_en,x
-	jsr start_flash
 	lda mg_frame
 	eor #1
 	sta mg_frame
-	rts
+	sta wpn_fr
+	lda #FLASH_EN_L
+	jmp start_flash
 
 ; X = cur_weapon; C=1 spent (or free), C=0 cannot fire
 try_spend_ammo
@@ -466,8 +574,8 @@ try_spend_ammo
 	beq .ts_shell
 	cpx #WPN_CHAIN
 	beq .ts_bull
-	cpx #WPN_GREN
-	beq .ts_gren
+	cpx #WPN_ROCKET
+	beq .ts_rkt
 	cpx #WPN_PIST
 	beq .ts_bull
 	sec
@@ -484,10 +592,10 @@ try_spend_ammo
 	dec ammo_shells
 	sec
 	rts
-.ts_gren
-	lda ammo_grenades
+.ts_rkt
+	lda ammo_rockets
 	beq .ts_no
-	dec ammo_grenades
+	dec ammo_rockets
 	sec
 	rts
 .ts_no
@@ -508,48 +616,41 @@ chain_idle
 	sta wpn_y
 	rts
 
-start_axe
+; Pose swap: the fist replaces the hand for PUNCH_MS. One melee test.
+start_punch
 	lda #POSE_ANIM
 	sta wpn_pose
 	lda #0
 	sta anim_step
-	jmp axe_apply_step
-
-axe_apply_step
-	ldx anim_step
-	cpx #AXE_NSTEPS
-	bcc .aas_ok
-	jmp wpn_to_idle
-.aas_ok
-	lda axe_step_x,x
+	lda #FIST_PUNCH_X
 	sta wpn_x
-	lda axe_step_y,x
+	lda #FIST_PUNCH_Y
 	sta wpn_y
-	lda axe_step_ms_lo,x
+	lda #<PUNCH_MS
 	sta anim_ms_l
-	lda axe_step_ms_hi,x
+	lda #>PUNCH_MS
 	sta anim_ms_h
-	lda axe_step_flags,x
-	sta wpn_tmp0
-	lda wpn_tmp0
-	and #AXE_F_OOF
-	beq .aas_hit
-	lda #SOUND_OOF
-	jsr play_sound
-.aas_hit
-	lda wpn_tmp0
-	and #AXE_F_HIT
-	beq .aas_rts
-	jsr axe_try_kill
-	bcc .aas_rts
+	jsr punch_try_kill
+	bcc .sp_rts
 	lda #SOUND_PUNCH
 	jsr play_sound
-	lda wpn_tmp0
-	and #AXE_F_SPARK
-	beq .aas_rts
-	lda #FLASH_EN_L
-	jsr start_flash
-.aas_rts
+.sp_rts
+	rts
+
+; Free, repeating. A hit marks the bite; each later down-flip picks 2..5.
+; A miss clears it and stays at 2.
+start_saw
+	jsr punch_try_kill
+	bcc .ss_miss
+	lda #1
+	sta saw_bite
+	lda #SOUND_PUNCH
+	jmp play_sound
+.ss_miss
+	lda #0
+	sta saw_bite
+	lda #2
+	sta saw_amp
 	rts
 
 wpn_to_idle
@@ -559,7 +660,7 @@ wpn_to_idle
 	lda #0
 	sta anim_step
 	sta wpn_fr
-	cpx #WPN_AXE
+	cpx #WPN_FIST
 	bne .ti_pos
 	jsr hide_flash
 	ldx cur_weapon
@@ -588,11 +689,11 @@ recoil_apply_step
 .ras_ok
 	lda cur_weapon
 	cmp #WPN_SHOT
-	bne .ras_gren
+	bne .ras_rkt
 	lda recoil_shot_y,x
 	jmp .ras_y
-.ras_gren
-	lda recoil_gren_y,x
+.ras_rkt
+	lda recoil_rkt_y,x
 .ras_y
 	sta wpn_y
 	lda recoil_step_ms_lo,x
@@ -929,7 +1030,7 @@ tick_anim
 	inc anim_step
 	cmp #POSE_RECOIL
 	beq .ta_rec
-	jmp axe_apply_step
+	jmp wpn_to_idle
 .ta_rec
 	jmp recoil_apply_step
 .ta_cock_done

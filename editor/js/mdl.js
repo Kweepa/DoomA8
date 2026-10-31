@@ -326,9 +326,7 @@ export function loadEnemyMdls(lumps) {
 }
 
 export const WEAPON_MDL_PATHS = {
-  axe: "progs/v_axe.mdl",
   shot2: "progs/v_shot2.mdl",
-  chain: "progs/v_nail.mdl",
   rock: "progs/v_rock.mdl",
 };
 
@@ -708,24 +706,9 @@ export function toSpritePos(sx, sy, scale, pan) {
   };
 }
 
-export function defaultWeaponFrames(mdl, key) {
+export function defaultWeaponFrames(mdl) {
   if (!mdl?.frames?.length) return [0];
-  if (key !== "axe") return [0];
-  const out = [];
-  const seen = new Set();
-  const add = (i) => {
-    const n = i | 0;
-    if (n < 0 || n >= mdl.frames.length || seen.has(n)) return;
-    seen.add(n);
-    out.push(n);
-  };
-  add(0);
-  for (const clip of mdl.clips || []) {
-    if (/^axea/i.test(clip.name)) {
-      for (const fr of clip.frames) add(fr.index);
-    }
-  }
-  return out.length ? out : [0];
+  return [0];
 }
 
 export function resolveWeaponFrames(item, mdl, key) {

@@ -431,7 +431,7 @@ maybe_stream_room
 	bne .msr_need
 	rts
 .msr_need
-	jsr init_grenades
+	jsr init_rockets
 	jsr collect_room_need
 	jsr room_need_resident
 	bcc .msr_mark

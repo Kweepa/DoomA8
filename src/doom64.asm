@@ -64,7 +64,7 @@ main
 }
 	jsr draw_world
 	jsr draw_enemies
-	jsr draw_grenades
+	jsr draw_rockets
 	jsr draw_explosion
 
 	jsr stamp_view
@@ -100,7 +100,7 @@ main
 	jsr proc_update
 	jsr update_floor
 	jsr update_fall
-	jsr update_grenades
+	jsr update_rockets
 	jsr update_barrel_chain
 	jsr update_status
 	jsr update_triggers
@@ -134,8 +134,8 @@ mod_line
 
 mod_fx
 !source "fx.asm"
-mod_grenade
-!source "grenade.asm"
+mod_rocket
+!source "rocket.asm"
 mod_playsound
 !source "playsound.asm"
 mod_pcsounds

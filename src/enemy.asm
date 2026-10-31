@@ -1653,8 +1653,8 @@ damage_enemy
 .de_rts
 	rts
 
-; Axe: first hittable enemy in room within AXE_HIT_R. C=1 hit.
-axe_try_kill
+; Fist / chainsaw: first hittable enemy in room within PUNCH_HIT_R. C=1 hit.
+punch_try_kill
 	ldx #0
 .atk_lp
 	cpx	map_nenemies
@@ -1673,7 +1673,7 @@ axe_try_kill
 	clc
 	adc #1
 +
-	cmp #AXE_HIT_R + 1
+	cmp #PUNCH_HIT_R + 1
 	bcs .atk_n
 	+lda_mx en_z
 	sec
@@ -1683,7 +1683,7 @@ axe_try_kill
 	clc
 	adc #1
 +
-	cmp #AXE_HIT_R + 1
+	cmp #PUNCH_HIT_R + 1
 	bcs .atk_n
 	+lda_mx en_y
 	sta box_y

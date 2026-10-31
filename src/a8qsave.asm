@@ -526,7 +526,7 @@ qso_tab
 	+qf player_armour, 0
 	+qf combat_armor, 0
 	+qf ammo_shells, 0
-	+qf ammo_grenades, 0
+	+qf ammo_rockets, 0
 	+qf ammo_bullets, 0
 	+qf have_wpn, 0
 	+qf cur_weapon, 0

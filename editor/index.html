@@ -3159,12 +3159,11 @@ const ITEM_ORBIT_DIST_MIN = 8;
 const ITEM_ORBIT_DIST_MAX = 80;
 const DOC_VERSION = 10;
 const DEFAULT_WEAPON_SCALE = 0.4;
-const WEAPON_KEYS = ["axe", "shot2", "chain", "rock"];
+const WEAPON_KEYS = ["shot2", "chain", "rock"];
 const WEAPON_LABELS = {
-  axe: "Axe",
   shot2: "Super shotgun",
-  nail: "Nailgun",
-  rock: "Grenade launcher",
+  chain: "Chaingun",
+  rock: "Rocket launcher",
 };
 
 /** Fixed enemy cue set. sight/wince/death play generically; melee/shoot bind to clips. */
@@ -3669,10 +3668,6 @@ const BACKPACK_SIDE = BACKPACK_HEIGHT / GOLDEN_RATIO;
 const BACKPACK_DEPTH = (BACKPACK_SIDE * Math.sqrt(3)) / 2;
 
 const PICKUP_ALIAS = {
-  nailgun: "chaingun",
-  nails: "ammo box",
-  "grenade launcher": "rocket launcher",
-  grenades: "box of rockets",
   "health 25%": "small health",
   "health 50%": "large health",
   armour: "green armor",
@@ -4212,10 +4207,6 @@ function parseItemMeshes(raw) {
   const src = { ...raw };
   const meshAlias = {
     "health 25%": "small health",
-    grenades: "box of rockets",
-    grenades: "box of rockets",
-    nailgun: "chaingun",
-    "grenade launcher": "rocket launcher",
     "silver key": "yellow keycard",
     "gold key": "blue keycard",
     "rune of earth magic": "red keycard",
@@ -6492,7 +6483,7 @@ function defaultEditorState() {
     layoutCamera: { x: 28, y: 10, z: -6, yaw: 0.35, pitch: -0.2, speed: 28 },
     animOrbit: { yaw: 0.5, pitch: 0.15, dist: 48 },
     mdlScale: DEFAULT_MDL_SCALE,
-    weapon: "axe",
+    weapon: "shot2",
     weaponFrame: 0,
     overlayOn: true,
     orthoMode: "top",
@@ -8173,9 +8164,7 @@ function loadEnemyMdls(lumps) {
 }
 
 const WEAPON_MDL_PATHS = {
-  axe: "progs/v_axe.mdl",
   shot2: "progs/v_shot2.mdl",
-  chain: "progs/v_nail.mdl",
   rock: "progs/v_rock.mdl",
 };
 
@@ -8555,24 +8544,9 @@ function toSpritePos(sx, sy, scale, pan) {
   };
 }
 
-function defaultWeaponFrames(mdl, key) {
+function defaultWeaponFrames(mdl) {
   if (!mdl?.frames?.length) return [0];
-  if (key !== "axe") return [0];
-  const out = [];
-  const seen = new Set();
-  const add = (i) => {
-    const n = i | 0;
-    if (n < 0 || n >= mdl.frames.length || seen.has(n)) return;
-    seen.add(n);
-    out.push(n);
-  };
-  add(0);
-  for (const clip of mdl.clips || []) {
-    if (/^axea/i.test(clip.name)) {
-      for (const fr of clip.frames) add(fr.index);
-    }
-  }
-  return out.length ? out : [0];
+  return [0];
 }
 
 function resolveWeaponFrames(item, mdl, key) {
@@ -14075,7 +14049,7 @@ let bindJoint = -1;
 let clipIndex = 0;
 let frameLocal = 0;
 let mdlScale = DEFAULT_MDL_SCALE;
-let weaponKey = "axe";
+let weaponKey = "shot2";
 let weaponFrame = 0;
 let itemMeshKey = "backpack";
 /** Collapsed room ids in the Objects tree. */
@@ -14688,7 +14662,7 @@ function applyEditorState(ed) {
     rememberSelectedRoom();
     selectedVerts = [...ed.selectedVerts];
     setMdlScale(ed.mdlScale);
-    weaponKey = WEAPON_KEYS.includes(ed.weapon) ? ed.weapon : "axe";
+    weaponKey = WEAPON_KEYS.includes(ed.weapon) ? ed.weapon : "shot2";
     weaponFrame = Math.max(0, ed.weaponFrame | 0);
     setOverlayOn(ed.overlayOn);
     setOrthoMode(ed.orthoMode);
@@ -16025,8 +15999,9 @@ function renderWeaponInspector(root) {
       ? `${folder} · ${mdl.numVerts} verts · ${mdl.frames.length} frames`
       : `${mdl.numVerts} verts · ${mdl.frames.length} frames`;
   } else if (sharewareWeaponMissing.includes(weaponKey)) {
-    status.textContent = folder
-      ? `${WEAPON_MDL_PATHS[weaponKey]} is not in ${folder}`
+    const mdlPath = WEAPON_MDL_PATHS[weaponKey];
+    status.textContent = folder && mdlPath
+      ? `${mdlPath} is not in ${folder}`
       : "View-model not in the opened PAK";
   } else {
     status.textContent = folder

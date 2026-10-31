@@ -70,7 +70,7 @@ only changes `LoadPrg` inside `loader.asm` (26 B).
 | `$19D8`–`$1CA9` | 722 | `util.asm` | AABB / line-box |
 | `$1CAA`–`$26A8` | 2559 | `line.asm` | Bresenham setup + generated unrolled bodies |
 | `$26A9`–`$28C8` | 544 | `fx.asm` | explosion particles |
-| `$28C9`–`$2EE2` | 1562 | `grenade.asm` | |
+| `$28C9`–`$2EE2` | 1562 | `rocket.asm` | |
 | `$2EE3`–`$3138` | 598 | `spit.asm` | |
 | `$3139`–`$3376` | 574 | `playsound.asm` | SID mixer |
 | `$3377`–`$377A` | 1028 | `pcsounds.asm` | resident PC-speaker envelopes/tables |
@@ -90,7 +90,7 @@ only changes `LoadPrg` inside `loader.asm` (26 B).
 | `$8F29`–`$9711` | 2025 | `loader.asm` | disk/map load and fused AI/pose/SFX bank relocation |
 
 Largest slices: `cube` 4612, `world` 4396, `enemy` 4093, `mesh` 3210,
-`line` 2559, `loader` 2025, `weapon` 2000, `grenade` 1562,
+`line` 2559, `loader` 2025, `weapon` 2000, `rocket` 1562,
 `math` 1543, and `weapon_spr` 1456.
 
 Macros-only (no bytes): `mem.asm`, `zp.asm`, `map_counts.asm`, `mapacc.asm`, `map_bss.asm`, `level_prefix.asm`. `_rotate_body.asm` is inlined in `load_view_trig` (no own label). `overlay.asm` assembles to `overlay.bin` and is prepended to each map.
@@ -141,7 +141,7 @@ Caps: `MAP_MAX_BYTES` 4096, pose payload 4096, fused bank 8192.
 | `$C980`–`$C9BF` | 64 | Sprite 6 enemy muzzle (`WPN_EMUZ`) |
 | `$C9C0`–`$C9FF` | 64 | Sprite 7 impact splat (`WPN_SPLAT`) |
 | `$CA00`–`$CE81` | 642 | Project / clip / game scratch (table below) |
-| `$CE82`–`$CFFF` | 382 | Play BSS: enemy state, grenade SoA, hitscan/FX, Scrag spit, movement scratch, and AI-bank relocation scratch through `$CFCB`; remainder free `$CFCC+` before charset A |
+| `$CE82`–`$CFFF` | 382 | Play BSS: enemy state, rocket SoA, hitscan/FX, Scrag spit, movement scratch, and AI-bank relocation scratch through `$CFCB`; `saw_flip`/`saw_amp` at `$CFD7`; remainder free before charset A |
 | `$D000`–`$D5FF` | 1536 | Charset A top cols 0–23 (viewport) |
 | `$D600`–`$D607` | 8 | Char 192 `$FF` margin glyph |
 | `$D608`–`$D747` | 320 | `SINTAB` (COSTAB = SINTAB+64 at `$D648`) |
@@ -247,9 +247,9 @@ Vertex tables are 16 slots. Edge clip tables are 32 slots. Unique-X/Z product ta
 | `$CC1E` | 6 | `ZS_L` | UZ × sin (lo) |
 | `$CC24` | 6 | `ZS_H` | UZ × sin (hi) |
 | `$CC2A` | 1 | `in_fire` | Weapon BSS |
-| `$CC2B` | 4 | `in_wpn_axe`…`in_wpn_gren` | |
+| `$CC2B` | 4 | `in_wpn_1`…`in_wpn_rkt` | |
 | `$CC2F` | 1 | `key_fire` | |
-| `$CC30` | 4 | `key_wpn_axe`…`key_wpn_gren` | |
+| `$CC30` | 4 | `key_wpn_1`…`key_wpn_rkt` | |
 | `$CC34` | 1 | `cur_weapon` | |
 | `$CC35` | 1 | `wpn_pose` | |
 | `$CC36` | 2 | `fire_rpt_l/h` | |
@@ -286,7 +286,7 @@ Vertex tables are 16 slots. Edge clip tables are 32 slots. Unique-X/Z product ta
 | `$CCF0` | 16 | `COL_PXH` | |
 | `$CD00` | 1 | `ammo_shells` | |
 | `$CD01` | 1 | unused | |
-| `$CD02` | 1 | `ammo_grenades` | |
+| `$CD02` | 1 | `ammo_rockets` | |
 | `$CD03` | 1 | `have_wpn` | `HAVE_*` bitfield |
 | `$CD04` | 32 | `th_taken` | `TH_MAX` |
 | `$CD24` | 1 | `player_hp` | 0..`PLAYER_HP_MAX` |
