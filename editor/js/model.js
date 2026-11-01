@@ -77,8 +77,8 @@ export const WORLD_MAX = 255;
 export const WORLD_SIZE = 256;
 export const MAX_VERTS = 13;
 export const MAX_LINES = 13;
-export const SKEL_MAX_VERTS = 48;
-export const SKEL_MAX_LINES = 64;
+export const SKEL_MAX_VERTS = 16;
+export const SKEL_MAX_LINES = 32;
 export const SPRITE_MAX_VERTS = 16;
 export const SPRITE_MAX_LINES = 32;
 export const ENEMY_DOS = {
@@ -104,26 +104,8 @@ export function clampWeaponVert(n, nv) {
   if (!Number.isFinite(v)) return fallback;
   return Math.max(0, Math.min(count - 1, v | 0));
 }
-export const WRIST_R = 7;
-export const JOINT_NAMES = [
-  "Hip L",
-  "Hip R",
-  "Neck",
-  "Head",
-  "Elbow L",
-  "Wrist L",
-  "Elbow R",
-  "Wrist R",
-  "Knee L",
-  "Ankle L",
-  "Knee R",
-  "Ankle R",
-  "Weapon",
-];
 export const VERT_MIN = -128;
 export const VERT_MAX = 127;
-// Custom skeletons pack at round(v / 2^shift), shift 0..2; genenemies picks the shift.
-// 509 is the largest magnitude that still rounds into a signed byte at shift 2.
 export const SKEL_VERT_MAX = 509;
 export const DEFAULT_MDL_SCALE = 0.7;
 const OLD_DEFAULT_MDL_SCALE = 0.57;
@@ -3108,8 +3090,6 @@ function migrateClipSounds(clips, cues) {
 
 function migrateEnemyClipSounds(enemy) {
   migrateClipSounds(enemy.clips, enemy.cues);
-  migrateClipSounds(enemy.stockGraph?.clips, enemy.cues);
-  migrateClipSounds(enemy.customGraph?.clips, enemy.cues);
 }
 
 /** Clip name + optional sound. start/len are filled when poses are derived. */
@@ -3147,18 +3127,6 @@ function persistClip(c) {
     out.soundFrame = c.soundFrame | 0;
   }
   if (c.attackFrame != null) out.attackFrame = c.attackFrame | 0;
-  return out;
-}
-
-function persistGraph(g) {
-  if (!g || typeof g !== "object") return g;
-  const out = {
-    verts: g.verts,
-    lines: g.lines,
-    mdlRig: g.mdlRig,
-  };
-  if (Array.isArray(g.clips)) out.clips = g.clips.map(persistClip);
-  if (Array.isArray(g.exportClips)) out.exportClips = [...g.exportClips];
   return out;
 }
 
@@ -3205,8 +3173,8 @@ function persistEnemy(e) {
   else delete out.frames;
   out.cues = parseEnemyCues(e.cues);
   if (Array.isArray(out.clips)) out.clips = out.clips.map(persistClip);
-  if (out.stockGraph) out.stockGraph = persistGraph(out.stockGraph);
-  if (out.customGraph) out.customGraph = persistGraph(out.customGraph);
+  delete out.stockGraph;
+  delete out.customGraph;
   return out;
 }
 
@@ -3223,20 +3191,6 @@ function stripInheritedStockJoints(enemy) {
   enemy.verts = extra.length;
   enemy.lines = [];
   enemy.frames = [restPoseFrame(enemy.name, extra.length)];
-}
-
-function parseSkelGraph(raw, name, fixedNv) {
-  if (!raw || typeof raw !== "object") return null;
-  const nv = fixedNv || inferSkelNv(raw);
-  const graph = {
-    verts: nv,
-    lines: parseSkelLines(raw.lines, nv),
-    frames: [restPoseFrame(name, nv)],
-    mdlRig: normalizeMdlRig(raw.mdlRig, nv),
-  };
-  if (Array.isArray(raw.clips)) graph.clips = parseClipMeta(raw.clips);
-  if (Array.isArray(raw.exportClips)) graph.exportClips = raw.exportClips.map(String);
-  return graph;
 }
 
 export function dummyFrameFor(name) {
@@ -3271,6 +3225,7 @@ export function createEnemy(name = "Possessed") {
     clips: [],
     cues: {},
     mdlRig: emptyMdlRig(),
+    customSkeleton: true,
     weaponVert: WEAPON_VERT,
     hp: defaultEnemyHp(name),
     painChance: defaultEnemyPainChance(name),
@@ -3710,24 +3665,15 @@ export function normalizeDocument(raw) {
       const enemy = createEnemy(e.name || "Enemy");
       enemy.id = e.id || enemy.id;
       enemy.name = e.name || enemy.name;
-      enemy.customSkeleton = !!e.customSkeleton;
-      enemy.stockGraph = parseSkelGraph(e.stockGraph, enemy.name, 13);
-      if (enemy.customSkeleton) {
-        const nv = inferSkelNv(e);
-        enemy.verts = nv;
-        enemy.lines = parseSkelLines(e.lines, nv);
-        enemy.frames = [restPoseFrame(enemy.name, nv)];
-        enemy.mdlRig = normalizeMdlRig(e.mdlRig, nv);
-        enemy.customGraph = null;
-        if (!enemyHasSprites({ clips: e.clips })) stripInheritedStockJoints(enemy);
-      } else {
-        enemy.verts = 13;
-        const savedLines = parseSkelLines(e.lines, 13);
-        enemy.lines = savedLines.length ? savedLines : TEMPLATE_LINES.map((p) => [p[0], p[1]]);
-        enemy.frames = [restPoseFrame(enemy.name, 13)];
-        enemy.mdlRig = normalizeMdlRig(e.mdlRig);
-        enemy.customGraph = parseSkelGraph(e.customGraph, enemy.name, 0);
-      }
+      enemy.customSkeleton = true;
+      const nv = inferSkelNv(e);
+      enemy.verts = nv;
+      enemy.lines = parseSkelLines(e.lines, nv);
+      enemy.frames = [restPoseFrame(enemy.name, nv)];
+      enemy.mdlRig = normalizeMdlRig(e.mdlRig, nv);
+      delete enemy.stockGraph;
+      delete enemy.customGraph;
+      if (!enemyHasSprites({ clips: e.clips })) stripInheritedStockJoints(enemy);
       enemy.clips = parseClipMeta(e.clips);
       if (enemyHasSprites({ clips: enemy.clips }) && Array.isArray(e.frames) && e.frames.length) {
         enemy.frames = e.frames.map((fr) =>

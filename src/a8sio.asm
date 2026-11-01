@@ -8,8 +8,8 @@ A8_DIR_SEC	= 20
 ; 128-byte SIO sector. SIOV stores each byte then checksums the accumulator,
 ; so a buffer under the OS ROM still returns DSTATS=$01 and the RAM never
 ; changes. $C000-$CFFF and $D800-$FFFF are that ROM while PORTB=$FF.
-; Not $0800: AI_ENTRY. The leftover sector looked like a
-; resident shambler and jsr'd the ogre tail ($8C97) over mesh_project.
+; Not $0800: AI_ENTRY. A stale sector left there was executed as code
+; and jsr'd $8C97 over mesh_project.
 ; Same page as the directory. sio_find has already taken start and length;
 ; the next LoadPrg re-reads the directory. Heap stops at HEAP_LIM, below
 ; this page. WPN_RAM already shares it with the directory.

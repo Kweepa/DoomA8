@@ -329,6 +329,33 @@ function addLevels(parent, data) {
   parent.append(section);
 }
 
+const SMC_NAME = /^smc_\d+$/;
+
+/** Drop smc_N tags. They mark accessor sites, not blocks; keep their bytes on the symbol they split. */
+function visibleSymbols(symbols) {
+  const ordered = symbols
+    .map((sym) => ({
+      name: sym.name || "",
+      bytes: Number(sym.bytes) || 0,
+      start: Number(sym.start) || 0,
+    }))
+    .sort((a, b) => a.start - b.start);
+  const kept = [];
+  let lead = 0;
+  for (const sym of ordered) {
+    const parts = sym.name.split(" / ").filter((part) => part && !SMC_NAME.test(part));
+    if (!parts.length) {
+      if (kept.length) kept[kept.length - 1].bytes += sym.bytes;
+      else lead += sym.bytes;
+      continue;
+    }
+    kept.push({ name: parts.join(" / "), bytes: sym.bytes + lead });
+    lead = 0;
+  }
+  kept.sort((a, b) => b.bytes - a.bytes || a.name.localeCompare(b.name));
+  return kept;
+}
+
 function addAdvanced(parent, data) {
   const keys = variantKeys(data);
   const variant = keys.length ? data.variants[keys[0]] : null;
@@ -357,21 +384,16 @@ function addAdvanced(parent, data) {
     const summary = el("summary");
     summary.append(el("span", "chev"));
     summary.append(el("span", "name", mod.name));
-    summary.append(singleBar(mod.bytes, scale));
     summary.append(el("span", "bytes", String(mod.bytes)));
+    summary.append(singleBar(mod.bytes, scale));
     block.append(summary);
-    const syms = mod.symbols
-      .map((sym) => ({
-        name: sym.name || "",
-        bytes: Number(sym.bytes) || 0,
-      }))
-      .sort((a, b) => b.bytes - a.bytes || a.name.localeCompare(b.name));
+    const syms = visibleSymbols(mod.symbols);
     const body = el("div", "build-syms");
     for (const sym of syms) {
       const line = el("div", "build-sym");
       line.append(el("span", "name", sym.name));
-      line.append(singleBar(sym.bytes, mod.bytes || 1));
       line.append(el("span", "bytes", String(sym.bytes)));
+      line.append(singleBar(sym.bytes, mod.bytes || 1));
       body.append(line);
     }
     block.append(body);

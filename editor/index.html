@@ -1251,7 +1251,7 @@ button:disabled {
 
 .build-tree summary {
   display: grid;
-  grid-template-columns: 1rem minmax(8rem, 22rem) 1fr auto;
+  grid-template-columns: 1rem minmax(8rem, 22rem) 4.5rem 1fr;
   gap: 0.45rem;
   align-items: center;
   cursor: pointer;
@@ -1290,6 +1290,7 @@ button:disabled {
 .build-tree summary .bytes,
 .build-sym .bytes {
   color: var(--muted);
+  text-align: right;
 }
 
 .build-mod-block {
@@ -1302,7 +1303,7 @@ button:disabled {
 
 .build-sym {
   display: grid;
-  grid-template-columns: minmax(8rem, 22rem) 1fr auto;
+  grid-template-columns: minmax(8rem, 22rem) 4.5rem 1fr;
   gap: 0.45rem;
   align-items: center;
   margin-left: 1.45rem;
@@ -3290,8 +3291,8 @@ const WORLD_MAX = 255;
 const WORLD_SIZE = 256;
 const MAX_VERTS = 13;
 const MAX_LINES = 13;
-const SKEL_MAX_VERTS = 48;
-const SKEL_MAX_LINES = 64;
+const SKEL_MAX_VERTS = 16;
+const SKEL_MAX_LINES = 32;
 const SPRITE_MAX_VERTS = 16;
 const SPRITE_MAX_LINES = 32;
 const ENEMY_DOS = {
@@ -3317,26 +3318,8 @@ function clampWeaponVert(n, nv) {
   if (!Number.isFinite(v)) return fallback;
   return Math.max(0, Math.min(count - 1, v | 0));
 }
-const WRIST_R = 7;
-const JOINT_NAMES = [
-  "Hip L",
-  "Hip R",
-  "Neck",
-  "Head",
-  "Elbow L",
-  "Wrist L",
-  "Elbow R",
-  "Wrist R",
-  "Knee L",
-  "Ankle L",
-  "Knee R",
-  "Ankle R",
-  "Weapon",
-];
 const VERT_MIN = -128;
 const VERT_MAX = 127;
-// Custom skeletons pack at round(v / 2^shift), shift 0..2; genenemies picks the shift.
-// 509 is the largest magnitude that still rounds into a signed byte at shift 2.
 const SKEL_VERT_MAX = 509;
 const DEFAULT_MDL_SCALE = 0.7;
 const OLD_DEFAULT_MDL_SCALE = 0.57;
@@ -6321,8 +6304,6 @@ function migrateClipSounds(clips, cues) {
 
 function migrateEnemyClipSounds(enemy) {
   migrateClipSounds(enemy.clips, enemy.cues);
-  migrateClipSounds(enemy.stockGraph?.clips, enemy.cues);
-  migrateClipSounds(enemy.customGraph?.clips, enemy.cues);
 }
 
 /** Clip name + optional sound. start/len are filled when poses are derived. */
@@ -6360,18 +6341,6 @@ function persistClip(c) {
     out.soundFrame = c.soundFrame | 0;
   }
   if (c.attackFrame != null) out.attackFrame = c.attackFrame | 0;
-  return out;
-}
-
-function persistGraph(g) {
-  if (!g || typeof g !== "object") return g;
-  const out = {
-    verts: g.verts,
-    lines: g.lines,
-    mdlRig: g.mdlRig,
-  };
-  if (Array.isArray(g.clips)) out.clips = g.clips.map(persistClip);
-  if (Array.isArray(g.exportClips)) out.exportClips = [...g.exportClips];
   return out;
 }
 
@@ -6418,8 +6387,8 @@ function persistEnemy(e) {
   else delete out.frames;
   out.cues = parseEnemyCues(e.cues);
   if (Array.isArray(out.clips)) out.clips = out.clips.map(persistClip);
-  if (out.stockGraph) out.stockGraph = persistGraph(out.stockGraph);
-  if (out.customGraph) out.customGraph = persistGraph(out.customGraph);
+  delete out.stockGraph;
+  delete out.customGraph;
   return out;
 }
 
@@ -6436,20 +6405,6 @@ function stripInheritedStockJoints(enemy) {
   enemy.verts = extra.length;
   enemy.lines = [];
   enemy.frames = [restPoseFrame(enemy.name, extra.length)];
-}
-
-function parseSkelGraph(raw, name, fixedNv) {
-  if (!raw || typeof raw !== "object") return null;
-  const nv = fixedNv || inferSkelNv(raw);
-  const graph = {
-    verts: nv,
-    lines: parseSkelLines(raw.lines, nv),
-    frames: [restPoseFrame(name, nv)],
-    mdlRig: normalizeMdlRig(raw.mdlRig, nv),
-  };
-  if (Array.isArray(raw.clips)) graph.clips = parseClipMeta(raw.clips);
-  if (Array.isArray(raw.exportClips)) graph.exportClips = raw.exportClips.map(String);
-  return graph;
 }
 
 function dummyFrameFor(name) {
@@ -6484,6 +6439,7 @@ function createEnemy(name = "Possessed") {
     clips: [],
     cues: {},
     mdlRig: emptyMdlRig(),
+    customSkeleton: true,
     weaponVert: WEAPON_VERT,
     hp: defaultEnemyHp(name),
     painChance: defaultEnemyPainChance(name),
@@ -6923,24 +6879,15 @@ function normalizeDocument(raw) {
       const enemy = createEnemy(e.name || "Enemy");
       enemy.id = e.id || enemy.id;
       enemy.name = e.name || enemy.name;
-      enemy.customSkeleton = !!e.customSkeleton;
-      enemy.stockGraph = parseSkelGraph(e.stockGraph, enemy.name, 13);
-      if (enemy.customSkeleton) {
-        const nv = inferSkelNv(e);
-        enemy.verts = nv;
-        enemy.lines = parseSkelLines(e.lines, nv);
-        enemy.frames = [restPoseFrame(enemy.name, nv)];
-        enemy.mdlRig = normalizeMdlRig(e.mdlRig, nv);
-        enemy.customGraph = null;
-        if (!enemyHasSprites({ clips: e.clips })) stripInheritedStockJoints(enemy);
-      } else {
-        enemy.verts = 13;
-        const savedLines = parseSkelLines(e.lines, 13);
-        enemy.lines = savedLines.length ? savedLines : TEMPLATE_LINES.map((p) => [p[0], p[1]]);
-        enemy.frames = [restPoseFrame(enemy.name, 13)];
-        enemy.mdlRig = normalizeMdlRig(e.mdlRig);
-        enemy.customGraph = parseSkelGraph(e.customGraph, enemy.name, 0);
-      }
+      enemy.customSkeleton = true;
+      const nv = inferSkelNv(e);
+      enemy.verts = nv;
+      enemy.lines = parseSkelLines(e.lines, nv);
+      enemy.frames = [restPoseFrame(enemy.name, nv)];
+      enemy.mdlRig = normalizeMdlRig(e.mdlRig, nv);
+      delete enemy.stockGraph;
+      delete enemy.customGraph;
+      if (!enemyHasSprites({ clips: e.clips })) stripInheritedStockJoints(enemy);
       enemy.clips = parseClipMeta(e.clips);
       if (enemyHasSprites({ clips: enemy.clips }) && Array.isArray(e.frames) && e.frames.length) {
         enemy.frames = e.frames.map((fr) =>
@@ -11775,10 +11722,6 @@ class AnimView {
     return !!(overlay && (overlay.binding || overlay.bindJoint >= 0));
   }
 
-  #custom() {
-    return !!this.opts.getEnemy()?.customSkeleton;
-  }
-
   #cam() {
     const { yaw, pitch, dist, target } = this.orbit;
     const { forward } = lookVectors(yaw, pitch);
@@ -11971,7 +11914,7 @@ class AnimView {
   }
 
   #hitLine(mx, my) {
-    if (!this.#custom() || this.#binding() || !this.#hasStick()) return -1;
+    if (this.#binding() || !this.#hasStick()) return -1;
     const enemy = this.opts.getEnemy();
     const frame = this.opts.getFrame();
     const verts = enemy.frames[frame];
@@ -12077,7 +12020,7 @@ class AnimView {
       this.draw();
       return;
     }
-    if (!binding && this.#custom()) {
+    if (!binding) {
       const li = this.#hitLine(p.x, p.y);
       if (li >= 0) {
         this.opts.onSelectLine?.(li, e.shiftKey);
@@ -13951,6 +13894,33 @@ function addLevels(parent, data) {
   parent.append(section);
 }
 
+const SMC_NAME = /^smc_\d+$/;
+
+/** Drop smc_N tags. They mark accessor sites, not blocks; keep their bytes on the symbol they split. */
+function visibleSymbols(symbols) {
+  const ordered = symbols
+    .map((sym) => ({
+      name: sym.name || "",
+      bytes: Number(sym.bytes) || 0,
+      start: Number(sym.start) || 0,
+    }))
+    .sort((a, b) => a.start - b.start);
+  const kept = [];
+  let lead = 0;
+  for (const sym of ordered) {
+    const parts = sym.name.split(" / ").filter((part) => part && !SMC_NAME.test(part));
+    if (!parts.length) {
+      if (kept.length) kept[kept.length - 1].bytes += sym.bytes;
+      else lead += sym.bytes;
+      continue;
+    }
+    kept.push({ name: parts.join(" / "), bytes: sym.bytes + lead });
+    lead = 0;
+  }
+  kept.sort((a, b) => b.bytes - a.bytes || a.name.localeCompare(b.name));
+  return kept;
+}
+
 function addAdvanced(parent, data) {
   const keys = variantKeys(data);
   const variant = keys.length ? data.variants[keys[0]] : null;
@@ -13979,21 +13949,16 @@ function addAdvanced(parent, data) {
     const summary = el("summary");
     summary.append(el("span", "chev"));
     summary.append(el("span", "name", mod.name));
-    summary.append(singleBar(mod.bytes, scale));
     summary.append(el("span", "bytes", String(mod.bytes)));
+    summary.append(singleBar(mod.bytes, scale));
     block.append(summary);
-    const syms = mod.symbols
-      .map((sym) => ({
-        name: sym.name || "",
-        bytes: Number(sym.bytes) || 0,
-      }))
-      .sort((a, b) => b.bytes - a.bytes || a.name.localeCompare(b.name));
+    const syms = visibleSymbols(mod.symbols);
     const body = el("div", "build-syms");
     for (const sym of syms) {
       const line = el("div", "build-sym");
       line.append(el("span", "name", sym.name));
-      line.append(singleBar(sym.bytes, mod.bytes || 1));
       line.append(el("span", "bytes", String(sym.bytes)));
+      line.append(singleBar(sym.bytes, mod.bytes || 1));
       body.append(line);
     }
     block.append(body);
@@ -14676,7 +14641,6 @@ let drawingOrtho = false;
 let doomSprites = null;
 let spriteSelClip = null;
 let framePoseClip = null;
-let bindJoint = -1;
 let clipIndex = 0;
 let frameLocal = 0;
 let mdlScale = DEFAULT_MDL_SCALE;
@@ -14911,9 +14875,9 @@ const animView = new AnimView(document.getElementById("view-canvas"), {
     return {
       verts,
       edges: mdl.edges,
-      binding: pendingBind != null || bindJoint >= 0,
-      bindJoint: pendingBind != null ? -1 : bindJoint,
-      meshSel: pendingBind != null ? pendingBind : rig.jointVerts[bindJoint] || [],
+      binding: pendingBind != null,
+      bindJoint: -1,
+      meshSel: pendingBind || [],
       jointVerts: rig.jointVerts,
       ghost: averageJointPositions(verts, rig.jointVerts),
       lines: e.lines,
@@ -14922,11 +14886,9 @@ const animView = new AnimView(document.getElementById("view-canvas"), {
   },
   onSelectMeshVert: (i, additive) => {
     if (pendingBind) stageMeshBind([i], additive);
-    else assignMeshVerts([i], additive);
   },
   onSelectMeshVerts: (indices, additive) => {
     if (pendingBind) stageMeshBind(indices, additive);
-    else assignMeshVerts(indices, additive);
   },
 });
 
@@ -16432,7 +16394,6 @@ function renderEnemyList() {
       selectedVerts = [];
       selectedLines = [];
       pendingBind = null;
-      bindJoint = -1;
       clampFrameIndex(activeEnemy());
       const timeline = getTimeline(activeEnemy());
       if (prevClip) {
@@ -17592,15 +17553,14 @@ function renderInspector() {
     const clamp = clampVertFor(e);
     const fine = enemyHasSprites(e);
     const lim = fine ? VERT_MAX / 4 : vertLimitFor(e);
-    const lo = fine ? VERT_MIN / 4 : e.customSkeleton ? -lim : -lim - 1;
+    const lo = fine ? VERT_MIN / 4 : -lim;
     const setC = (k, val) => {
       pushUndo();
       v[k] = clamp(val);
       markDirty();
       refreshAll();
     };
-    const name = !e.customSkeleton && JOINT_NAMES[vi] ? ` ${JOINT_NAMES[vi]}` : "";
-    const xyz = vec3Field(`Vertex ${vi}${name}`, [
+    const xyz = vec3Field(`Vertex ${vi}`, [
       { axis: "x", value: v.x, onChange: (n) => setC("x", n), min: lo, max: lim, step: enemyHasSprites(e) ? 0.25 : undefined },
       { axis: "y", value: v.y, onChange: (n) => setC("y", n), min: lo, max: lim, step: enemyHasSprites(e) ? 0.25 : undefined },
       { axis: "z", value: v.z, onChange: (n) => setC("z", n), min: lo, max: lim, step: enemyHasSprites(e) ? 0.25 : undefined },
@@ -17814,64 +17774,9 @@ function pasteSpriteSelection() {
 
 function stickCount(e) {
   if (enemyHasSprites(e)) return poseVertCount(e) || (e?.verts | 0);
-  if (!e?.customSkeleton) return 13;
   const joints = e.mdlRig?.jointVerts;
   if (Array.isArray(joints)) return joints.length;
   return poseVertCount(e);
-}
-
-function jointLabel(e, i) {
-  if (e?.customSkeleton) return String(i);
-  return JOINT_NAMES[i] || String(i);
-}
-
-function cloneGraph(e) {
-  return {
-    verts: stickCount(e),
-    lines: e.lines.map((p) => [p[0], p[1]]),
-    frames: JSON.parse(JSON.stringify(e.frames)),
-    mdlRig: JSON.parse(JSON.stringify(e.mdlRig)),
-    clips: JSON.parse(JSON.stringify(e.clips || [])),
-    exportClips: e.exportClips ? [...e.exportClips] : undefined,
-  };
-}
-
-function applyGraph(e, g) {
-  e.verts = g.verts;
-  e.lines = g.lines.map((p) => [p[0], p[1]]);
-  e.frames = JSON.parse(JSON.stringify(g.frames));
-  e.mdlRig = JSON.parse(JSON.stringify(g.mdlRig));
-  if (g.clips) e.clips = JSON.parse(JSON.stringify(g.clips));
-  if (g.exportClips) e.exportClips = [...g.exportClips];
-}
-
-function setCustomSkeleton(e, on) {
-  if (!!e.customSkeleton === !!on) return;
-  pushUndo();
-  bindJoint = -1;
-  pendingBind = null;
-  selectedVerts = [];
-  selectedLines = [];
-  if (on) {
-    e.stockGraph = cloneGraph(e);
-    if (e.customGraph) applyGraph(e, e.customGraph);
-    else {
-      e.verts = 0;
-      e.lines = [];
-      e.frames = [[]];
-      e.mdlRig = { jointVerts: [] };
-    }
-    e.customSkeleton = true;
-    e.customGraph = null;
-  } else {
-    e.customGraph = cloneGraph(e);
-    if (e.stockGraph) applyGraph(e, e.stockGraph);
-    e.customSkeleton = false;
-    e.stockGraph = null;
-  }
-  markDirty();
-  retargetMdlFrames();
-  updateAnimHint();
 }
 
 function animHintText() {
@@ -17880,16 +17785,10 @@ function animHintText() {
     const wire = stickWireOn ? "Space hide wireframe" : "Space show wireframe";
     return `Left/front drag the on-screen axes · ${wire} · perspective orbits · V add vert · L add line · Del delete · Ctrl+C/V selection · Add/Remove frames · [ ] frames`;
   }
-  if (e?.customSkeleton && pendingBind) {
+  if (pendingBind) {
     return "Box-select mesh verts · Shift add · V done · Esc cancels · F focus · RMB orbit";
   }
-  if (bindJoint >= 0) {
-    return `Box-select mesh verts for ${jointLabel(e, bindJoint)} · Shift add · Esc stops bind · F focus · RMB orbit`;
-  }
-  if (e?.customSkeleton) {
-    return "LMB select verts or a line · Shift add · V bind · L add line · M merge · Del delete · [ ] frames · F focus · MMB pan · Alt+LMB / RMB orbit · Alt+RMB zoom";
-  }
-  return "LMB box-select verts · click-drag unselected on camera plane · gizmo moves selection · X/Y/Z nudge · [ ] frames · F focus · MMB pan · Alt+LMB / RMB orbit · Alt+RMB zoom";
+  return "LMB select verts or a line · Shift add · V bind · L add line · M merge · Del delete · [ ] frames · F focus · MMB pan · Alt+LMB / RMB orbit · Alt+RMB zoom";
 }
 
 function updateAnimHint() {
@@ -17972,7 +17871,6 @@ function toggleCustomBind(e) {
     return;
   }
   pendingBind = [];
-  bindJoint = -1;
   selectedVerts = [];
   selectedLines = [];
   setOverlayOn(true);
@@ -18046,8 +17944,6 @@ function mergeCustomVerts(e) {
   e.lines = lines;
   e.verts = nv - 1;
   e.weaponVert = remap(e.weaponVert ?? WEAPON_VERT);
-  if (bindJoint === drop) bindJoint = surv;
-  else if (bindJoint > drop) bindJoint--;
   selectedVerts = [surv];
   selectedLines = [];
   markDirty();
@@ -18079,7 +17975,6 @@ function deleteCustomVerts(e) {
   e.verts = n;
   const mappedWeapon = map[e.weaponVert ?? WEAPON_VERT];
   e.weaponVert = mappedWeapon == null || mappedWeapon < 0 ? 0 : mappedWeapon;
-  if (bindJoint >= 0) bindJoint = map[bindJoint] ?? -1;
   selectedVerts = [];
   selectedLines = [];
   markDirty();
@@ -18104,61 +17999,29 @@ function deleteCustomSelection(e) {
 }
 
 function ensureEnemyRig(e) {
-  if (e?.customSkeleton) {
-    if (!e.mdlRig || !Array.isArray(e.mdlRig.jointVerts)) {
-      e.mdlRig = { jointVerts: [] };
-    }
-    const joints = e.mdlRig.jointVerts;
-    let donor = null;
-    if (Array.isArray(e.frames)) {
-      for (const fr of e.frames) {
-        if (Array.isArray(fr) && (!donor || fr.length > donor.length)) donor = fr;
-      }
-      for (const fr of e.frames) {
-        if (!Array.isArray(fr)) continue;
-        while (fr.length < joints.length) {
-          const src = donor && donor.length > fr.length ? donor[fr.length] : null;
-          fr.push(src ? { x: src.x, y: src.y, z: src.z } : { x: 0, y: 0, z: 0 });
-        }
-      }
-    }
-    e.verts = joints.length;
-    return e.mdlRig;
-  }
-  const n = stickCount(e);
   if (!e.mdlRig || !Array.isArray(e.mdlRig.jointVerts)) {
-    e.mdlRig = { jointVerts: Array.from({ length: n }, () => []) };
-    return e.mdlRig;
+    e.mdlRig = { jointVerts: [] };
   }
   const joints = e.mdlRig.jointVerts;
-  if (joints.length === n) return e.mdlRig;
-  e.mdlRig = emptyMdlRig();
+  let donor = null;
+  if (Array.isArray(e.frames)) {
+    for (const fr of e.frames) {
+      if (Array.isArray(fr) && (!donor || fr.length > donor.length)) donor = fr;
+    }
+    for (const fr of e.frames) {
+      if (!Array.isArray(fr)) continue;
+      while (fr.length < joints.length) {
+        const src = donor && donor.length > fr.length ? donor[fr.length] : null;
+        fr.push(src ? { x: src.x, y: src.y, z: src.z } : { x: 0, y: 0, z: 0 });
+      }
+    }
+  }
+  e.verts = joints.length;
   return e.mdlRig;
 }
 
 function activeMdl() {
   return sharewareModels[activeEnemy()?.name] || null;
-}
-
-function assignMeshVerts(indices, additive) {
-  if (bindJoint < 0) return;
-  const e = activeEnemy();
-  if (!e) return;
-  const rig = ensureEnemyRig(e);
-  const mdl = activeMdl();
-  const max = mdl ? mdl.numVerts : Infinity;
-  pushUndo();
-  const set = new Set(additive ? rig.jointVerts[bindJoint] : []);
-  for (const i of indices) {
-    const n = i | 0;
-    if (n >= 0 && n < max) set.add(n);
-  }
-  rig.jointVerts[bindJoint] = [...set].sort((a, b) => a - b);
-  markDirty();
-  persistMdlRigBackup();
-  retargetMdlFrames({ status: true });
-  refreshPanels();
-  animView.draw();
 }
 
 async function loadSharewareFromHandle(handle) {
@@ -18343,49 +18206,17 @@ function renderDoomSource(root, e) {
   }
   wrap.appendChild(status);
 
-  const rig = ensureEnemyRig(e);
-  const custom = !!e.customSkeleton;
-  const count = stickCount(e);
-
-  if (custom) {
-    const row = document.createElement("div");
-    row.className = "btn-row";
-    const bindBtn = document.createElement("button");
-    bindBtn.type = "button";
-    bindBtn.textContent = pendingBind ? "Done" : "Bind";
-    bindBtn.title = "V";
-    if (pendingBind) bindBtn.className = "active";
-    bindBtn.addEventListener("click", () => toggleCustomBind(e));
-    row.append(bindBtn);
-    wrap.appendChild(row);
-  } else {
-  const jointList = document.createElement("ul");
-  jointList.className = "joint-list";
-  for (let i = 0; i < count; i++) {
-    const name = jointLabel(e, i);
-    const li = document.createElement("li");
-    li.className = "joint-row" + (bindJoint === i ? " active" : "");
-    const label = document.createElement("span");
-    label.className = "joint-name";
-    const n = rig.jointVerts[i]?.length || 0;
-    label.classList.toggle("unbound", !n);
-    label.textContent = n ? `${name} · ${n}` : name;
-    const bindBtn = document.createElement("button");
-    bindBtn.type = "button";
-    bindBtn.textContent = bindJoint === i ? "Done" : "Bind";
-    if (bindJoint === i) bindBtn.className = "active";
-    bindBtn.addEventListener("click", () => {
-      bindJoint = bindJoint === i ? -1 : i;
-      if (bindJoint >= 0) setOverlayOn(true);
-      updateAnimHint();
-      refreshPanels();
-      animView.draw();
-    });
-    li.append(label, bindBtn);
-    jointList.appendChild(li);
-  }
-  wrap.appendChild(jointList);
-  }
+  ensureEnemyRig(e);
+  const row = document.createElement("div");
+  row.className = "btn-row";
+  const bindBtn = document.createElement("button");
+  bindBtn.type = "button";
+  bindBtn.textContent = pendingBind ? "Done" : "Bind";
+  bindBtn.title = "V";
+  if (pendingBind) bindBtn.className = "active";
+  bindBtn.addEventListener("click", () => toggleCustomBind(e));
+  row.append(bindBtn);
+  wrap.appendChild(row);
   root.appendChild(wrap);
 }
 
@@ -18885,10 +18716,9 @@ window.addEventListener("keydown", (e) => {
       return;
     }
     if (e.key === "Escape") {
-      if (pendingBind || bindJoint >= 0) {
+      if (pendingBind) {
         e.preventDefault();
         pendingBind = null;
-        bindJoint = -1;
         updateAnimHint();
         refreshPanels();
         animView.draw();

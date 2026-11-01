@@ -926,11 +926,8 @@ solid_at
 	lda room_idx
 	sta col_room
 solid_at_col
-	cpy #2
-	beq .sa_p			; Y=2: lava ignores crates (electrodes)
 	jsr crates_block
 	bcs .sa_yes
-.sa_p
 	; platforms — solid on Y overlap (plane as sy=0); rise <= STEP_UP is a step-up
 	ldy col_room			; Y flag is dead past the crates
 	+slice_x room_plat_o

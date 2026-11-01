@@ -71,7 +71,7 @@ only changes `LoadPrg` inside `loader.asm` (26 B).
 | `$1CAA`–`$26A8` | 2559 | `line.asm` | Bresenham setup + generated unrolled bodies |
 | `$26A9`–`$28C8` | 544 | `fx.asm` | explosion particles |
 | `$28C9`–`$2EE2` | 1562 | `rocket.asm` | |
-| `$2EE3`–`$3138` | 598 | `spit.asm` | |
+| `$2EE3`–`$3138` | 598 | (removed) | old spit module; not in the current link |
 | `$3139`–`$3376` | 574 | `playsound.asm` | SID mixer |
 | `$3377`–`$377A` | 1028 | `pcsounds.asm` | resident PC-speaker envelopes/tables |
 | `$377B`–`$387A` | 256 | `pcsfreq.asm` | Fn hi LUT (256) |
@@ -107,22 +107,22 @@ map plus the worst room's banks; load peak is packed map plus `LEVEL_PREFIX`.
 `MAP_MAX_BYTES` 4096 is a packed-map cap; prefix is extra.
 
 Enemy bank bytes (from `enemy_sizes.asm`, including QAI1 header, optional
-relocatable behavior code, pose data, SFX, and clip events): grunt 2488,
-knight 2369, rott 2384, scrag 2353, ogre 2836, shambler 2526, chthon 2934,
-zombie 2936.
+relocatable behavior code, pose data, SFX, and clip events): poss 1130,
+baron 1800, pinky 1482, imp 1965.
 
-Current gate (`game.lbl`, avail 10478, `LEVEL_PREFIX` 2220):
+Current gate (`build-report.json`, avail 6975, `LEVEL_PREFIX` 2239):
 
-| Level | Map | Worst room poses | Need | Slack |
+| Level | Map | Worst room | Need | Slack |
 | :--- | ---: | :--- | ---: | ---: |
-| E1M1 | 2332 | 4872 (room 2: grunt, rott) | 7204 | 3274 |
-| E1M2 | 3115 | 5324 (room 0: grunt, ogre) | 8439 | 2039 |
-| E1M3 | 3555 | 2936 (room 1: zombie) | 6491 | 3987 |
-| E1M4 | 2345 | 5205 (room 7: knight, ogre) | 7550 | 2928 |
-| E1M5 | 3651 | 5205 (room 3: knight, ogre) | 8856 | 1622 |
-| E1M6 | 2234 | 2936 (room 8: zombie) | 5170 | 5308 |
+| E1M1 | 2023 | 1965 (room 5: imp) | 4262 | 2713 |
+| E1M2 | 3900 | 1965 (room 2: imp) | 6139 | 836 |
+| E1M3 | 3465 | 1965 (room 9: imp) | 5704 | 1271 |
+| E1M4 | 2182 | 1800 (room 1: baron) | 4421 | 2554 |
+| E1M5 | 3351 | 1800 (room 0: baron) | 5590 | 1385 |
+| E1M6 | 2284 | 1965 (room 8: imp) | 4523 | 2452 |
+| E1M7 | 718 | 0 (no enemies) | 2957 | 4018 |
 
-E1M5 is the tightest.
+E1M2 is the tightest.
 Caps: `MAP_MAX_BYTES` 4096, pose payload 4096, fused bank 8192.
 
 ## VIC Bank 3 overview
@@ -141,7 +141,7 @@ Caps: `MAP_MAX_BYTES` 4096, pose payload 4096, fused bank 8192.
 | `$C980`–`$C9BF` | 64 | Sprite 6 enemy muzzle (`WPN_EMUZ`) |
 | `$C9C0`–`$C9FF` | 64 | Sprite 7 impact splat (`WPN_SPLAT`) |
 | `$CA00`–`$CE81` | 642 | Project / clip / game scratch (table below) |
-| `$CE82`–`$CFFF` | 382 | Play BSS: enemy state, rocket SoA, hitscan/FX, Scrag spit, movement scratch, and AI-bank relocation scratch through `$CFCB`; `saw_flip`/`saw_amp` at `$CFD7`; remainder free before charset A |
+| `$CE82`–`$CFFF` | 382 | Play BSS: enemy state, rocket SoA, hitscan/FX, barrel chain, movement scratch, and AI-bank relocation scratch through `$CFCB`; `saw_flip`/`saw_amp` at `$CFD7`; remainder free before charset A |
 | `$D000`–`$D5FF` | 1536 | Charset A top cols 0–23 (viewport) |
 | `$D600`–`$D607` | 8 | Char 192 `$FF` margin glyph |
 | `$D608`–`$D747` | 320 | `SINTAB` (COSTAB = SINTAB+64 at `$D648`) |

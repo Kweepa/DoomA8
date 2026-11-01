@@ -3,25 +3,6 @@
 
 !source "enemy_data.asm"
 
-; A = signed editor byte → nlo:nhi = A/8 as 8.8 (hi = A>>3 arithmetic, lo = A<<5)
-scale_s8_88
-	sta nlo
-	cmp #$80
-	ror
-	cmp #$80
-	ror
-	cmp #$80
-	ror
-	sta nhi
-	lda nlo
-	asl
-	asl
-	asl
-	asl
-	asl
-	sta nlo
-	rts
-
 ; A = signed quarter-units → nlo:nhi = A/4 as 8.8 (hi = A>>2 arithmetic, lo = A<<6)
 scale_q4_88
 	sta nlo
@@ -42,7 +23,8 @@ scale_q4_88
 
 ; Local vert gidx (gx/gz_ptr, signed editor bytes) rotated by the facing in
 ; sg_a/pa_* (cos) and sg_b/pb_* (sin) → e0x:e0xh = x', e1z:e1zh = z' (8.8).
-; x' = (lx*cc - lz*ss) >> 2, z' = (lx*ss + lz*cc) >> 2: four unsigned 8x8
+; x' = (lx*cc - lz*ss) >> 1, z' = (lx*ss + lz*cc) >> 1, low bit cleared.
+; That is the old >> 2 followed by the << 1. Four unsigned 8x8
 ; products, signs applied per term, one shift at the end.
 !macro rl_umul .s1l, .s2l, .s1h, .s2h, .lo, .hi {
 	sec
@@ -132,23 +114,21 @@ ent_rot_local
 	lda e1zh
 	adc nhi
 .rl_z2
-	cmp #$80			; z' >>= 2
+	cmp #$80			; z' >>= 1, clear bit 0 (was >>2 then <<1)
 	ror
 	sta e1zh
 	ror e1z
-	cmp #$80
-	ror
-	sta e1zh
-	ror e1z
-	lda e0xh			; x' >>= 2
+	lda e1z
+	and #$fe
+	sta e1z
+	lda e0xh			; x' >>= 1, clear bit 0
 	cmp #$80
 	ror
 	sta e0xh
 	ror e0x
-	cmp #$80
-	ror
-	sta e0xh
-	ror e0x
+	lda e0x
+	and #$fe
+	sta e0x
 	rts
 
 load_view_trig
@@ -291,16 +271,13 @@ ent_set_pose
 	ldx obj_i
 	jsr enemy_logical_frame
 .esp_off
-	; Y = logical global frame. pose_map (heap): packed index or $FF = midpoint lerp.
+	; Y = logical global frame. pose_map (heap) is the packed index.
 	ldx ent_type
 	lda pose_map_lo,x
 	sta rot1
 	lda pose_map_hi,x
 	sta rot2
 	lda (rot1),y
-	bpl .esp_stored
-	jmp pose_lerp
-.esp_stored
 	tay
 	ldx ent_type
 	jsr frame_stride
@@ -328,18 +305,14 @@ ent_set_pose
 	rts
 
 ; X = type, Y = frame or stored count. nlo:nhi = Y * pose stride.
-; No prefix: stride 0. Prefix with nv = 0: stride 0. Otherwise nv.
+; No prefix, or a prefix with nv = 0: stride 0. Otherwise nv.
 ; Preserves X. Destroys Y on the multiply path.
 frame_stride
 	lda skel_base_hi,x
-	beq .fs_f13
+	beq .fs_zero
 	lda skel_nv,x
 	bne .fs_nv
-	lda #0
-	sta nlo
-	sta nhi
-	rts
-.fs_f13
+.fs_zero
 	lda #0
 	sta nlo
 	sta nhi
@@ -348,206 +321,8 @@ frame_stride
 	sta skel_mul_n
 	jmp skel_mul_ya
 
-pose_lerp
-	ldx ent_type
-	lda skel_entry_hi,x
-	beq .pl_res
-	lda #SKEL_CMD_LERP
-	jmp skel_call
-.pl_res
-	sty gidx
-	dey
-	lda (rot1),y
-	sta rot0
-	ldy gidx
-	iny
-	lda (rot1),y
-	sta gidx
-	ldx ent_type
-	ldy rot0
-	clc
-	lda enemy_gx_lo,x
-	adc frame13_lo,y
-	sta src_ptr
-	lda enemy_gx_hi,x
-	adc frame13_hi,y
-	sta src_ptr+1
-	ldy gidx
-	clc
-	lda enemy_gx_lo,x
-	adc frame13_lo,y
-	sta dst_ptr
-	lda enemy_gx_hi,x
-	adc frame13_hi,y
-	sta dst_ptr+1
-	ldy #0
-.plx
-	jsr pose_avg_y
-	sta pose_gx,y
-	iny
-	cpy #NVERTS
-	bcc .plx
-	ldy rot0
-	clc
-	lda enemy_gy_lo,x
-	adc frame13_lo,y
-	sta src_ptr
-	lda enemy_gy_hi,x
-	adc frame13_hi,y
-	sta src_ptr+1
-	ldy gidx
-	clc
-	lda enemy_gy_lo,x
-	adc frame13_lo,y
-	sta dst_ptr
-	lda enemy_gy_hi,x
-	adc frame13_hi,y
-	sta dst_ptr+1
-	ldy #0
-.ply
-	jsr pose_avg_y
-	sta pose_gy,y
-	iny
-	cpy #NVERTS
-	bcc .ply
-	ldy rot0
-	clc
-	lda enemy_gz_lo,x
-	adc frame13_lo,y
-	sta src_ptr
-	lda enemy_gz_hi,x
-	adc frame13_hi,y
-	sta src_ptr+1
-	ldy gidx
-	clc
-	lda enemy_gz_lo,x
-	adc frame13_lo,y
-	sta dst_ptr
-	lda enemy_gz_hi,x
-	adc frame13_hi,y
-	sta dst_ptr+1
-	ldy #0
-.plz
-	jsr pose_avg_y
-	sta pose_gz,y
-	iny
-	cpy #NVERTS
-	bcc .plz
-	lda #<pose_gx
-	sta gx_ptr
-	lda #>pose_gx
-	sta gx_ptr+1
-	lda #<pose_gy
-	sta gy_ptr
-	lda #>pose_gy
-	sta gy_ptr+1
-	lda #<pose_gz
-	sta gz_ptr
-	lda #>pose_gz
-	sta gz_ptr+1
-	rts
-
-; Signed (src+dst)>>1. Y = vert. X/Y preserved. nlo/nhi scratch.
-pose_avg_y
-	lda #0
-	sta nhi
-	lda (src_ptr),y
-	bpl +
-	dec nhi
-+	clc
-	adc (dst_ptr),y
-	sta nlo
-	lda nhi
-	adc #0
-	sta nhi
-	lda (dst_ptr),y
-	bpl +
-	dec nhi
-+	lda nhi
-	cmp #$80
-	ror nhi
-	ror nlo
-	lda nlo
-	rts
-
-; Rotate one enemy instance at ent_wx/wy/wz, ent_rot, ent_type.
-; Caller already ran load_view_trig + xform_world_vert (CAM[0] = view origin).
-; view(v) = R_yaw(world − cam) + R(yaw − facing)(local): the rotated origin
-; is hoisted per enemy and facing (8-bit yaw ticks) folds into the trig
-; angle — 8-bit local products replace 16-bit smul16_7s.
-ent_rotate
-	jsr ent_set_pose
-	; combined angle a = yaw − ent_rot → fast-mul sets (A=cos, B=sin)
-	sec
-	lda yaw
-	sbc ent_rot
-	tay
-	lda COSTAB,y
-	jsr mulset_a
-	lda SINTAB,y
-	jsr mulset_b
-	; view-space origin from CAM[0] (xform_world_vert output)
-	lda CAM_X
-	sta org_xl
-	lda CAM_XH
-	sta org_xh
-	lda CAM_Y
-	sta org_yl
-	lda CAM_YH
-	sta org_yh
-	lda CAM_Z
-	sta org_zl
-	lda CAM_ZH
-	sta org_zh
-	lda #0
-	sta gidx
-	sta vindex
-.rvert
-	jsr ent_rot_local
-	; CAM[v] = origin + rotated local (y unrotated: yaw-only view)
-	ldx vindex
-	clc
-	lda org_xl
-	adc e0x
-	sta CAM_X,x
-	lda org_xh
-	adc e0xh
-	sta CAM_XH,x
-	clc
-	lda org_zl
-	adc e1z
-	sta CAM_Z,x
-	lda org_zh
-	adc e1zh
-	sta CAM_ZH,x
-	ldy gidx
-	lda (gy_ptr),y
-	jsr scale_s8_88			; nlo:nhi = gy·32 (8.8 of gy/8)
-	clc
-	lda org_yl
-	adc nlo
-	sta CAM_Y,x
-	lda org_yh
-	adc nhi
-	sta CAM_YH,x
-	inc gidx
-	inc vindex
-	lda vindex
-	cmp #NVERTS
-	beq +
-	jmp .rvert
-+
-	lda #NVERTS
-	sta mesh_nwork
-!if PROFILE = 1 {
-	ldx #NV_ROT
-	jmp prof_add_nv
-} else {
-	rts
-}
-
 ; Y = local vert. obj_i = enemy, ent_type set. org_* = world 8.8 of that bone.
-; Facing rotate only (same smul8_88 / scale_s8_88 as ent_rotate).
+; Facing rotate only (same rotate / scale_q4_88 as draw_one_batch).
 ent_vert_world
 	sty gidx
 	jsr ent_set_pose
@@ -564,15 +339,7 @@ ent_vert_world
 	jsr ent_rot_local
 	ldy gidx
 	lda (gy_ptr),y
-	jsr scale_s8_88
-	ldx ent_type
-	lda pose_fine,x
-	beq .evw_grow
-	tax
-	jsr .evw_shr
-.evw_grow
-	jsr doom_grow
-.evw_add
+	jsr scale_q4_88
 	ldx obj_i
 	clc
 	lda e0x
@@ -593,51 +360,6 @@ ent_vert_world
 	+lda_mx en_y
 	adc nhi
 	sta org_yh
-	rts
-
-; X = pose_fine. >> that many on the 8.8 offset from ent_rot_local / scale_s8_88.
-.evw_shr
-	lda e0xh
-	cmp #$80
-	ror e0xh
-	ror e0x
-	lda e1zh
-	cmp #$80
-	ror e1zh
-	ror e1z
-	lda nhi
-	cmp #$80
-	ror nhi
-	ror nlo
-	dex
-	bne .evw_shr
-	rts
-
-; Index is ent_type. Extra shifts on top of editor/8. The four Doom
-; sprites are 0 here; draw_one_batch / doom_grow doubles them afterward.
-pose_fine	!byte 0, 0, 0, 0
-
-; Resident batch stores v*4 and the rotator yields editor/2. Double that
-; for Poss, Baron, Pinky, Imp so the mesh matches the editor units.
-; e0 / e1 / nlo:nhi are the local 8.8 offset. Clobbers A.
-doom_grow
-	lda ent_type
-	cmp #ENT_POSS
-	beq .dg
-	cmp #ENT_BARON
-	beq .dg
-	cmp #ENT_PINKY
-	beq .dg
-	cmp #ENT_IMP
-	bne .dg_no
-.dg
-	asl e0x
-	rol e0xh
-	asl e1z
-	rol e1zh
-	asl nlo
-	rol nhi
-.dg_no
 	rts
 
 ; Y = vert index. Branch to .skip if culled by mesh_vmask. 8 cycles at $ff.
@@ -2035,12 +1757,6 @@ draw_enemies
 	tay
 	+lda_mx en_rot
 	sta ent_rot
-	lda skel_entry_hi,y
-	beq .de_batch
-	lda #SKEL_CMD_DRAW
-	jsr skel_call
-	jmp .de_one_rts
-.de_batch
 	lda skel_base_hi,y
 	beq .de_one_rts
 	jsr draw_one_batch
@@ -2050,10 +1766,7 @@ draw_enemies
 	rts
 
 
-SKEL_CMD_DRAW = 0
-SKEL_CMD_LERP = 1
-
-; Shift-0 custom mesh, one batch, 12..16 slots. Same rotate as the stick.
+; Shift-0 custom mesh, one batch, 12..16 slots.
 ; ent_type set, CAM[0] is the origin.
 draw_one_batch
 	jsr ent_set_pose
@@ -2102,8 +1815,7 @@ draw_one_batch
 	jsr ent_rot_local
 	ldy gidx
 	lda (gy_ptr),y
-	jsr scale_s8_88
-	jsr doom_grow
+	jsr scale_q4_88
 	ldx vindex
 	clc
 	lda org_xl
@@ -2158,23 +1870,6 @@ draw_one_batch
 	lda #$ff
 	sta mesh_vmask
 	jsr enemy_project
-	rts
-
-; A = command. ent_type set. Y preserved. jsr the streamed skeleton entry.
-skel_call
-	pha
-	ldx ent_type
-	lda skel_entry_hi,x
-	beq .sc_pop
-	sta .sc_jsr+2
-	lda skel_entry_lo,x
-	sta .sc_jsr+1
-	pla
-.sc_jsr
-	jsr $ffff
-	rts
-.sc_pop
-	pla
 	rts
 
 ; Pending melee splat: half-pixel 48+X×4 / 32−Y×2 via .pcs_bias, then jitter ×2.

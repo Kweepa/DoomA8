@@ -156,11 +156,8 @@ MAP_SMC_BASE	= $0200
 
 ; Play BSS: default VIC matrix / leftover boot. VIC matrix in play is $C000.
 ; map_bss.asm occupies $0400–$0523. $08F6 video_ms, $08F9–$08FF reboot stub + selectors.
-FRAME13_N	= 106			; offsets 0..105
 ENEMY_PTR_N	= 4			; must == ENEMY_NTYPES (doom64.asm asserts)
-frame13_lo	= $0524
-frame13_hi	= $058E
-enemy_gx_lo	= $05F8
+enemy_gx_lo	= $0524
 enemy_gx_hi	= enemy_gx_lo + ENEMY_PTR_N
 enemy_gy_lo	= enemy_gx_hi + ENEMY_PTR_N
 enemy_gy_hi	= enemy_gy_lo + ENEMY_PTR_N
@@ -172,10 +169,7 @@ box_vis_b	= box_vis_edges + 12		; 12 line ends
 room_pack_edges	= box_vis_edges + 24		; 64
 room_vis_a	= room_pack_edges		; 32 line starts
 room_vis_b	= room_pack_edges + 32		; 32 line ends
-pose_gx		= room_pack_edges + 64		; 13 — lerp scratch (ent_set_pose)
-pose_gy		= pose_gx + 13
-pose_gz		= pose_gy + 13
-pose_map_lo	= pose_gz + 13			; patched at pose load (logical → packed)
+pose_map_lo	= room_pack_edges + 64		; patched at pose load (logical → packed)
 pose_map_hi	= pose_map_lo + ENEMY_PTR_N
 enemy_sfx_evt_lo	= pose_map_hi + ENEMY_PTR_N	; cue block + clip event table on pose heap
 enemy_sfx_evt_hi	= enemy_sfx_evt_lo + ENEMY_PTR_N
@@ -183,13 +177,16 @@ en_sfx_old	= enemy_sfx_evt_hi + ENEMY_PTR_N	; local frame before this anim step;
 en_sfx_new	= en_sfx_old + 1		; logical frame after the step
 en_sfx_n	= en_sfx_new + 1		; remaining events while scanning
 en_sfx_armed	= en_sfx_n + 1			; 1 = frame changed this anim step
-play_bss_free	= en_sfx_armed + 1		; up to ENEMY_DATA_BASE
-; Menu set_video_ms copies the PAL hue table here. GAME loads at $0900, so
-; this is still here when a8_to_pal runs. NTSC never reads it.
-a8_pal_hue	= play_bss_free			; 16: NTSC hue → PAL high nibble, lum 0
+play_bss_free	= en_sfx_armed + 1		; up to a8_pal_hue
+; Menu set_video_ms writes this while the boot loader ($0480–boot_end) is still
+; live. Fixed above that image, below skip_n. GAME loads at $0900 and leaves it.
+; NTSC never reads it.
+a8_pal_hue	= $06d5				; 16: NTSC hue → PAL high nibble, lum 0
 a8_hue_lo	= a8_pal_hue + 16		; a8_to_pal luminance scratch
-; genenemies.py ENEMY_DATA_BASE must match. Pointer tables above are shorter
-; than the pad, so this stays put when ENEMY_PTR_N changes.
+!if  play_bss_free > a8_pal_hue {
+	!error "play BSS overlaps the PAL hue table"
+}
+; genenemies.py ENEMY_DATA_BASE must match.
 ; Per-type cue ids ride on the pose heap, not here: enemy_sfx_evt_* points at the
 ; 5-byte cue block, and the clip event table follows it (CUE_N bytes in).
 CUE_SIGHT	= 0			; generic: enemy_enter_alert
@@ -226,9 +223,7 @@ skel_ne		= skel_nv + ENEMY_PTR_N
 skel_base_lo	= skel_ne + ENEMY_PTR_N		; pose prefix in the bank
 skel_base_hi	= skel_base_lo + ENEMY_PTR_N
 skel_mul_n	= skel_base_hi + ENEMY_PTR_N
-skel_entry_lo	= skel_mul_n + 1		; streamed draw/lerp entry
-skel_entry_hi	= skel_entry_lo + ENEMY_PTR_N
-SKEL_BSS_END	= skel_entry_hi + ENEMY_PTR_N
+SKEL_BSS_END	= skel_mul_n + 1
 !if  SKEL_BSS_END > RB_CELL {
 	!error "skeleton BSS overlaps rb_n cell"
 }
@@ -299,10 +294,7 @@ MOUSE_BSS_END	= mouse_v + 1
 	!error "mouse BSS overlaps rb_n"
 }
 
-SKEL_MAX_VERTS	= 48
-SKEL_MAX_EDGES	= 64
-SKEL_PFX	= 7			; size.w, nv, ne, entry.w, shift; baked batches follow
-SKEL_PFX_SHIFT	= 6			; pose coords stored as v >> shift
+SKEL_PFX	= 4			; size.w, nv, ne; one baked batch follows
 
 AI_BANK_MAGIC0	= 'Q'
 AI_BANK_MAGIC1	= 'A'
@@ -360,7 +352,7 @@ MARGIN_GLYPH	= CH_A_TOP + 24 * 64	; $D600 — char 192, A top
 
 A8_OFF		= $0E00			; $CA00-$CFFF -> $D800-$DDFF (under bitmap B)
 
-PROJ_X		= $CA00 + A8_OFF			; 16 view/proj slots (NVERTS=13 used)
+PROJ_X		= $CA00 + A8_OFF			; 16 view/proj slots
 PROJ_Y		= $CA10 + A8_OFF
 PROJ_Z		= $CA20 + A8_OFF
 CAM_X		= $CA30 + A8_OFF
@@ -383,8 +375,6 @@ casc_now	= $CB68 + A8_OFF
 
 FOCAL		= 100
 LOG_FOCAL	= 213			; round(32*log2(100))
-NVERTS		= 13
-NEDGES		= 13
 MESH_MAX_VERTS	= 16			; CAM/PROJ / VOC / COL_* slot count
 MESH_MAX_EDGES	= 32			; EDGE_VIS / CLIP_* slot count
 ANIM_MS		= 100			; walk step interval (ms)
@@ -605,17 +595,12 @@ FX_VEL_SPEED		= 32			; (dir*speed)>>7 → ~±31 into 8.8
 RKT_MAX		= 4
 RKT_OWN_PL		= 0
 RKT_OWN_EN		= 1
-RKT_F_BOUNCE		= 1			; fuse running
 RKT_F_PEND		= 2			; waiting on fx_on
-RKT_F_FIREBALL		= 4			; fireball: no bounce/explode
+RKT_F_FIREBALL		= 4			; fireball: clear on impact, no splash
 RKT_F_BARON		= 8			; baron fireball (base 30, else 10)
 RKT_TICK_MS		= 32
-RKT_FLOOR_XZ_ASR	= 1			; /2 XZ per floor hop
-RKT_GRAV		= $01EC			; 60 u/s² × 32ms as 8.8
-RKT_SPEED		= 30			; enemy horizontal
-RKT_SPEED_PL		= 64			; player outward; loft stays RKT_SPEED_Y
-RKT_SPEED_Y		= 10		; upward (was 20; ~22° not 45°)
-RKT_FUSE_MS		= 2000
+RKT_SPEED		= 30			; enemy horizontal, before aim
+RKT_SPEED_PL		= 64			; player horizontal
 RKT_LIFE_MS		= 5000
 RKT_DMG_BASE		= 16			; splash 16 + (rnd & 31)
 RKT_RAD		= 8
@@ -847,6 +832,7 @@ gr_vyl		= $CF01 + A8_OFF
 gr_vyh		= $CF05 + A8_OFF
 gr_vzl		= $CF09 + A8_OFF
 gr_vzh		= $CF0D + A8_OFF
+; Unused (was the grenade fuse). Life follows; do not slide.
 gr_fuse_l	= $CF11 + A8_OFF
 gr_fuse_h	= $CF15 + A8_OFF
 gr_life_l	= $CF19 + A8_OFF
@@ -906,7 +892,7 @@ stream_room	= $CF42 + A8_OFF
 ; Explosion particle vel — FX_N × vx/vy s8 (integrated at draw)
 fx_vx		= $CF43 + A8_OFF			; 24
 fx_vy		= $CF5B + A8_OFF			; 24
-; Barrel chain. Was scrag spit ($CF73–$CF82). Do not slide splat_src.
+; Barrel chain ($CF73–$CF82). Do not slide splat_src.
 barrel_pend	= $CF73 + A8_OFF		; 4 bytes, bit = thing index
 barrel_ch_l	= $CF77 + A8_OFF
 barrel_ch_h	= $CF78 + A8_OFF
@@ -1009,7 +995,7 @@ saw_flip	= $CFD7 + A8_OFF		; bit 0 drop, bit 1 idle half-rate
 saw_amp		= $CFD8 + A8_OFF		; 1 idle, 2 firing, 2..5 biting
 saw_bite	= $CFD9 + A8_OFF		; 1 = last chainsaw tick hit
 wpn1_held	= $CFDA + A8_OFF		; 1 = key 1 still down; one toggle per press
-; $CFDB–$CFFF reserved (was chthon/shambler). Charset A is $D000. Do not slide.
+; $CFDB–$CFFF reserved. Charset A is $D000. Do not slide.
 HAVE_YELLOW	= 1
 HAVE_BLUE	= 2
 HAVE_RED	= 4

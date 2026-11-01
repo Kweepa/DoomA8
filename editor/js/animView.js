@@ -97,10 +97,6 @@ export class AnimView {
     return !!(overlay && (overlay.binding || overlay.bindJoint >= 0));
   }
 
-  #custom() {
-    return !!this.opts.getEnemy()?.customSkeleton;
-  }
-
   #cam() {
     const { yaw, pitch, dist, target } = this.orbit;
     const { forward } = lookVectors(yaw, pitch);
@@ -293,7 +289,7 @@ export class AnimView {
   }
 
   #hitLine(mx, my) {
-    if (!this.#custom() || this.#binding() || !this.#hasStick()) return -1;
+    if (this.#binding() || !this.#hasStick()) return -1;
     const enemy = this.opts.getEnemy();
     const frame = this.opts.getFrame();
     const verts = enemy.frames[frame];
@@ -399,7 +395,7 @@ export class AnimView {
       this.draw();
       return;
     }
-    if (!binding && this.#custom()) {
+    if (!binding) {
       const li = this.#hitLine(p.x, p.y);
       if (li >= 0) {
         this.opts.onSelectLine?.(li, e.shiftKey);

@@ -1,6 +1,6 @@
-; Bouncing rockets: player rocket launcher. Faction owner (contact skips
-; allies; splash does not). One explosion at a time via fx_on.
-; Fireballs are imp and baron shots: no bounce, direct hit only.
+; Player rockets fly straight and explode on impact. Faction owner (contact
+; skips allies; splash does not). One explosion at a time via fx_on.
+; Fireballs are imp and baron shots: clear on impact, no splash.
 !zone rocket
 
 init_rockets
@@ -27,7 +27,8 @@ rkt_alloc
 	sec
 	rts
 
-; A = yaw. Y = horizontal speed. X = slot. Upward RKT_SPEED_Y.
+; A = yaw. Y = horizontal speed. X = slot. Vertical speed stays 0
+; (fireball aim overwrites all three axes after this).
 rkt_set_vel
 	stx obj_i
 	sta rot2
@@ -40,6 +41,8 @@ rkt_set_vel
 	sta gr_vxh,x
 	lda #0
 	sta gr_vxl,x
+	sta gr_vyh,x
+	sta gr_vyl,x
 	ldy rot2
 	lda COSTAB,y
 	ldy rot0
@@ -48,10 +51,6 @@ rkt_set_vel
 	sta gr_vzh,x
 	lda #0
 	sta gr_vzl,x
-	lda #RKT_SPEED_Y
-	sta gr_vyh,x
-	lda #0
-	sta gr_vyl,x
 	rts
 
 ; X=slot. org_* = pos. rot2 = aim yaw. A = owner.
@@ -72,8 +71,6 @@ rkt_fill_slot
 	lda #0
 	sta gr_flags,x
 	sta gr_acc,x
-	sta gr_fuse_l,x
-	sta gr_fuse_h,x
 	lda #<RKT_LIFE_MS
 	sta gr_life_l,x
 	lda #>RKT_LIFE_MS
@@ -155,21 +152,15 @@ rkt_tick
 	lda proc_tmp1
 	sbc #0
 	sta proc_tmp1
-	ldx obj_i
-	lda gr_flags,x
-	and #RKT_F_FIREBALL
-	bne .gt_move
-	sec
-	lda gr_vyl,x
-	sbc #<RKT_GRAV
-	sta gr_vyl,x
-	lda gr_vyh,x
-	sbc #>RKT_GRAV
-	sta gr_vyh,x
-.gt_move
 	jsr rkt_move_x
+	jsr rkt_step_dead
+	bcs .gt_tdone
 	jsr rkt_move_z
+	jsr rkt_step_dead
+	bcs .gt_tdone
 	jsr rkt_move_y
+	jsr rkt_step_dead
+	bcs .gt_tdone
 	ldx obj_i
 	lda gr_owner,x
 	bne .gt_vspl
@@ -189,29 +180,17 @@ rkt_tick
 	ldx obj_i
 	lda proc_tmp0
 	sta gr_acc,x
+	lda gr_on,x
+	beq .gt_rts
 	jsr rkt_contact
 	ldx obj_i
 	lda gr_on,x
 	beq .gt_rts
 	lda gr_flags,x
 	and #RKT_F_PEND
-	beq .gt_fuse
+	beq .gt_life
 	lda fx_on
 	bne .gt_life
-	jsr rkt_explode
-	jmp .gt_rts
-.gt_fuse
-	lda gr_flags,x
-	and #RKT_F_BOUNCE
-	beq .gt_life
-	sec
-	lda gr_fuse_l,x
-	sbc dt_ms
-	sta gr_fuse_l,x
-	lda gr_fuse_h,x
-	sbc dt_msh
-	sta gr_fuse_h,x
-	bcs .gt_life
 	jsr rkt_explode
 	jmp .gt_rts
 .gt_life
@@ -245,68 +224,29 @@ rkt_asr5
 !if (gr_vxh != gr_vxl + 4) | (gr_vyl != gr_vxl + 8) | (gr_vyh != gr_vyl + 4) | (gr_vzl != gr_vxl + 16) | (gr_vzh != gr_vzl + 4) {
 	!error "gr_v* layout"
 }
-; A = <vel_lo (Y unused). Negate and asr1.
-rkt_bounce
-	pha
+; C=1 stop this step: slot already dead, or splash is waiting on fx_on.
+rkt_step_dead
+	ldx obj_i
+	lda gr_on,x
+	beq .rsd_stop
+	lda gr_flags,x
+	and #RKT_F_PEND
+	bne .rsd_stop
+	clc
+	rts
+.rsd_stop
+	sec
+	rts
+
+; Wall, floor, ceiling, or solid. Fireball clears. Player rocket splashes.
+rkt_impact
 	ldx obj_i
 	lda gr_flags,x
 	and #RKT_F_FIREBALL
-	beq .gb_n
-	pla
+	beq +
 	jmp rkt_clear
-.gb_n
-	pla
-	; A = <gr_v?l. The arrays are 4 apart per slot, axes 8 apart, hi = lo + 4,
-	; and they straddle a page, so index off gr_vxl instead of patching low bytes.
-	sec
-	sbc #<gr_vxl
-	clc
-	adc obj_i
-	tax
-	sec
-	lda #0
-	sbc gr_vxl,x
-	sta gr_vxl,x
-	lda #0
-	sbc gr_vxl+4,x
-	sta gr_vxl+4,x
-	cmp #$80
-	ror gr_vxl+4,x
-	ror gr_vxl,x
-	ldx obj_i
-	lda gr_flags,x
-	and #RKT_F_BOUNCE
-	bne .gmb_rts
-	lda gr_flags,x
-	ora #RKT_F_BOUNCE
-	sta gr_flags,x
-	lda #<RKT_FUSE_MS
-	sta gr_fuse_l,x
-	lda #>RKT_FUSE_MS
-	sta gr_fuse_h,x
-.gmb_rts
-	rts
-
-; Signed ASR vx and vz (floor hop only).
-rkt_floor_xz
-	ldx obj_i
-	ldy #RKT_FLOOR_XZ_ASR
-.gfx
-	lda gr_vxh,x
-	cmp #$80
-	ror gr_vxh,x
-	ror gr_vxl,x
-	dey
-	bne .gfx
-	ldy #RKT_FLOOR_XZ_ASR
-.gfz
-	lda gr_vzh,x
-	cmp #$80
-	ror gr_vzh,x
-	ror gr_vzl,x
-	dey
-	bne .gfz
-	rts
++
+	jmp rkt_explode
 
 rkt_move_x
 	ldx obj_i
@@ -347,15 +287,7 @@ rkt_xz_done
 	sta pv2
 	jsr rkt_pos_ok
 	bcs .ok
-	lda pv2
-	bne .bz
-	lda #<gr_vxl
-	ldy #<gr_vxh
-	jmp rkt_bounce
-.bz
-	lda #<gr_vzl
-	ldy #<gr_vzh
-	jmp rkt_bounce
+	jmp rkt_impact
 .ok
 	ldx obj_i
 	lda pv2
@@ -396,9 +328,7 @@ rkt_move_y
 	bcc .gmy_ceil
 	jmp rkt_try_y
 .gmy_ceil
-	lda #<gr_vyl
-	ldy #<gr_vyh
-	jmp rkt_bounce
+	jmp rkt_impact
 .gmy_down
 	jsr rkt_col_xz
 	ldx obj_i
@@ -416,15 +346,7 @@ rkt_move_y
 	beq .gmy_land
 	bcc rkt_try_y
 .gmy_land
-	ldx obj_i
-	lda #0
-	sta gr_yl,x
-	lda proc_tmp2
-	sta gr_yh,x
-	jsr rkt_floor_xz
-	lda #<gr_vyl
-	ldy #<gr_vyh
-	jmp rkt_bounce
+	jmp rkt_impact
 
 rkt_try_y
 	ldx obj_i
@@ -444,9 +366,7 @@ rkt_try_y
 	sta gr_yl,x
 	lda pv1
 	sta gr_yh,x
-	lda #<gr_vyl
-	ldy #<gr_vyh
-	jmp rkt_bounce
+	jmp rkt_impact
 .gty_ok
 	rts
 

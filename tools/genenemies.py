@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import json
-import random
 import re
 import struct
 from copy import deepcopy
@@ -20,9 +19,6 @@ BLOB_OUT = ROOT / "src" / "enemy_data_blob.asm"
 SIZES_OUT = ROOT / "src" / "enemy_sizes.asm"
 ENEMY_DIR = ROOT / "enemies"
 
-NVERTS = 13
-SKEL_MAX_VERTS = 48
-SKEL_MAX_EDGES = 64
 MESH_BATCH_VERTS = 16  # mesh.asm MESH_MAX_VERTS
 MESH_BATCH_EDGES = 32
 TYPES = ["Possessed", "Baron", "Pinky", "Imp"]
@@ -423,39 +419,17 @@ def s8(n: int) -> int:
     return n & 0xFF
 
 
-DEFAULT_EDGES = [
-    [0, 1],
-    [1, 2],
-    [2, 0],
-    [2, 3],
-    [2, 4],
-    [4, 5],
-    [2, 6],
-    [6, 7],
-    [0, 8],
-    [8, 9],
-    [1, 10],
-    [10, 11],
-    [7, 12],
-]
-
-
 def enemy_nv(enemy: dict) -> int:
     if not enemy.get("customSkeleton"):
-        return NVERTS
+        raise SystemExit(f"{enemy['name']}: customSkeleton required")
     joints = (enemy.get("mdlRig") or {}).get("jointVerts") or []
     nv = len(joints) if joints else int(enemy.get("verts") or 0)
-    if not 0 <= nv <= SKEL_MAX_VERTS:
-        raise SystemExit(f"{enemy['name']}: custom skeleton vert count {nv} not in 0..{SKEL_MAX_VERTS}")
+    if not 12 <= nv <= MESH_BATCH_VERTS:
+        raise SystemExit(f"{enemy['name']}: vert count {nv} not in 12..{MESH_BATCH_VERTS}")
     return nv
 
 
-SKEL_PFX = 7  # size.w, nv, ne, entry.w (entry patched by genaibanks), shift
-SKEL_SHIFT_MAX = 2
-
-
-def shift_round(v: int, shift: int) -> int:
-    return (int(v) + ((1 << shift) >> 1)) >> shift
+SKEL_PFX = 4  # size.w, nv, ne; one baked batch follows
 
 
 SPRITE_Q = 4
@@ -475,95 +449,26 @@ def pose_int(v, fine: bool) -> int:
     return int(n)
 
 
-def pick_skel_shift(enemy: dict, frames: list) -> int:
-    """Smallest shift so every coord >> shift fits a signed byte. Never clamps."""
-    coords = [int(v[a]) for fr in frames for v in fr for a in ("x", "y", "z")]
-    for shift in range(SKEL_SHIFT_MAX + 1):
-        if all(-128 <= shift_round(c, shift) <= 127 for c in coords):
-            return shift
-    peak = max((abs(c) for c in coords), default=0)
-    raise SystemExit(
-        f"{enemy['name']}: custom skeleton coord {peak} needs shift > {SKEL_SHIFT_MAX}; "
-        "lower the MDL scale in the editor"
-    )
-
-
-def batch_cost(order: list[list[int]]) -> tuple[int, int]:
-    """(batches, vert slots) as baked_batches packs them: a batch closes at the first misfit."""
-    batches = slots = 0
-    i = 0
-    while i < len(order):
-        verts: set[int] = set()
-        n = 0
-        while i < len(order) and n < MESH_BATCH_EDGES:
-            a, b = order[i]
-            if len(verts) + (a not in verts) + (b not in verts) > MESH_BATCH_VERTS:
-                break
-            verts.update((a, b))
-            n += 1
-            i += 1
-        batches += 1
-        slots += len(verts)
-    return batches, slots
-
-
-def baked_batches(order: list[list[int]]) -> bytes:
-    """Per batch: nslot, nedge, slot→vert, starts, ends. nslot = 0 ends. Packs like batch_cost."""
-    out = bytearray()
-    i = 0
-    while i < len(order):
-        slots: list[int] = []
-        starts: list[int] = []
-        ends: list[int] = []
-        while i < len(order) and len(starts) < MESH_BATCH_EDGES:
-            a, b = order[i]
-            if len(slots) + (a not in slots) + (b not in slots) > MESH_BATCH_VERTS:
-                break
-            for v in (a, b):
-                if v not in slots:
-                    slots.append(v)
-            starts.append(slots.index(a))
-            ends.append(slots.index(b))
-            i += 1
-        out += bytes([len(slots), len(starts)]) + bytes(slots) + bytes(starts) + bytes(ends)
-    out.append(0)
-    return bytes(out)
-
-
-def greedy_edges(lines: list[tuple[int, int]], rng: random.Random | None) -> list[list[int]]:
-    left = list(lines)
-    out: list[list[int]] = []
-    while left:
-        verts: set[int] = set()
-        n = 0
-        while left and n < MESH_BATCH_EDGES:
-            cands = []
-            for i, (a, b) in enumerate(left):
-                need = (a not in verts) + (b not in verts)
-                if len(verts) + need <= MESH_BATCH_VERTS:
-                    cands.append((need, i))
-            if not cands:
-                break
-            low = min(c[0] for c in cands)
-            pool = [i for need, i in cands if need == low]
-            a, b = left.pop(pool[0] if rng is None else rng.choice(pool))
-            verts.update((a, b))
-            out.append([a, b])
-            n += 1
-    return out
-
-
-def cluster_edges(lines: list[list[int]]) -> tuple[list[list[int]], int, int]:
-    """Edge order that minimises batches then vert slots. Deterministic (fixed seeds)."""
-    src = [(int(a), int(b)) for a, b in lines]
-    best = [list(e) for e in src]
-    cost = batch_cost(best)
-    for seed in range(1000):
-        order = greedy_edges(src, random.Random(seed))
-        c = batch_cost(order)
-        if c < cost:
-            best, cost = order, c
-    return best, cost[0], cost[1]
+def one_batch(lines: list[list[int]], name: str) -> bytes:
+    """nslot, nedge, slot→vert, starts, ends, 0. File order. One batch or fail."""
+    if not 1 <= len(lines) <= MESH_BATCH_EDGES:
+        raise SystemExit(f"{name}: line count {len(lines)} not in 1..{MESH_BATCH_EDGES}")
+    slots: list[int] = []
+    starts: list[int] = []
+    ends: list[int] = []
+    for a, b in lines:
+        ai, bi = int(a), int(b)
+        for v in (ai, bi):
+            if v not in slots:
+                if len(slots) >= MESH_BATCH_VERTS:
+                    raise SystemExit(f"{name}: more than one batch")
+                slots.append(v)
+        starts.append(slots.index(ai))
+        ends.append(slots.index(bi))
+    nslot = len(slots)
+    if not 12 <= nslot <= MESH_BATCH_VERTS:
+        raise SystemExit(f"{name}: {nslot} slots not in 12..{MESH_BATCH_VERTS}")
+    return bytes([nslot, len(starts)]) + bytes(slots) + bytes(starts) + bytes(ends) + bytes([0])
 
 
 WEAPON_SLOT = 12  # cube.asm try_enemy_muzzle
@@ -598,14 +503,12 @@ def pin_vert_slot(body: bytearray, vert: int, anchor: int) -> bool:
     return True
 
 
-def skel_prefix(nv: int, lines: list[list[int]], shift: int, name: str, weapon: int = WEAPON_SLOT) -> bytes:
+def skel_prefix(nv: int, lines: list[list[int]], name: str, weapon: int = WEAPON_SLOT) -> bytes:
     ne = len(lines)
-    lines, batches, slots = cluster_edges(lines)
-    print(f"{name}: edge order {batches} batches, {slots} vert slots")
-    body = bytearray(baked_batches(lines))
-    if shift == 0 and pin_vert_slot(body, weapon, WEAPON_SLOT):
+    body = bytearray(one_batch(lines, name))
+    if pin_vert_slot(body, weapon, WEAPON_SLOT):
         print(f"{name}: weapon vert {weapon} in slot {WEAPON_SLOT}")
-    elif shift == 0:
+    else:
         print(f"{name}: weapon vert {weapon} not in slot {WEAPON_SLOT}")
     size = SKEL_PFX + len(body)
     out = bytearray(size)
@@ -613,37 +516,26 @@ def skel_prefix(nv: int, lines: list[list[int]], shift: int, name: str, weapon: 
     out[1] = (size >> 8) & 0xFF
     out[2] = nv & 0xFF
     out[3] = ne & 0xFF
-    out[6] = shift
     out[SKEL_PFX:] = body
     return bytes(out)
 
 
-def export_type(enemy: dict) -> tuple[list[int], list[int], list[int], list[list[int]], list[dict], int, int]:
+def export_type(enemy: dict) -> tuple[list[int], list[int], list[int], list[list[int]], list[dict], int]:
+    if not enemy.get("customSkeleton"):
+        raise SystemExit(f"{enemy['name']}: customSkeleton required")
     lines = enemy["lines"]
     frames = enemy["frames"]
     clips = enemy.get("clips") or []
     nv = enemy_nv(enemy)
-    custom = bool(enemy.get("customSkeleton"))
-    if custom:
-        if nv == 0:
-            lines = []
-        elif not 1 <= len(lines) <= SKEL_MAX_EDGES:
-            raise SystemExit(f"{enemy['name']}: custom skeleton line count {len(lines)} not in 1..{SKEL_MAX_EDGES}")
-        else:
-            for a, b in lines:
-                ai, bi = int(a), int(b)
-                if ai == bi or not 0 <= ai < nv or not 0 <= bi < nv:
-                    raise SystemExit(f"{enemy['name']}: bad custom line {a}-{b}")
-    elif len(lines) != NVERTS:
-        raise SystemExit(f"{enemy['name']}: expected {NVERTS} lines, got {len(lines)}")
+    if not 1 <= len(lines) <= MESH_BATCH_EDGES:
+        raise SystemExit(f"{enemy['name']}: line count {len(lines)} not in 1..{MESH_BATCH_EDGES}")
+    for a, b in lines:
+        ai, bi = int(a), int(b)
+        if ai == bi or not 0 <= ai < nv or not 0 <= bi < nv:
+            raise SystemExit(f"{enemy['name']}: bad line {a}-{b}")
     if not frames:
         raise SystemExit(f"{enemy['name']}: no frames")
     fine = enemy_fine(enemy)
-    if fine:
-        # Quarter-units are already inside a signed byte. Do not shift them down.
-        shift = 0
-    else:
-        shift = pick_skel_shift(enemy, frames) if custom else 0
     gx: list[int] = []
     gy: list[int] = []
     gz: list[int] = []
@@ -651,10 +543,13 @@ def export_type(enemy: dict) -> tuple[list[int], list[int], list[int], list[list
         if len(fr) != nv:
             raise SystemExit(f"{enemy['name']} frame {fi}: bad vert count")
         for v in fr:
-            gx.append(s8(shift_round(pose_int(v["x"], fine), shift)))
-            gy.append(s8(shift_round(pose_int(v["y"], fine), shift)))
-            gz.append(s8(shift_round(pose_int(v["z"], fine), shift)))
-    return gx, gy, gz, lines, clips, nv, shift
+            try:
+                gx.append(s8(pose_int(v["x"], fine)))
+                gy.append(s8(pose_int(v["y"], fine)))
+                gz.append(s8(pose_int(v["z"], fine)))
+            except ValueError as e:
+                raise SystemExit(f"{enemy['name']}: {e}") from e
+    return gx, gy, gz, lines, clips, nv
 
 
 def trim_to_budget(gx: list[int], gy: list[int], gz: list[int], enemy: dict, nv: int) -> int:
@@ -767,19 +662,15 @@ def main() -> None:
         if not (isinstance(enemy.get("frames"), list) and enemy["frames"]):
             raise SystemExit(f"{name}: no authored frames")
         apply_export_clips(enemy)
-        gx, gy, gz, lines, _clips, nv, shift = export_type(enemy)
+        gx, gy, gz, lines, _clips, nv = export_type(enemy)
         nframes = trim_to_budget(gx, gy, gz, enemy, nv)
         dos = DOS_NAME[ti]
-        custom = bool(enemy.get("customSkeleton"))
-        if nv and lines:
-            raw_weapon = enemy.get("weaponVert", WEAPON_SLOT)
-            try:
-                weapon = int(raw_weapon)
-            except (TypeError, ValueError):
-                weapon = WEAPON_SLOT
-            prefix = skel_prefix(nv, lines, shift, name, weapon)
-        else:
-            prefix = b""
+        raw_weapon = enemy.get("weaponVert", WEAPON_SLOT)
+        try:
+            weapon = int(raw_weapon)
+        except (TypeError, ValueError):
+            weapon = WEAPON_SLOT
+        prefix = skel_prefix(nv, lines, name, weapon)
         while True:
             pgx, pgy, pgz, pose_map, n_stored = pack_poses(
                 gx, gy, gz, enemy, nframes, nv
@@ -806,12 +697,7 @@ def main() -> None:
         pose_sizes.append(len(payload))
         nframes_list.append(nframes)
         stored_list.append(n_stored)
-        n_lerp = sum(1 for v in pose_map if v == 0xFF)
-        shift_note = f" shift={shift}" if custom else ""
-        print(
-            f"{name}: logical={nframes} stored={n_stored} lerp={n_lerp} bytes={len(payload)}"
-            f"{shift_note}"
-        )
+        print(f"{name}: logical={nframes} stored={n_stored} bytes={len(payload)}")
         if nframes > max_nframes:
             max_nframes = nframes
 

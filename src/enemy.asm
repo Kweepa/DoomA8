@@ -1919,7 +1919,7 @@ gun_hitscan
 	jmp .sh_n
 .sh_on
 	sty rot1				; sy
-	; |sx − (SCREEN_CX + scan_aim)| ≤ sham_hit_lim
+	; |sx − (SCREEN_CX + scan_aim)| ≤ pellet_hit_lim
 	sec
 	sbc #SCREEN_CX
 	sec
@@ -1930,7 +1930,7 @@ gun_hitscan
 	adc #1
 .sh_xabs
 	sta rot0
-	jsr sham_hit_lim
+	jsr pellet_hit_lim
 	sta rot2
 	lda rot0
 	cmp rot2
@@ -2117,7 +2117,7 @@ gun_hitscan
 ; A = |sx−CX| limit. Pellets widen while the body still covers the fan
 ; (CAM_ZH < 6 → ±10, < 12 → ±5). Pistol and chaingun keep scan_hit_x.
 ; Y is free (sy already in rot1). rot0 and gidx stay.
-sham_hit_lim
+pellet_hit_lim
 	lda scan_hit_x
 	ldy scan_dmg_all
 	cpy #SCAN_PELLET

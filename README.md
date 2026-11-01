@@ -10,25 +10,25 @@ The HUD is the text window: title, map name, bullets / shells / rockets, health,
 
 ## World
 
-The map is **rooms as axis-aligned hulls**, not a global mesh. Floor plans can be a box or a tetromino (**T / L / S**, including a proper S dogleg). Collision is 8-bit tests against the room’s collider boxes. Closed doors are blocking planes; open doors are walk-throughs that switch the active room. Silver and gold keys unlock matching doors. Only the current room is drawn — doorways do not punch a view into the next one.
+The map is **rooms as axis-aligned hulls**, not a global mesh. Floor plans can be a box or a tetromino (**T / L / S**, including a proper S dogleg). Collision is 8-bit tests against the room’s collider boxes. Closed doors are blocking planes; open doors are walk-throughs that switch the active room. Red, yellow, and blue keycards unlock matching doors. Only the current room is drawn — doorways do not punch a view into the next one.
 
 Ramps use the AABB for **rise/run** (`height = slope_y + (local * sy) / run` in 8.8) so the eye rides the slope. Elevators, switches, and crates share the same box tests. Step off a ledge and you fall; a hard landing costs health.
 
-Walk-over **things** grant ammo, weapons, health, armour, keys, and the exclusive powerups (quad / pentagram / ring). Killed enemies can drop a pack. Message, hurt, and elevator **triggers** are undrawn AABBs; a switch can arm a trigger that would otherwise stay inert. End-of-level advances `e1mN` or returns to the menu endings.
+Walk-over **things** grant ammo, weapons, health, armour, keys, a soulsphere, and the radsuit. Killed enemies can drop a pack. Message, hurt, and elevator **triggers** are undrawn AABBs; a switch can arm a trigger that would otherwise stay inert. End-of-level advances `e1mN` or returns to the menu endings.
 
 Off-screen **items** (AABB meshes) and **enemies** skip rotate/project/draw. Horizontal and vertical tests use a fat 45° cone (`|axis| ≤ z` plus a size pad) so the miss is drawing something a bit off-screen, not dropping something that is still in the 192×128 view. The active room’s bounding lines are not frustum-culled.
 
-There’s an editor for maps (Unity-style orbit in the viewport), item meshes, weapon sprites, and enemy animations retargeted from the original MDLs.
+There’s an editor for maps (Unity-style orbit in the viewport), item meshes, weapon sprites, and enemy animations retargeted from Doom MD2/MD3 meshes.
 
 ## Entities
 
-Enemies are **13 vertices / 13 lines** on a shared skeleton (Grunt, Knight, Rottweiler, Scrag, Ogre, Shambler, Chthon, Zombie). Poses live in local space as signed offsets from the creature base. All animations are imported from the original data by retargeting the vertex animation to the skeleton. A few KB of poses per type, plus one line layout.
+Enemies are **Possessed, Imp, Pinky, and Baron**. Poses live in local space as signed offsets from the creature base. Animations are retargeted from Doom MD2/MD3 meshes onto the skeleton. A few KB of poses per type, plus one line layout.
 
-They run a room-scoped state machine (idle / patrol / alert / approach / attack / pain / death). Grunt, Rottweiler, Ogre, and Scrag behaviour is in; the others still share the skeleton and clips. Scrag hovers, spits, and falls on death. E1M1 places Grunts and a rottweiler.
+They run a room-scoped state machine (idle / patrol / alert / approach / attack / pain / death). Imp and Baron throw fireballs. Pinky closes to melee. A room holds at most two types.
 
 Yaw is rolled(!) into the world rotation to avoid a double rotate. Perspective and rotation use 8-bit **log / antilog LUTs** (`alog(log|x| + log|cos θ|)`).
 
-**Fist** is two rectangles (left fist, right hand) and is always owned. **Chainsaw** is one vibrating rectangle, granted by the pickup; key 1 toggles the two. **Super shotgun** is a hitscan with range falloff, blood on a hit and a wall splat on a miss. **Chaingun** is a faster centered hitscan that uses the pistol muzzle and swaps two body frames. **Rocket launcher** throws a bouncing rocket with splash damage. The blast is a half-dome of charset pixels: six unique directions, the other three quadrants filled with 90° Y rotates.
+**Fist** is two rectangles (left fist, right hand) and is always owned. **Chainsaw** is one vibrating rectangle, granted by the pickup; key 1 toggles the two. **Super shotgun** is a hitscan with range falloff, blood on a hit and a wall splat on a miss. **Chaingun** is a faster centered hitscan that uses the pistol muzzle and swaps two body frames. **Rocket launcher** throws a straight rocket that explodes on impact, with splash damage. The blast is a half-dome of charset pixels: six unique directions, the other three quadrants filled with 90° Y rotates.
 
 The player weapon is stamped into the mode-E bitmap (body, muzzle, enemy muzzle, impact splat). Bob and recoil move that stamp.
 

@@ -6,7 +6,7 @@ HUD_POS		    = 0				; 1 = X/Y/Z/yaw/pitch on HUD row 2 (blank line when off)
 INF_AMMO		= 0				; 1 = guns fire without spending ammo
 JUKEBOX		= 0				; 1 = Jukebox row in the menu (one tune; off for now)
 
-; Stage buckets closed by prof_add_bucket. Same ids in GAME and skel_draw.
+; Stage buckets closed by prof_add_bucket.
 PROF_CLEAR	= 0
 PROF_ROT	= 1
 PROF_PROJ	= 2

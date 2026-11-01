@@ -473,7 +473,6 @@ def steps(exe: str) -> list[Step]:
                 ("ai_pinky.asm", "ai_pinky"),
                 ("ai_baron.asm", "ai_baron"),
                 ("ai_imp.asm", "ai_imp"),
-                ("skel_draw.asm", "skel_draw"),
             )
         ],
         Step(
@@ -484,12 +483,9 @@ def steps(exe: str) -> list[Step]:
                 SRC / "mem.asm",
                 *(ENEMIES / f"ai_{dos}.bin" for dos in DOS),
                 *(ENEMIES / f"ai_{dos}.lbl" for dos in DOS),
-                ENEMIES / "skel_draw.bin",
-                ENEMIES / "skel_draw.lbl",
             ],
             lambda: [
                 *(ENEMIES / f"ai_{dos}.rel" for dos in DOS),
-                ENEMIES / "skel_draw.rel",
             ],
             lambda: tool("genaimeta.py"),
         ),
@@ -501,8 +497,6 @@ def steps(exe: str) -> list[Step]:
                 *(ENEMIES / f"{dos}.skel" for dos in DOS),
                 *(ENEMIES / f"ai_{dos}.bin" for dos in DOS),
                 *(ENEMIES / f"ai_{dos}.rel" for dos in DOS),
-                ENEMIES / "skel_draw.bin",
-                ENEMIES / "skel_draw.rel",
             ],
             lambda: [*enemy_prgs(), SRC / "enemy_sizes.asm"],
             lambda: tool("genaibanks.py"),

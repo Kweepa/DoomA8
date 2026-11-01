@@ -91,25 +91,6 @@ def main() -> None:
             f"map={len(map_sites)}"
         )
         found += 1
-    skel_path = ENEMY_DIR / "skel_draw.bin"
-    if skel_path.is_file():
-        code = skel_path.read_bytes()
-        internal = scan(code, link, sentinel)
-        map_sites = map_operand_offs(ENEMY_DIR / "skel_draw.lbl", code, link, sentinel)
-        out = ENEMY_DIR / "skel_draw.rel"
-        out.write_text(
-            json.dumps(
-                {"entry": 0, "internal": internal, "map": map_sites},
-                indent=2,
-            )
-            + "\n",
-            encoding="utf-8",
-        )
-        print(
-            f"skel_draw: code={len(code)} internal={len(internal)} "
-            f"map={len(map_sites)}"
-        )
-        found += 1
     if found == 0:
         raise SystemExit("genaimeta: no AI module binaries")
 

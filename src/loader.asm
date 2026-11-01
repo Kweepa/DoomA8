@@ -135,29 +135,6 @@ qs_call
 	!error "QS_OVL must be page aligned (the wipe starts at Y=0)"
 }
 
-; Fill frame13_lo/hi[i] = i*13 (pose stride). Called each LoadLevel.
-init_frame13
-	ldx #0
-	lda #0
-	sta nlo
-	sta nhi
-.f13
-	lda nlo
-	sta frame13_lo,x
-	lda nhi
-	sta frame13_hi,x
-	clc
-	lda nlo
-	adc #13
-	sta nlo
-	lda nhi
-	adc #0
-	sta nhi
-	inx
-	cpx #FRAME13_N
-	bcc .f13
-	rts
-
 ; A=size lo, Y=size hi → load_dest = heap_top = heap_top - size.
 ; C=0 ok; C=1 would overlap GAME (new top <= end_game). heap_top unchanged on fail.
 heap_alloc
@@ -203,7 +180,6 @@ LoadLevel
 	sta heap_top
 	lda #>HEAP_LIM
 	sta heap_top+1
-	jsr init_frame13
 
 	jsr FormatDosName
 	ldx level_num
@@ -357,8 +333,6 @@ clear_pose_ptrs
 	sta skel_ne,x
 	sta skel_base_lo,x
 	sta skel_base_hi,x
-	sta skel_entry_lo,x
-	sta skel_entry_hi,x
 	inx
 	cpx #ENEMY_NTYPES
 	bcc .cpp
@@ -702,8 +676,6 @@ skel_bind_prefix
 	sta skel_ne,x
 	sta skel_base_lo,x
 	sta skel_base_hi,x
-	sta skel_entry_lo,x
-	sta skel_entry_hi,x
 	rts
 .sbp_on
 	lda load_dest
@@ -718,26 +690,6 @@ skel_bind_prefix
 	iny
 	lda (src_ptr),y
 	sta skel_ne,x
-	iny
-	lda (src_ptr),y
-	iny
-	ora (src_ptr),y
-	beq .sbp_noent			; entry word 0: resident single-batch draw
-	dey
-	lda (src_ptr),y
-	clc
-	adc AI_BANK_LO,x
-	sta skel_entry_lo,x
-	iny
-	lda (src_ptr),y
-	adc AI_BANK_HI,x
-	sta skel_entry_hi,x
-	jmp .sbp_size
-.sbp_noent
-	lda #0
-	sta skel_entry_lo,x
-	sta skel_entry_hi,x
-.sbp_size
 	ldy #0
 	lda (src_ptr),y
 	sta nlo

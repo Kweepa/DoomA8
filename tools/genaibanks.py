@@ -16,8 +16,9 @@ MAGIC = b"QAI1"
 HEADER_SIZE = 15
 NO_ENTRY = 0xFFFF
 ENEMY_BANK_MAX = 8192
-SKEL_PFX = 7  # size.w, nv, ne, entry.w, shift
+SKEL_PFX = 4  # size.w, nv, ne; one baked batch follows
 MESH_MAX_VERTS = 16
+MESH_MAX_EDGES = 32
 
 
 def load_module(dos: str) -> tuple[bytes, list[int], list[int], int]:
@@ -43,54 +44,13 @@ def load_module(dos: str) -> tuple[bytes, list[int], list[int], int]:
     return code, internal, map_sites, entry
 
 
-def load_skel_draw() -> tuple[bytes, list[int], list[int]]:
-    code_path = ENEMY_DIR / "skel_draw.bin"
-    rel_path = ENEMY_DIR / "skel_draw.rel"
-    if not code_path.is_file() or not rel_path.is_file():
-        raise SystemExit("missing enemies/skel_draw.bin; assemble src/skel_draw.asm first")
-    meta = json.loads(rel_path.read_text(encoding="utf-8"))
-    code = code_path.read_bytes()
-    internal = [int(v) for v in meta.get("internal", [])]
-    map_sites = [int(v) for v in meta.get("map", [])]
-    if not code:
-        raise SystemExit(f"{code_path}: empty")
-    for kind, sites in (("internal", internal), ("map", map_sites)):
-        for off in sites:
-            if off < 0 or off + 1 >= len(code):
-                raise SystemExit(f"{rel_path}: {kind} relocation {off} outside module")
-    return code, internal, map_sites
-
-
-def attach_skel(
-    code: bytes,
-    internal: list[int],
-    map_sites: list[int],
-) -> tuple[bytes, list[int], list[int], int]:
-    """Append the skeleton module. It was linked at AI_LINK_BASE, so shift its
-    internal targets by the behavior-code length already sitting in front."""
-    skel_code, skel_internal, skel_map = load_skel_draw()
-    shift = len(code)
-    patched = bytearray(skel_code)
-    for off in skel_internal:
-        addr = patched[off] | (patched[off + 1] << 8)
-        addr = (addr + shift) & 0xFFFF
-        patched[off] = addr & 0xFF
-        patched[off + 1] = (addr >> 8) & 0xFF
-    return (
-        code + bytes(patched),
-        internal + [off + shift for off in skel_internal],
-        map_sites + [off + shift for off in skel_map],
-        shift,
-    )
-
-
 def resident_batch(pose: bytes) -> bool:
-    """Shift 0 and one batch of 12..16 slots. The resident rotator draws it."""
-    if len(pose) < SKEL_PFX + 2 or pose[6] != 0:
+    """One batch of 12..16 slots. The resident rotator draws it."""
+    if len(pose) < SKEL_PFX + 2:
         return False
     nslot = pose[SKEL_PFX]
     nedge = pose[SKEL_PFX + 1]
-    if nslot < 12 or nslot > MESH_MAX_VERTS:
+    if nslot < 12 or nslot > MESH_MAX_VERTS or not 1 <= nedge <= MESH_MAX_EDGES:
         return False
     end = SKEL_PFX + 2 + nslot + nedge * 2
     return end < len(pose) and pose[end] == 0
@@ -105,26 +65,12 @@ def fuse(
     pose: bytes,
     skel: int = 0,
 ) -> bytes:
-    skel_at = 0
-    attach = False
-    if skel:
-        if len(pose) < 6:
-            raise SystemExit(f"{dos}: custom skeleton prefix shorter than 6 bytes")
-        pose_b = bytearray(pose)
-        if not resident_batch(pose):
-            code, internal, map_sites, skel_at = attach_skel(code, internal, map_sites)
-            attach = True
-    else:
-        pose_b = bytearray(pose)
+    if not skel or not resident_batch(pose):
+        raise SystemExit(f"{dos}: pose is not one resident batch")
     records_size = 2 * (len(internal) + len(map_sites))
     code_off = HEADER_SIZE + records_size
     pose_off = code_off + len(code)
     entry_off = NO_ENTRY if entry == NO_ENTRY else code_off + entry
-    if attach:
-        skel_entry = code_off + skel_at
-        pose_b[4] = skel_entry & 0xFF
-        pose_b[5] = (skel_entry >> 8) & 0xFF
-    pose = bytes(pose_b)
     header = struct.pack(
         "<4sHHHHHB",
         MAGIC,
