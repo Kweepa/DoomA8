@@ -76,9 +76,9 @@ UI_FONT_PAGES	= 8			; 256 glyphs, ASCII-indexed from doomfont.png
 ;  0FFF              Doom64          orange
 ;  1          The Slipgate Complex   orange
 ;    (8 blank lines)
-;  2        B000   Health  Armour  PU   bullets
-;  3        S000                   PU   shells
-;  4        R000    100     000  Damage   rockets
+;  2        B000   Health  Armour        bullets, blue key
+;  3        S000                        shells, yellow key
+;  4        R000    100     000         rockets, red key
 ;    (8 blank lines)
 ;  5                  trigger message   brighter yellow
 ;  6 seam
@@ -114,8 +114,9 @@ HUD_HP_LABEL	= 13
 HUD_AR_LABEL	= 21
 HUD_HP_NUM	= 15
 HUD_AR_NUM	= 22
-HUD_PU_LABEL = 26
-HUD_PU_COL	= 28
+HUD_KEY_COL_BLU	= 30			; keycard glyphs, one per ammo row
+HUD_KEY_COL_YEL	= 29
+HUD_KEY_COL_RED	= 30
 HUD_CH_SP	= $20			; ASCII space / digits / letters in UI charset
 HUD_CH_PLUS	= $2b
 HUD_CH_MINUS	= $2d
@@ -132,9 +133,9 @@ HUD_CH_Z	= $5a
 HUD_CH_BULLET	= $7b			; glyph after 'z'
 HUD_CH_SHELL	= $7c
 HUD_CH_ROCKET	= $7d
-HUD_CH_QUAD	= $00			; 2×2 powerup tiles in $00–$1E (quad/pent/ring)
-HUD_CH_PENT	= $04
-HUD_CH_RING	= $08
+HUD_CH_KEY_RED	= $5b			; '[' .. ']' after 'Z': red, yellow, blue
+HUD_CH_KEY_YEL	= $5c
+HUD_CH_KEY_BLU	= $5d
 COL_HUD		= 8			; orange digits
 COL_HUD_DIM	= 2			; dark red stage letters
 

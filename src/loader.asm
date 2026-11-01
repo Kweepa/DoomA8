@@ -1140,13 +1140,13 @@ play_up2
 
 	jsr init_hud
 	jsr hud_ammo
-	jsr hud_powerup
+	jsr hud_keys
 	jsr mulset_init
 	jsr world_init
 	jsr maybe_stream_room
 	jsr init_hud
 	jsr hud_ammo
-	jsr hud_powerup
+	jsr hud_keys
 	jsr a8_nmi_on
 	rts
 

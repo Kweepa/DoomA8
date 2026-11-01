@@ -295,7 +295,6 @@ def steps(exe: str) -> list[Step]:
             lambda: [
                 TOOLS / "genuifont.py",
                 ROOT / "ui" / "doomfont.png",
-                ROOT / "ui" / "powerups.png",
             ],
             lambda: [SRC / "uifont_data.asm", SRC / "uifont.asm"],
             lambda: tool("genuifont.py"),

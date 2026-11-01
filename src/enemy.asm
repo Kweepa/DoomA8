@@ -702,15 +702,13 @@ enemy_face_player
 	+sta_mx en_rot
 	rts
 
-; Enter alert one-shot (Halt / bark).
+; Sight bark, then chase. The alert clip is the stand pose, so EN_ALERT
+; looks like idle for the whole clip (possessed ~2 s).
 enemy_enter_alert
 	ldx enemy_idx
-	lda #EN_ALERT
-	sta en_state,x
-	lda #0
-	sta en_frame,x
 	lda #CUE_SIGHT
-	; fall through
+	jsr enemy_play_cue
+	jmp enemy_enter_approach
 
 ; A = CUE_* of enemy_idx's type. Plays it unless the type has none ($FF).
 ; The cue block heads the type's event table on the pose heap.
@@ -1062,7 +1060,7 @@ update_hurt_flash
 .uhf_rts
 	rts
 
-; Exclusive powerup: one kind, one 30s timer. Underflow clears HUD icon.
+; Exclusive powerup: one kind, one 30s timer.
 update_powerup
 	lda pu_kind
 	beq .up_rts
@@ -1078,7 +1076,7 @@ update_powerup
 	sta pu_kind
 	sta pu_ms_l
 	sta pu_ms_h
-	jmp hud_powerup
+	jmp .up_rts
 .up_rts
 	rts
 

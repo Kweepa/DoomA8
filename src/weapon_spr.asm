@@ -47,8 +47,8 @@ spr_hand_b
 	!byte $3c,$fc,$ff,$cf,$ff,$ff,$fc
 
 spr_shot_b
-	!byte $00,$00,$05,$20,$ff,$ff,$fc,$ff,$ff,$ff,$ff,$fc,$ff,$ff,$ff,$ff
-	!byte $f0,$3f,$ff,$ff,$ff,$f0,$3f,$ff,$ff,$ff,$f3,$3f,$ff,$ff,$ff,$cf
+	!byte $00,$00,$05,$20,$ff,$ff,$fc,$ff,$ff,$ff,$ff,$f0,$3f,$ff,$ff,$ff
+	!byte $f3,$3f,$ff,$ff,$ff,$f3,$3f,$ff,$ff,$ff,$f3,$3f,$ff,$ff,$ff,$cf
 	!byte $cf,$ff,$ff,$ff,$cf,$cf,$ff,$ff,$ff,$cf,$cf,$ff,$ff,$ff,$cf,$cf
 	!byte $ff,$ff,$ff,$c0,$0f,$ff,$ff,$fc,$3f,$f3,$ff,$ff,$c0,$3f,$f3,$ff
 	!byte $ff,$3c,$ff,$fc,$ff,$ff,$3c,$ff,$fc,$ff,$fc,$fc,$ff,$fc,$ff,$fc

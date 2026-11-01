@@ -3,8 +3,8 @@
 ; Keys 1-4 select weapons. Start is use.
 !zone a8irq
 
-; Hue 4, lum 0. Blood is COLPF1 $46, so the splat stays brighter than the flash.
-COL_HURT_A8	= $40
+; Border only (COLBK). Hue 4, lum 8. Lum E clips to white. Room paper stays col_bg.
+COL_HURT_A8	= $48
 
 pot_prev	!byte $e0
 stick_bits	!byte 0
@@ -335,12 +335,12 @@ a8_vbi
 	beq .nb
 hurt_col
 	lda #COL_HURT_A8			; PAL init rewrites the hue
-	sta $d01a				; COLBK
-	bne .pp
+	bne .bk
 .nb
-	sta $d01a				; A = 0
+	lda #0
+.bk
+	sta $d01a				; COLBK: black, or bright red while hurt
 	lda col_bg
-.pp
 	sta dli_paper				; seam DLI colours, precomputed so the
 						; handler does nothing before WSYNC
 	and #$f0

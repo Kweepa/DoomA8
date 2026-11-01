@@ -2120,7 +2120,6 @@ gb_do_pu
 	sta pu_ms_l
 	lda #>POWERUP_MS
 	sta pu_ms_h
-	jsr hud_powerup
 	sec
 	rts
 
@@ -2133,6 +2132,7 @@ gb_do_key
 	lda have_keys
 	ora gb_bits,y
 	sta have_keys
+	jsr hud_keys
 	sec
 	rts
 

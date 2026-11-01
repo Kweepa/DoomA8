@@ -158,7 +158,7 @@ init_hud
 
 
 }
-	jmp hud_powerup
+	jmp hud_keys
 
 ; X = column, A = char. init_ptr = row base. Saves Y. Not abs,x (map sentinel).
 
@@ -651,70 +651,34 @@ hud_msg_center
 .hm_done
 	rts
 
-; Name at HUD_OFF_RKT + HUD_PU_LABEL (row below the 2×2 icon on SHELL/SHELLS).
-hud_powerup
-	lda pu_kind
-	cmp #TH_RADSUIT
-	beq .hpu_pent
+; One keycard glyph per ammo row: blue on bullets, yellow on shells, red on rockets.
+; Only A is touched (callers keep X/Y).
+hud_keys
 	lda #HUD_CH_SP
-	ldx #5
-
-	lda #<HUD_SCR + HUD_OFF_RKT + HUD_PU_LABEL
-	sta init_ptr
-	lda #>HUD_SCR + HUD_OFF_RKT + HUD_PU_LABEL
-	sta init_ptr+1
-	lda #HUD_CH_SP
-
-.hpu_clab
-
-	jsr hud_stax
-
-	dex
-	bpl .hpu_clab
-	sta HUD_SCR + HUD_OFF_SHELL + HUD_PU_COL
-	sta HUD_SCR + HUD_OFF_SHELL + HUD_PU_COL + 1
-	sta HUD_SCR + HUD_OFF_SHELLS + HUD_PU_COL
-	sta HUD_SCR + HUD_OFF_SHELLS + HUD_PU_COL + 1
-	rts
-.hpu_quad
-	ldx #0
-	lda #HUD_CH_QUAD
-	jmp .hpu_draw
-.hpu_pent
-	ldx #hud_str_shield - hud_str_damage
-	lda #HUD_CH_PENT
-	jmp .hpu_draw
-.hpu_ring
-	ldx #hud_str_shadow - hud_str_damage
-	lda #HUD_CH_RING
-.hpu_draw
-	sta HUD_SCR + HUD_OFF_SHELL + HUD_PU_COL
-	clc
-	adc #1
-	sta HUD_SCR + HUD_OFF_SHELL + HUD_PU_COL + 1
-	adc #1
-	sta HUD_SCR + HUD_OFF_SHELLS + HUD_PU_COL
-	adc #1
-	sta HUD_SCR + HUD_OFF_SHELLS + HUD_PU_COL + 1
-	ldy #0
-
-	lda #<HUD_SCR + HUD_OFF_RKT + HUD_PU_LABEL
-	sta init_ptr
-	lda #>HUD_SCR + HUD_OFF_RKT + HUD_PU_LABEL
-	sta init_ptr+1
-
-.hpu_lab
-	lda hud_str_damage,x
-
-	sta (init_ptr),y
-
-	inx
-	iny
-	cpy #6
-	bne .hpu_lab
+	sta HUD_SCR + HUD_OFF_SHELL + HUD_KEY_COL_BLU
+	sta HUD_SCR + HUD_OFF_SHELLS + HUD_KEY_COL_YEL
+	sta HUD_SCR + HUD_OFF_RKT + HUD_KEY_COL_RED
+	lda have_keys
+	and #HAVE_BLUE
+	beq +
+	lda #HUD_CH_KEY_BLU
+	sta HUD_SCR + HUD_OFF_SHELL + HUD_KEY_COL_BLU
++
+	lda have_keys
+	and #HAVE_YELLOW
+	beq +
+	lda #HUD_CH_KEY_YEL
+	sta HUD_SCR + HUD_OFF_SHELLS + HUD_KEY_COL_YEL
++
+	lda have_keys
+	and #HAVE_RED
+	beq +
+	lda #HUD_CH_KEY_RED
+	sta HUD_SCR + HUD_OFF_RKT + HUD_KEY_COL_RED
++
 	rts
 
-; A = TH_* type. "Got the <name>" for 5s on HUD_ROW4.
+; A = TH_* type. "You got the <name>" for 5s on HUD_ROW4.
 hud_got
 	cmp #TH_NTYPES
 	bcc .hg_ok
@@ -828,11 +792,17 @@ update_status
 .us_rts
 	rts
 
-HUD_GOT_LEN	= 8			; "Got the "
-hud_str_got	!text "Got the ",0
-hud_str_yellow_req	!text "Yellow keycard required",0
-hud_str_blue_req	!text "Blue keycard required",0
-hud_str_red_req	!text "Red keycard required",0
+HUD_GOT_LEN	= 12			; "You got the "
+hud_str_got	!text "You got the ",0
+hud_str_yellow_req	!text "You need a "
+	!byte HUD_CH_KEY_YEL
+	!text " keycard",0
+hud_str_blue_req	!text "You need a "
+	!byte HUD_CH_KEY_BLU
+	!text " keycard",0
+hud_str_red_req	!text "You need a "
+	!byte HUD_CH_KEY_RED
+	!text " keycard",0
 hud_str_remote_req	!text "This door is opened elsewhere",0
 thn_hsm	!text "stimpack",0
 thn_hlg	!text "medikit",0
@@ -846,9 +816,12 @@ thn_chain	!text "chaingun",0
 thn_saw	!text "chainsaw",0
 thn_rl	!text "rocket launcher",0
 thn_pack	!text "backpack",0
-thn_red	!text "red keycard",0
-thn_yellow	!text "yellow keycard",0
-thn_blue	!text "blue keycard",0
+thn_red	!byte HUD_CH_KEY_RED
+	!text " keycard",0
+thn_yellow	!byte HUD_CH_KEY_YEL
+	!text " keycard",0
+thn_blue	!byte HUD_CH_KEY_BLU
+	!text " keycard",0
 thn_soul	!text "soulsphere",0
 thn_suit	!text "radsuit",0
 thn_lamp	!text "lightpost",0
@@ -868,6 +841,3 @@ th_name_hi
 hud_str_title	!text "DoomA8",0
 hud_str_health	!text "health",0
 hud_str_armour	!text "armour",0
-hud_str_damage	!text "Damage",0
-hud_str_shield	!text "Shield",0
-hud_str_shadow	!text "Shadow",0

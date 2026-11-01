@@ -22,7 +22,7 @@ REQUIRED = [
     "update_floor",
     "sync_eye",
     "hud_ammo",
-    "hud_powerup",
+    "hud_keys",
     "switch_weapon",
 ]
 

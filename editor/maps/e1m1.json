@@ -1157,8 +1157,8 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "roomId": "8841eb7b-abb9-4365-b2ce-44a25e3ca288",
-      "allEdges": true
+      "allEdges": true,
+      "roomId": "8841eb7b-abb9-4365-b2ce-44a25e3ca288"
     },
     {
       "id": "e430715a-5755-4d86-8360-28eb27781c80",
@@ -1216,8 +1216,8 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "roomId": "6d086918-ee13-48f3-8f3a-95c9f66c993b",
-      "allEdges": true
+      "allEdges": true,
+      "roomId": "6d086918-ee13-48f3-8f3a-95c9f66c993b"
     }
   ]
 }

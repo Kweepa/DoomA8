@@ -199,7 +199,7 @@ qso_restore
 	tax
 	jsr switch_weapon
 	jsr hud_ammo
-	jsr hud_powerup
+	jsr hud_keys
 	+qmsg qso_m_loaded
 	clc
 	rts

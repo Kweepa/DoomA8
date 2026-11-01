@@ -253,6 +253,7 @@ apply_kfa
 	lda have_keys
 	ora #HAVE_YELLOW | HAVE_BLUE | HAVE_RED
 	sta have_keys
+	jsr hud_keys
 	jsr hud_ammo
 	lda #<cheat_msg_kfa
 	ldy #>cheat_msg_kfa
