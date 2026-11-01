@@ -1507,7 +1507,7 @@ function permuteRoomAabb(room, axis) {
   }
 }
 
-/** Quarter-turn room orient about world axis; re-encode rx/ry/rz + permute AABB. */
+/** Quarter-turn room orient about world axis. Yaw permutes the AABB; X/Z keep the box. */
 export function rotateRoom(room, axis, delta) {
   const steps = ((delta | 0) % 4 + 4) % 4;
   for (let i = 0; i < steps; i++) {
@@ -1517,7 +1517,7 @@ export function rotateRoom(room, axis, delta) {
     room.rx = q.rx;
     room.ry = q.ry;
     room.rz = q.rz;
-    permuteRoomAabb(room, axis);
+    if (axis === "y") permuteRoomAabb(room, axis);
   }
   return clampRoomSplits(room);
 }

@@ -301,6 +301,17 @@ export class LayoutView {
     return ids.length ? ids[ids.length - 1] : null;
   }
 
+  /** Last selected doorway, if the selection contains one. */
+  #selectedDoor(doc) {
+    const ids = this.#selectedIds();
+    const objs = activeMap(doc).objects;
+    for (let i = ids.length - 1; i >= 0; i--) {
+      const o = objs.find((obj) => obj.id === ids[i]);
+      if (o?.kind === "doorway") return o;
+    }
+    return null;
+  }
+
   #onWheel(e) {
     if (!this.enabled) return;
     e.preventDefault();
@@ -1111,6 +1122,24 @@ export class LayoutView {
       }
       const dropped = this.#floorHeightPose(visRooms, ray, focus, pose);
       if (dropped) return dropped;
+    }
+
+    if (kind === "room") {
+      const door = this.#selectedDoor(doc);
+      if (door) {
+        const y = door.y | 0;
+        const plane = intersectPlane(ray.origin, ray.dir, { x: 0, y, z: 0 }, { x: 0, y: 1, z: 0 });
+        if (plane) return pose(plane.point.x, y, plane.point.z, undefined, true);
+        const grid = intersectPlane(
+          ray.origin,
+          ray.dir,
+          { x: 0, y: this.gridY, z: 0 },
+          { x: 0, y: 1, z: 0 }
+        );
+        if (grid) return pose(grid.point.x, y, grid.point.z, undefined, true);
+        const { forward } = lookVectors(this.camera.yaw, this.camera.pitch);
+        return pose(this.camera.x + forward.x * 12, y, this.camera.z + forward.z * 12, undefined, true);
+      }
     }
 
     const gy = this.gridY;
