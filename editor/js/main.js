@@ -1224,7 +1224,7 @@ function setMode(mode) {
   updateCenterChrome();
   document.getElementById("hint").textContent =
     mode === "layout"
-      ? "Drag palette to place · LMB box/click-select · Shift add · WASD/wheel fly · Q/E up · RMB look · Alt+LMB / Alt+MMB orbit · MMB pan · Alt+RMB zoom · F focus · G drop · Ctrl+D dup · gizmo moves selection · Del"
+      ? "Drag palette to place · LMB box/click-select · Ctrl+LMB box-select points · Shift add · WASD/wheel fly · Q/E up · RMB look · Alt+LMB / Alt+MMB orbit · MMB pan · Alt+RMB zoom · F focus · G drop · Ctrl+D dup · gizmo moves selection · Del"
       : mode === "weapons"
         ? "LMB drag pans · wheel scale"
         : mode === "items"
@@ -4426,6 +4426,10 @@ window.addEventListener("keydown", (e) => {
       markDirty();
       refreshAll();
     }
+  }
+  if (e.key === "Escape" && editorMode === "layout" && layoutView.clearPointSelection()) {
+    e.preventDefault();
+    return;
   }
   if (editorMode === "anim") {
     if (e.code === "Space" && !e.ctrlKey && !e.metaKey && !e.altKey) {

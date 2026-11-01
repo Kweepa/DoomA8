@@ -424,6 +424,193 @@ export function applyRoomSplitDelta(room, orig, key, delta) {
   return clampRoomSplits(room, { preferCut: i, preferDim: dim });
 }
 
+/** Editor-only. Local cut planes (same places as the split handles). */
+function cutPlaneLocals(shape, cuts, uSize, vSize) {
+  const planes = [];
+  if (shape === "L") {
+    const c = cuts[0];
+    if (!c) return planes;
+    planes.push({ key: "cut0u", axis: "u", t: uSize - (c.su | 0) });
+    planes.push({ key: "cut0v", axis: "v", t: vSize - (c.sv | 0) });
+  } else if (shape === "T") {
+    const a = cuts[0];
+    const b = cuts[1];
+    if (a) {
+      planes.push({ key: "cut0u", axis: "u", t: a.su | 0 });
+      planes.push({ key: "cut0v", axis: "v", t: a.sv | 0 });
+    }
+    if (b) {
+      planes.push({ key: "cut1u", axis: "u", t: uSize - (b.su | 0) });
+      planes.push({ key: "cut1v", axis: "v", t: b.sv | 0 });
+    }
+  } else if (shape === "S") {
+    const a = cuts[0];
+    const b = cuts[1];
+    if (a) {
+      planes.push({ key: "cut0u", axis: "u", t: uSize - (a.su | 0) });
+      planes.push({ key: "cut0v", axis: "v", t: vSize - (a.sv | 0) });
+    }
+    if (b) {
+      planes.push({ key: "cut1u", axis: "u", t: b.su | 0 });
+      planes.push({ key: "cut1v", axis: "v", t: b.sv | 0 });
+    }
+  }
+  return planes;
+}
+
+function axisDeltaOf(axis, dx, dy, dz) {
+  if (axis === "x") return dx | 0;
+  if (axis === "y") return dy | 0;
+  return dz | 0;
+}
+
+/** Move min/max of one axis. Unselected side stays. Size stays at least 1. */
+function moveSpan(min, max, moveMin, moveMax, d) {
+  let a = min;
+  let b = max;
+  if (moveMin) a += d;
+  if (moveMax) b += d;
+  if (b - a < 1) {
+    if (moveMin && !moveMax) a = b - 1;
+    else if (moveMax && !moveMin) b = a + 1;
+  }
+  return [a, b];
+}
+
+/**
+ * Hull corners tagged with the planes they sit on.
+ * Outer faces are `x0`/`x1`/`y0`/`y1`/`z0`/`z1`. L/T/S inner corners also get `cutNu`/`cutNv`.
+ */
+export function roomControlPoints(room) {
+  const shape = clampRoomShape(room.shape);
+  const basis = roomBasis(room);
+  const cuts = resolveCuts(room, shape, basis.uSize, basis.vSize);
+  const planes = shape === "box" ? [] : cutPlaneLocals(shape, cuts, basis.uSize, basis.vSize);
+  const x0 = room.x | 0;
+  const y0 = room.y | 0;
+  const z0 = room.z | 0;
+  const x1 = x0 + (room.sx | 0);
+  const y1 = y0 + (room.sy | 0);
+  const z1 = z0 + (room.sz | 0);
+  const uAxis = hatAxis(basis.u);
+  const vAxis = hatAxis(basis.v);
+  return roomGeometry(room).verts.map((v) => {
+    const x = Math.round(v.x);
+    const y = Math.round(v.y);
+    const z = Math.round(v.z);
+    const keys = [];
+    if (x === x0) keys.push("x0");
+    else if (x === x1) keys.push("x1");
+    if (y === y0) keys.push("y0");
+    else if (y === y1) keys.push("y1");
+    if (z === z0) keys.push("z0");
+    else if (z === z1) keys.push("z1");
+    if (planes.length) {
+      const at = { x, y, z };
+      const u = Math.round(tAlongHat(room, at[uAxis], basis.u, basis.uSize));
+      const vv = Math.round(tAlongHat(room, at[vAxis], basis.v, basis.vSize));
+      for (const p of planes) {
+        if (p.axis === "u" && u === p.t) keys.push(p.key);
+        else if (p.axis === "v" && vv === p.t) keys.push(p.key);
+      }
+    }
+    return { x, y, z, keys };
+  });
+}
+
+/** True when every control-point plane is selected, so the object translates. */
+export function controlSelectionTranslates(points, keys) {
+  const sel = keys instanceof Set ? keys : new Set(keys || []);
+  const need = new Set();
+  for (const p of points) for (const k of p.keys) need.add(k);
+  if (!need.size) return false;
+  for (const k of need) if (!sel.has(k)) return false;
+  return true;
+}
+
+/**
+ * Move the selected outer faces and cut planes by a world delta.
+ * A cut that is not selected keeps its world position (the elbow stays put while a wall stretches).
+ */
+export function applyRoomControlDelta(room, orig, keys, dx, dy, dz) {
+  const sel = keys instanceof Set ? keys : new Set(keys || []);
+  const shape = clampRoomShape(orig.shape);
+  room.shape = shape;
+  room.rx = orig.rx;
+  room.ry = orig.ry;
+  room.rz = orig.rz;
+  const x0 = orig.x | 0;
+  const y0 = orig.y | 0;
+  const z0 = orig.z | 0;
+  const [nx0, nx1] = moveSpan(x0, x0 + (orig.sx | 0), sel.has("x0"), sel.has("x1"), dx | 0);
+  const [ny0, ny1] = moveSpan(y0, y0 + (orig.sy | 0), sel.has("y0"), sel.has("y1"), dy | 0);
+  const [nz0, nz1] = moveSpan(z0, z0 + (orig.sz | 0), sel.has("z0"), sel.has("z1"), dz | 0);
+  room.x = nx0;
+  room.sx = nx1 - nx0;
+  room.y = ny0;
+  room.sy = ny1 - ny0;
+  room.z = nz0;
+  room.sz = nz1 - nz0;
+  if (shape === "box") {
+    room.cuts = [];
+    stripLegacySplits(room);
+    return clampRoomSplits(room);
+  }
+  const basis = roomBasis(orig);
+  const cuts = resolveCuts(orig, shape, basis.uSize, basis.vSize);
+  const planes = cutPlaneLocals(shape, cuts, basis.uSize, basis.vSize);
+  const byKey = new Map(planes.map((p) => [p.key, p]));
+  const newBasis = roomBasis(room);
+  const worldOf = (plane) => {
+    const hat = plane.axis === "u" ? basis.u : basis.v;
+    const size = plane.axis === "u" ? basis.uSize : basis.vSize;
+    const w = coordAlongHat(orig, plane.t, hat, size);
+    if (!sel.has(plane.key)) return w;
+    return w + axisDeltaOf(hatAxis(hat), dx, dy, dz);
+  };
+  const localOf = (plane, world) => {
+    const hat = plane.axis === "u" ? newBasis.u : newBasis.v;
+    const size = plane.axis === "u" ? newBasis.uSize : newBasis.vSize;
+    return Math.round(tAlongHat(room, world, hat, size));
+  };
+  const tOf = (key) => {
+    const plane = byKey.get(key);
+    if (!plane) return 0;
+    return localOf(plane, worldOf(plane));
+  };
+  const newCuts = [];
+  if (shape === "L") {
+    newCuts.push({ su: newBasis.uSize - tOf("cut0u"), sv: newBasis.vSize - tOf("cut0v") });
+  } else if (shape === "T") {
+    newCuts.push({ su: tOf("cut0u"), sv: tOf("cut0v") });
+    newCuts.push({ su: newBasis.uSize - tOf("cut1u"), sv: tOf("cut1v") });
+  } else if (shape === "S") {
+    newCuts.push({ su: newBasis.uSize - tOf("cut0u"), sv: newBasis.vSize - tOf("cut0v") });
+    newCuts.push({ su: tOf("cut1u"), sv: tOf("cut1v") });
+  }
+  room.cuts = newCuts;
+  stripLegacySplits(room);
+  return clampRoomSplits(room);
+}
+
+/** Face-key delta for an AABB (crates, ramps, platforms, triggers). */
+export function applyAabbControlDelta(obj, orig, keys, dx, dy, dz) {
+  const sel = keys instanceof Set ? keys : new Set(keys || []);
+  const x0 = orig.x | 0;
+  const y0 = orig.y | 0;
+  const z0 = orig.z | 0;
+  const [nx0, nx1] = moveSpan(x0, x0 + (orig.sx | 0), sel.has("x0"), sel.has("x1"), dx | 0);
+  const [ny0, ny1] = moveSpan(y0, y0 + (orig.sy | 0), sel.has("y0"), sel.has("y1"), dy | 0);
+  const [nz0, nz1] = moveSpan(z0, z0 + (orig.sz | 0), sel.has("z0"), sel.has("z1"), dz | 0);
+  obj.x = nx0;
+  obj.sx = nx1 - nx0;
+  obj.y = ny0;
+  obj.sy = ny1 - ny0;
+  obj.z = nz0;
+  obj.sz = nz1 - nz0;
+  return obj;
+}
+
 function keepUv(box) {
   return box.su > 0 && box.sv > 0;
 }

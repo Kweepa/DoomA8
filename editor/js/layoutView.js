@@ -14,6 +14,10 @@ import {
   isGhostKind,
   figureTemplateName,
   roomGeometry,
+  roomControlPoints,
+  controlSelectionTranslates,
+  applyRoomControlDelta,
+  applyAabbControlDelta,
   preserveRoomSplits,
   applyRoomSplitDelta,
   assignDoorRooms,
@@ -133,6 +137,100 @@ function rampSegments(obj) {
 const HANDLE = 7;
 const LINE_HIT = 8;
 const LAYOUT_BOX_CLICK = 4;
+
+function faceKeyedPoint(p, x0, y0, z0, x1, y1, z1) {
+  const x = Math.round(p.x);
+  const y = Math.round(p.y);
+  const z = Math.round(p.z);
+  const keys = [];
+  if (x === x0) keys.push("x0");
+  else if (x === x1) keys.push("x1");
+  if (y === y0) keys.push("y0");
+  else if (y === y1) keys.push("y1");
+  if (z === z0) keys.push("z0");
+  else if (z === z1) keys.push("z1");
+  return { x, y, z, keys };
+}
+
+function aabbControlPoints(obj) {
+  const x0 = obj.x | 0;
+  const y0 = obj.y | 0;
+  const z0 = obj.z | 0;
+  const x1 = x0 + (obj.sx | 0);
+  const y1 = y0 + (obj.sy | 0);
+  const z1 = z0 + (obj.sz | 0);
+  const pts = [];
+  for (const x of [x0, x1]) {
+    for (const y of [y0, y1]) {
+      for (const z of [z0, z1]) pts.push(faceKeyedPoint({ x, y, z }, x0, y0, z0, x1, y1, z1));
+    }
+  }
+  return pts;
+}
+
+/** Ramp corners that are actually drawn. Phantom low-end top corners are left out. */
+function slopeControlPoints(obj) {
+  const x0 = obj.x | 0;
+  const y0 = obj.y | 0;
+  const z0 = obj.z | 0;
+  const x1 = x0 + (obj.sx | 0);
+  const y1 = y0 + (obj.sy | 0);
+  const z1 = z0 + (obj.sz | 0);
+  const seen = new Set();
+  const pts = [];
+  for (const seg of rampSegments(obj)) {
+    for (const p of [seg.a, seg.b]) {
+      const x = Math.round(p.x);
+      const y = Math.round(p.y);
+      const z = Math.round(p.z);
+      const id = `${x},${y},${z}`;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      const pt = faceKeyedPoint({ x, y, z }, x0, y0, z0, x1, y1, z1);
+      if (pt.keys.length) pts.push(pt);
+    }
+  }
+  return pts;
+}
+
+/** A plane is grabbed only when every control point on it is inside the marquee. */
+function keysForInside(points, inside) {
+  const groups = new Map();
+  points.forEach((p, i) => {
+    for (const k of p.keys) {
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(i);
+    }
+  });
+  const keys = new Set();
+  for (const [k, idxs] of groups) {
+    if (idxs.length && idxs.every((i) => inside.has(i))) keys.add(k);
+  }
+  return keys;
+}
+
+function unionPointSel(a, b) {
+  const geom = new Map();
+  const take = (src) => {
+    if (!src) return;
+    for (const [id, keys] of src.geom) {
+      const prev = geom.get(id);
+      geom.set(id, prev ? new Set([...prev, ...keys]) : new Set(keys));
+    }
+  };
+  take(a);
+  take(b);
+  const rigid = new Set([...(a?.rigid || []), ...(b?.rigid || [])]);
+  if (!geom.size && !rigid.size) return null;
+  return { geom, rigid };
+}
+
+function snapshotObj(o) {
+  return {
+    ...o,
+    cuts: (o.cuts || []).map((c) => ({ su: c.su | 0, sv: c.sv | 0 })),
+  };
+}
 const ZOOM_K = 0.008;
 
 export class LayoutView {
@@ -161,6 +259,7 @@ export class LayoutView {
     this.hoverId = null;
     this.hoverGizmo = null;
     this.drag = null;
+    this.pointSel = null;
     this.gridY = 0;
     this.placePreview = null;
     this.placePreviewOverCanvas = false;
@@ -359,6 +458,32 @@ export class LayoutView {
     }
 
     const doc = this.opts.getDoc();
+    if (e.ctrlKey || e.metaKey) {
+      this.drag = { kind: "box", start: p, end: p, additive: e.shiftKey, partial: true };
+      this.canvas.setPointerCapture(e.pointerId);
+      return;
+    }
+    if (this.#pointSelActive()) {
+      const hitGizmo = this.#hitPointGizmo(doc, p.x, p.y);
+      if (hitGizmo) {
+        this.opts.beginUndo?.();
+        this.drag = this.#makePointDrag(doc, hitGizmo, p);
+        this.canvas.setPointerCapture(e.pointerId);
+        return;
+      }
+      const corner = this.#hitPointCorner(doc, p.x, p.y);
+      if (corner) {
+        this.opts.beginUndo?.();
+        this.drag = this.#makePointDrag(doc, { kind: "move", world: { x: corner.x, y: corner.y, z: corner.z } }, p);
+        this.canvas.setPointerCapture(e.pointerId);
+        return;
+      }
+      this.pointSel = null;
+      this.drag = { kind: "box", start: p, end: p, additive: e.shiftKey };
+      this.canvas.setPointerCapture(e.pointerId);
+      return;
+    }
+
     const primary = this.#primaryId();
     const hitHandle = primary ? this.#hitHandle(doc, primary, p.x, p.y) : null;
     if (hitHandle) {
@@ -569,6 +694,11 @@ export class LayoutView {
       return;
     }
     const doc = this.opts.getDoc();
+    if (this.#pointSelActive()) {
+      this.hoverGizmo = this.#hitPointGizmo(doc, p.x, p.y);
+      this.hoverId = this.#pick(doc, p.x, p.y)?.id || null;
+      return;
+    }
     const primary = this.#primaryId();
     this.hoverGizmo = primary ? this.#hitHandle(doc, primary, p.x, p.y) : null;
     this.hoverId = this.#pick(doc, p.x, p.y)?.id || null;
@@ -581,8 +711,10 @@ export class LayoutView {
     if (this.orbit) this.orbit = null;
     if (this.pan) this.pan = null;
     if (this.zoom) this.zoom = null;
-    if (this.drag?.kind === "box") this.#finishBox();
-    else if (this.drag && this.drag.kind !== "select") {
+    if (this.drag?.kind === "box") {
+      if (this.drag.partial) this.#finishPointBox();
+      else this.#finishBox();
+    } else if (this.drag && this.drag.kind !== "select") {
       this.#finishTransform();
       this.opts.endUndo?.();
     }
@@ -658,6 +790,273 @@ export class LayoutView {
     return { x0, y0, x1, y1, w: x1 - x0, h: y1 - y0 };
   }
 
+  #pointSelActive() {
+    return !!(this.pointSel && (this.pointSel.geom.size || this.pointSel.rigid.size));
+  }
+
+  clearPointSelection() {
+    if (!this.#pointSelActive()) return false;
+    this.pointSel = null;
+    this.hoverGizmo = null;
+    this.draw();
+    return true;
+  }
+
+  #prunePointSel(doc) {
+    if (!this.pointSel) return;
+    const ids = new Set(activeMap(doc).objects.map((o) => o.id));
+    for (const id of this.pointSel.geom.keys()) if (!ids.has(id)) this.pointSel.geom.delete(id);
+    for (const id of this.pointSel.rigid) if (!ids.has(id)) this.pointSel.rigid.delete(id);
+    if (!this.pointSel.geom.size && !this.pointSel.rigid.size) this.pointSel = null;
+  }
+
+  #controlPoints(obj) {
+    if (obj.kind === "room") return roomControlPoints(obj);
+    if (obj.kind === "slope") return slopeControlPoints(obj);
+    return aabbControlPoints(obj);
+  }
+
+  #objInScreenRect(obj, rect) {
+    const cam = this.camera;
+    const w = this.cssW;
+    const h = this.cssH;
+    for (let i = 0; i < 8; i++) {
+      const pr = projectPoint(cornerWorld(obj, i), cam, w, h);
+      if (pr.ok && pr.sx >= rect.x0 && pr.sx <= rect.x1 && pr.sy >= rect.y0 && pr.sy <= rect.y1) return true;
+    }
+    const c = projectPoint(aabbCenter(obj), cam, w, h);
+    return !!(c.ok && c.sx >= rect.x0 && c.sx <= rect.x1 && c.sy >= rect.y0 && c.sy <= rect.y1);
+  }
+
+  /** Ctrl marquee: planes whose every corner is inside, plus fixed objects. */
+  #collectPointHits(doc, rect, click) {
+    const cam = this.camera;
+    const w = this.cssW;
+    const h = this.cssH;
+    const tiny = rect.w < LAYOUT_BOX_CLICK && rect.h < LAYOUT_BOX_CLICK;
+    const origin = click || { x: rect.x0, y: rect.y0 };
+    const inside = (pr) => {
+      if (!pr.ok) return false;
+      if (tiny) return Math.hypot(pr.sx - origin.x, pr.sy - origin.y) <= HANDLE + 2;
+      return pr.sx >= rect.x0 && pr.sx <= rect.x1 && pr.sy >= rect.y0 && pr.sy <= rect.y1;
+    };
+    const geom = new Map();
+    const rigid = new Set();
+    for (const obj of this.#visibleObjects(doc)) {
+      if (KINDS[obj.kind].fixed) {
+        if (!tiny && this.#objInScreenRect(obj, rect)) rigid.add(obj.id);
+        continue;
+      }
+      const pts = this.#controlPoints(obj);
+      const hit = new Set();
+      pts.forEach((pt, i) => {
+        if (inside(projectPoint(pt, cam, w, h))) hit.add(i);
+      });
+      const keys = keysForInside(pts, hit);
+      if (keys.size) geom.set(obj.id, keys);
+    }
+    if (tiny) {
+      const picked = this.#pick(doc, origin.x, origin.y);
+      if (picked) {
+        const obj = activeMap(doc).objects.find((o) => o.id === picked.id);
+        if (obj && KINDS[obj.kind].fixed) rigid.add(obj.id);
+      }
+    }
+    return { geom, rigid };
+  }
+
+  #commitPointHits(hits, additive) {
+    if (additive) this.pointSel = unionPointSel(this.pointSel, hits);
+    else this.pointSel = hits.geom.size || hits.rigid.size ? hits : null;
+  }
+
+  #previewPointSel(doc) {
+    if (this.drag?.kind === "box" && this.drag.partial) {
+      const hits = this.#collectPointHits(doc, this.#boxRect(), this.drag.start);
+      if (this.drag.additive) return unionPointSel(this.pointSel, hits) || { geom: new Map(), rigid: new Set() };
+      return hits;
+    }
+    return this.pointSel;
+  }
+
+  #pointsForKeys(obj, keys) {
+    const pts = [];
+    for (const p of this.#controlPoints(obj)) {
+      if (p.keys.some((k) => keys.has(k))) pts.push(p);
+    }
+    return pts;
+  }
+
+  #pointAnchor(doc, sel) {
+    if (!sel) return null;
+    const objs = activeMap(doc).objects;
+    const pts = [];
+    for (const [id, keys] of sel.geom) {
+      const obj = objs.find((o) => o.id === id);
+      if (obj) pts.push(...this.#pointsForKeys(obj, keys));
+    }
+    for (const id of sel.rigid) {
+      const obj = objs.find((o) => o.id === id);
+      if (obj) pts.push(aabbCenter(obj));
+    }
+    if (!pts.length) return null;
+    let x = 0;
+    let y = 0;
+    let z = 0;
+    for (const p of pts) {
+      x += p.x;
+      y += p.y;
+      z += p.z;
+    }
+    const n = pts.length;
+    return { x: x / n, y: y / n, z: z / n };
+  }
+
+  #hitPointGizmo(doc, mx, my) {
+    const anchor = this.#pointAnchor(doc, this.pointSel);
+    if (!anchor) return null;
+    return hitTranslateGizmo(anchor, this.camera, this.cssW, this.cssH, mx, my, HANDLE + 1);
+  }
+
+  #hitPointCorner(doc, mx, my) {
+    if (!this.pointSel) return null;
+    const cam = this.camera;
+    const w = this.cssW;
+    const h = this.cssH;
+    const objs = activeMap(doc).objects;
+    let best = null;
+    let bestD = HANDLE + 2;
+    for (const [id, keys] of this.pointSel.geom) {
+      const obj = objs.find((o) => o.id === id);
+      if (!obj) continue;
+      for (const p of this.#pointsForKeys(obj, keys)) {
+        const pr = projectPoint(p, cam, w, h);
+        if (!pr.ok) continue;
+        const d = Math.hypot(mx - pr.sx, my - pr.sy);
+        if (d <= bestD) {
+          bestD = d;
+          best = p;
+        }
+      }
+    }
+    return best;
+  }
+
+  #makePointDrag(doc, handle, p) {
+    const objs = activeMap(doc).objects;
+    const origs = [];
+    const specs = [];
+    const claimed = new Set();
+    const take = (obj) => {
+      if (!obj || claimed.has(obj.id)) return;
+      claimed.add(obj.id);
+      origs.push(snapshotObj(obj));
+    };
+    for (const [id, keys] of this.pointSel.geom) {
+      const obj = objs.find((o) => o.id === id);
+      if (!obj) continue;
+      take(obj);
+      const full = controlSelectionTranslates(this.#controlPoints(obj), keys);
+      specs.push({ id, keys: new Set(keys) });
+      if (full && obj.kind === "room") {
+        for (const other of objs) {
+          if (other.kind === "room" || other.kind === "doorway" || claimed.has(other.id)) continue;
+          if (other.roomId !== obj.id) continue;
+          if (this.pointSel.geom.has(other.id) || this.pointSel.rigid.has(other.id)) continue;
+          take(other);
+          specs.push({ id: other.id, keys: null });
+        }
+      }
+    }
+    for (const id of this.pointSel.rigid) {
+      const obj = objs.find((o) => o.id === id);
+      if (!obj || claimed.has(obj.id)) continue;
+      take(obj);
+      specs.push({ id, keys: null });
+    }
+    const anchor = this.#pointAnchor(doc, this.pointSel) || handle.world;
+    const gizmo = gizmoMetrics(anchor, this.camera, this.cssW, this.cssH);
+    return {
+      points: true,
+      kind: handle.kind,
+      axis: handle.axis,
+      plane: handle.plane,
+      start: p,
+      origs,
+      specs,
+      grab: handle.world,
+      planeN: handle.planeN || lookVectors(this.camera.yaw, this.camera.pitch).forward,
+      gizmoAxisLen: handle.gizmoAxisLen ?? gizmo.axisLen,
+    };
+  }
+
+  #pointDragDelta(p, d) {
+    if (d.kind === "axis") {
+      const delta = this.#axisDelta(p, d.grab, d.axis, d.start, d.gizmoAxisLen ?? GIZMO_FALLBACK_LEN);
+      if (delta == null) return null;
+      return {
+        dx: d.axis === "x" ? delta : 0,
+        dy: d.axis === "y" ? delta : 0,
+        dz: d.axis === "z" ? delta : 0,
+      };
+    }
+    const ray = screenRay(p.x, p.y, this.camera, this.cssW, this.cssH);
+    const hit = intersectPlane(ray.origin, ray.dir, d.grab, d.planeN);
+    if (!hit) return null;
+    let dx = Math.round(hit.point.x - d.grab.x);
+    let dy = Math.round(hit.point.y - d.grab.y);
+    let dz = Math.round(hit.point.z - d.grab.z);
+    if (d.kind === "plane") {
+      if (d.plane === "xy") dz = 0;
+      else if (d.plane === "xz") dy = 0;
+      else if (d.plane === "yz") dx = 0;
+    }
+    return { dx, dy, dz };
+  }
+
+  #applyPointDelta(d, dx, dy, dz) {
+    const objs = activeMap(this.opts.getDoc()).objects;
+    for (const spec of d.specs) {
+      if (!spec.keys) continue;
+      const obj = objs.find((o) => o.id === spec.id);
+      const orig = d.origs.find((o) => o.id === spec.id);
+      if (!obj || !orig) continue;
+      if (obj.kind === "room") applyRoomControlDelta(obj, orig, spec.keys, dx, dy, dz);
+      else applyAabbControlDelta(obj, orig, spec.keys, dx, dy, dz);
+      clampObject(obj);
+    }
+    for (const spec of d.specs) {
+      if (spec.keys) continue;
+      const obj = objs.find((o) => o.id === spec.id);
+      const orig = d.origs.find((o) => o.id === spec.id);
+      if (!obj || !orig) continue;
+      obj.x = orig.x + dx;
+      obj.y = orig.y + dy;
+      obj.z = orig.z + dz;
+      clampObject(obj);
+    }
+  }
+
+  #finishPointBox() {
+    const hits = this.#collectPointHits(this.opts.getDoc(), this.#boxRect(), this.drag.start);
+    this.#commitPointHits(hits, this.drag.additive);
+  }
+
+  #drawPointMarkers(ctx, doc, sel, cam, w, h) {
+    if (!sel?.geom.size) return;
+    const objs = activeMap(doc).objects;
+    ctx.fillStyle = "#f2d36b";
+    for (const [id, keys] of sel.geom) {
+      const obj = objs.find((o) => o.id === id);
+      if (!obj) continue;
+      for (const p of this.#pointsForKeys(obj, keys)) {
+        const pr = projectPoint(p, cam, w, h);
+        if (!pr.ok) continue;
+        ctx.fillRect(pr.sx - 2.5, pr.sy - 2.5, 5, 5);
+      }
+    }
+  }
+
   #finishBox() {
     const rect = this.#boxRect();
     const additive = this.drag.additive;
@@ -702,6 +1101,13 @@ export class LayoutView {
     const objs = activeMap(doc).objects;
     const ray = screenRay(p.x, p.y, this.camera, this.cssW, this.cssH);
     const d = this.drag;
+
+    if (d.points) {
+      const delta = this.#pointDragDelta(p, d);
+      if (!delta) return;
+      this.#applyPointDelta(d, delta.dx, delta.dy, delta.dz);
+      return;
+    }
 
     if (d.kind === "move") {
       const hit = intersectPlane(ray.origin, ray.dir, d.grab, d.planeN);
@@ -1254,8 +1660,13 @@ export class LayoutView {
 
     const doc = this.opts.getDoc();
     const cam = this.camera;
+    this.#prunePointSel(doc);
+    const pointPreview = this.#previewPointSel(doc);
     const selected = new Set(this.#selectedIds());
-    if (this.drag?.kind === "box") {
+    if (pointPreview) {
+      for (const id of pointPreview.rigid) selected.add(id);
+    }
+    if (this.drag?.kind === "box" && !this.drag.partial) {
       const r = this.#boxRect();
       if (r.w >= LAYOUT_BOX_CLICK || r.h >= LAYOUT_BOX_CLICK) {
         for (const obj of this.#visibleObjects(doc)) {
@@ -1303,6 +1714,14 @@ export class LayoutView {
     if (selIds.length === 1) {
       const elev = objs.find((o) => o.id === selIds[0] && o.kind === "elevator");
       if (elev) this.#drawElevDestGhosts(ctx, doc, elev, cam, w, h);
+    }
+
+    this.#drawPointMarkers(ctx, doc, pointPreview, cam, w, h);
+    if (this.#pointSelActive() && this.drag?.kind !== "box") {
+      const anchor = this.#pointAnchor(doc, this.pointSel);
+      if (anchor) {
+        drawTranslateGizmo(ctx, anchor, cam, w, h, { hoverGizmo: this.hoverGizmo, drag: this.drag });
+      }
     }
 
     if (this.drag?.kind === "box") {
@@ -1479,7 +1898,7 @@ export class LayoutView {
       ctx.setLineDash([]);
       this.#drawGlyphs(ctx, obj, cam, w, h, color);
     }
-    if (primary) this.#drawGizmo(ctx, obj, cam, w, h);
+    if (primary && !this.#pointSelActive()) this.#drawGizmo(ctx, obj, cam, w, h);
   }
 
   #drawElevDestGhosts(ctx, doc, elev, cam, w, h) {

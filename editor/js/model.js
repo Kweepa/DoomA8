@@ -25,6 +25,10 @@ import {
   rotateRoom,
   preserveRoomSplits,
   applyRoomSplitDelta,
+  roomControlPoints,
+  controlSelectionTranslates,
+  applyRoomControlDelta,
+  applyAabbControlDelta,
   roomBasis,
   defaultRoomSplits,
 } from "./roomGeom.js";
@@ -55,6 +59,10 @@ export {
   rotateRoom,
   preserveRoomSplits,
   applyRoomSplitDelta,
+  roomControlPoints,
+  controlSelectionTranslates,
+  applyRoomControlDelta,
+  applyAabbControlDelta,
   roomBasis,
   defaultRoomSplits,
 };
