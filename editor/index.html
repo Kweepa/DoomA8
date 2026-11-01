@@ -16840,6 +16840,9 @@ function layoutInspectorTitle(objs) {
   if (kind === "enemy") {
     const name = unanimous(objs, (o) => o.enemy || "Enemy");
     label = name === undefined ? "Enemy" : name;
+  } else if (kind === "pickup") {
+    const name = unanimous(objs, (o) => clampPickupType(o.pickup));
+    label = name === undefined ? "Pickup" : name;
   } else {
     label = KINDS[kind].label;
   }
@@ -17130,20 +17133,6 @@ function renderLayoutObjectFields(root, objs) {
         )
       );
     }
-  }
-
-  if (kind === "pickup") {
-    const cur = unanimous(objs, (o) => clampPickupType(o.pickup));
-    root.appendChild(
-      field(
-        "Contains",
-        selectMixed(
-          cur,
-          PICKUP_TYPES.map((t) => ({ value: t, text: t })),
-          (v) => apply((obj) => (obj.pickup = v))
-        )
-      )
-    );
   }
 
   if (kind === "platform") {
