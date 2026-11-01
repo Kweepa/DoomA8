@@ -449,6 +449,10 @@ DEMON_MELEE_R	= 4		; claw Chebyshev
 PUNCH_HIT_R		= 3			; XZ chebyshev radius for fist / chainsaw
 SHOT_FAN_X	= 12			; pellet fan half-width; cols 18..22
 SHOT_PELLET_X	= 2			; |sx − column| for one pellet
+SHOT_BODY_NEAR	= 6			; CAM_ZH below this: pellet limit reaches ±10
+SHOT_BODY_MID	= 12			; CAM_ZH below this: pellet limit reaches ±5
+SHOT_BODY_NEAR_ADD = 12			; SHOT_PELLET_X + this = 14
+SHOT_BODY_MID_ADD = 5			; SHOT_PELLET_X + this = 7
 SHOT_Z_MAX	= 32			; view-Z high max range
 SHOT_MID_H	= 3			; mid-body Y above feet (≈ ENEMY_CULL_H/2)
 CHAIN_HIT_X	= 6			; |sx − SCREEN_CX| ≤ this (pixels)

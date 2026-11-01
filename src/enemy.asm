@@ -1728,8 +1728,9 @@ roll_upto
 	rts
 
 ; ------------------------------------------------------------------
-; Hitscan: mid-body project → |sx−(CX+aim)|≤scan_hit_x (no screen-Y gate;
-; height auto-aims). Flat guns roll 1..scan_dmg_max on the closest body.
+; Hitscan: mid-body project → |sx−(CX+aim)|≤limit (no screen-Y gate;
+; height auto-aims). Pellets widen that limit when close. Flat guns roll
+; 1..scan_dmg_max on the closest body.
 ; Shotgun is five pellets, one column each. Pistol and chaingun are one.
 ; z in 0..SHOT_Z_MAX-1. Blood splat on a hit; wall splat on a miss.
 shotgun_hitscan
@@ -1918,7 +1919,7 @@ gun_hitscan
 	jmp .sh_n
 .sh_on
 	sty rot1				; sy
-	; |sx − (SCREEN_CX + scan_aim)| ≤ scan_hit_x
+	; |sx − (SCREEN_CX + scan_aim)| ≤ sham_hit_lim
 	sec
 	sbc #SCREEN_CX
 	sec
@@ -2113,9 +2114,26 @@ gun_hitscan
 .sh_rts
 	rts
 
-; A = |sx−CX| limit.
+; A = |sx−CX| limit. Pellets widen while the body still covers the fan
+; (CAM_ZH < 6 → ±10, < 12 → ±5). Pistol and chaingun keep scan_hit_x.
+; Y is free (sy already in rot1). rot0 and gidx stay.
 sham_hit_lim
 	lda scan_hit_x
+	ldy scan_dmg_all
+	cpy #SCAN_PELLET
+	bne .shl_rts
+	ldy CAM_ZH
+	cpy #SHOT_BODY_NEAR
+	bcc .shl_near
+	cpy #SHOT_BODY_MID
+	bcs .shl_rts
+	clc
+	adc #SHOT_BODY_MID_ADD
+	rts
+.shl_near
+	clc
+	adc #SHOT_BODY_NEAR_ADD
+.shl_rts
 	rts
 
 ; Mid-body blood splat on shot_hit_i (view trig loaded).
