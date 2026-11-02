@@ -1,6 +1,9 @@
 ; Sound effects — PC-speaker envelopes on SID voices 1–3 (pulse 50%).
 ; Data: pcsounds.asm (tools/gensounds.py). Mixer: ch0=player V1, ch1=enemy V2,
-; ch2=world V3. Enemy envelopes ride pose PRGs; sound_table (BSS, SOUND_TABLE)
+; ch2=world V3. Continuous fillers share V3 and only run while that channel
+; is idle: chainsaw (equipped) beats the elevator. Atari parks the saw on
+; POKEY channel 4 (a8_saw); a 3-voice port folds it into this V3 filler.
+; Enemy envelopes ride pose PRGs; sound_table (BSS, SOUND_TABLE)
 ; hi=0 until rebind_streamed_sfx.
 ; Layout: N, AD|voice, priority, fnhi[0..N-1]. AD (low nibble masked) written on
 ; commit. Sustain is full. Stepped once per mid-split raster (~50/60 Hz).
@@ -264,5 +267,6 @@ sfx_gate_off
 
 	rts
 
-; V3 elevator rumble is written by a8_noise (a8irq.asm).
+; V3 elevator rumble is a8_noise. Chainsaw rumble is POKEY channel 4
+; (a8_saw). On SID both are this V3 filler; the saw wins while equipped.
 

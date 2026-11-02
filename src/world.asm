@@ -373,7 +373,7 @@ peek_rc_floor
 
 ; col_x/col_z set. Y = room (floor_below uses room_idx).
 ; fb_probe_y = probe Y inclusive.
-; C=1, proc_tmp2 = highest walkable ≤ fb_probe_y (rc floor, crate top, solid plat).
+; C=1, proc_tmp2 = highest walkable ≤ fb_probe_y (rc floor, crate top, solid plat, elev top).
 floor_below
 	ldy room_idx
 floor_below_y
@@ -416,7 +416,7 @@ floor_below_y
 	+slice_x room_plat_o
 .fb_pl
 	cpx sl_end
-	bcs .fb_done
+	bcs .fb_e
 	+lda_mx plat_solid
 	beq .fb_pn
 	+lda_mx plat_x
@@ -434,6 +434,31 @@ floor_below_y
 .fb_pn
 	inx
 	bne .fb_pl			; sl_end <= 255; X wraps only after the slice
+.fb_e
+	ldx #0
+.fb_el
+	cpx	map_nelevs
+	bcs .fb_done
+	+lda_mx elev_room
+	cmp col_room
+	bne .fb_en
+	+lda_mx elev_x
+	sta box_x
+	+lda_mx elev_z
+	sta box_z
+	+lda_mx elev_sx
+	sta box_sx
+	+lda_mx elev_sz
+	sta box_sz
+	jsr point_in_floor_xz
+	bcc .fb_en
+	clc
+	lda elev_y,x
+	+adc_mx elev_sy
+	jsr .fb_cand
+.fb_en
+	inx
+	bne .fb_el
 .fb_done
 	lda proc_tmp0
 	beq .fb_no

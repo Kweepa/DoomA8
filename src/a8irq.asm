@@ -379,7 +379,8 @@ hurt_col
 	jsr check_cheats
 	jsr flush_sfx
 	jsr update_sfx
-	jmp a8_noise
+	jsr a8_noise
+	jmp a8_saw
 
 a8_stick
 	lda pot_prev
@@ -528,6 +529,93 @@ a8_noise
 	lda #0
 	sta $d205
 .rts
+	rts
+
+; Chainsaw motor on POKEY channel 4 ($D206 / $D207). Channel 4 is the Atari
+; spare, so world one-shots and the elevator keep channel 3. C64 has three
+; SID voices (playsound.asm: V1 player, V2 enemy, V3 world). Fold this into
+; the V3 idle filler with a8_noise, first match:
+;   sfx_index+2 active → one-shot owns V3 (door / switch / pickup)
+;   saw equipped       → this rumble; elevator waits
+;   elev_noise_n       → elevator
+;   else               → gate off
+; Player and enemy voices stay one-shots. The punch stays on the player voice.
+; Idle gates the 17-bit noise 00110011 (vbi_count bit 1) at effects_vol>>3.
+; Fire held gates it 01010101 (bit 0) at effects_vol>>2. Bite is every frame
+; at full volume, frequency re-rolled from saw_rng. SID uses the same gates.
+; Loudness is V3 sustain ($D414 bits 4-7); $D418 stays effects_vol. Idle and
+; fire are noise alone ($D412 gate + $80); a silent frame clears the gate.
+; Idle Fn is about 1/4 of fire. Bite keeps that waveform and rewrites Fn
+; every frame, in a band at and above the fire pitch. These AUDF bytes are
+; POKEY clocks. 6581 noise plus any other waveform is undefined, so the
+; bite's extra grit is the frequency hop.
+SAW_IDLE_F	= $c0			; slow 17-bit noise
+SAW_FIRE_F	= $28			; higher, faster
+SAW_DIST	= $80			; 17-bit poly
+SAW_BITE_MASK	= $1f			; plus SAW_BITE_LO → $08..$27
+SAW_BITE_LO	= $08
+SAW_RNG_TAP	= $1d			; same x^8+x^4+x^3+x^2+1 as rnd8
+
+a8_saw
+	lda cur_weapon
+	cmp #WPN_SAW
+	bne .saw_off
+	lda effects_vol
+	and #$0f
+	beq .saw_off
+	lda key_fire
+	beq .saw_idle
+	lda saw_bite
+	bne .saw_bite
+	lda vbi_count_l			; already incremented this VBI
+	sec
+	sbc #1
+	and #1				; 01010101
+	beq .saw_off
+	lda #SAW_FIRE_F
+	sta $d206
+	lda effects_vol
+	and #$0f
+	lsr
+	lsr				; vol >> 2
+	ora #SAW_DIST
+	sta $d207
+	rts
+.saw_idle
+	lda vbi_count_l
+	sec
+	sbc #1
+	and #2				; 00110011
+	beq .saw_off
+	lda #SAW_IDLE_F
+	sta $d206
+	lda effects_vol
+	and #$0f
+	lsr
+	lsr
+	lsr				; vol >> 3
+	ora #SAW_DIST
+	sta $d207
+	rts
+.saw_bite
+	lda saw_rng
+	bne +
+	lda #$7b
++	asl
+	bcc +
+	eor #SAW_RNG_TAP
++	sta saw_rng
+	and #SAW_BITE_MASK
+	clc
+	adc #SAW_BITE_LO
+	sta $d206
+	lda effects_vol
+	and #$0f
+	sta $d207			; full poly, full volume
+	rts
+.saw_off
+	lda #0
+	sta $d207
 	rts
 
 ; Y = 0,2,4,… offset from in_fwd; add sample_ms, saturate at 65535.

@@ -219,7 +219,7 @@ elev_pu_re
 
 ; ------------------------------------------------------------------
 ; elev_carry — Y = elev index, A = dy ($01 / $ff). X (proc slot) kept.
-; Pickups on this car's current top, in its room, move by dy first.
+; Things and enemies on this car's current top, in its room, move by dy first.
 ; ------------------------------------------------------------------
 elev_carry
 	sta elev_ride_dy
@@ -236,8 +236,9 @@ elev_carry
 	tax
 	rts
 
-; elev_reseat_pickups — after quickload. Map th_y is authored again;
-; a pickup that started on the car (top = elev_y0 + sy) follows elev_y.
+; elev_reseat_pickups — after quickload. Map columns are authored again.
+; Anything still at the start top (elev_y0 + sy) follows elev_y.
+; A carried enemy's en_y was already restored, so it does not match.
 elev_reseat_pickups
 	ldx #0
 .ers_lp
@@ -261,8 +262,7 @@ elev_reseat_pickups
 .ers_rts
 	rts
 
-; elev_ride_i / dy / top set. Things in this elev's room only.
-; Light posts and barrels stay. X clobbered.
+; elev_ride_i / dy / top set. This elev's room only. EN_GONE stays. X clobbered.
 elev_ride_apply
 	ldx elev_ride_i
 	+lda_mx elev_x
@@ -278,12 +278,9 @@ elev_ride_apply
 	+slice_x room_th_o
 .era_lp
 	cpx sl_end
-	bcs .era_rts
+	bcs .era_en
 	lda th_taken,x
 	bne .era_n
-	+lda_mx th_type
-	cmp #TH_LIGHTPOST
-	bcs .era_n
 	+lda_mx th_y
 	cmp elev_ride_top
 	bne .era_n
@@ -300,6 +297,36 @@ elev_ride_apply
 .era_n
 	inx
 	jmp .era_lp
+.era_en
+	ldx elev_ride_i
+	+lda_mx elev_room
+	sta col_room
+	ldx #0
+.era_el
+	cpx	map_nenemies
+	bcs .era_rts
+	lda en_state,x
+	cmp #EN_GONE
+	beq .era_enx
+	+lda_mx en_room
+	cmp col_room
+	bne .era_enx
+	+lda_mx en_y
+	cmp elev_ride_top
+	bne .era_enx
+	+lda_mx en_x
+	sta col_x
+	+lda_mx en_z
+	sta col_z
+	jsr point_in_floor_xz
+	bcc .era_enx
+	clc
+	+lda_mx en_y
+	adc elev_ride_dy
+	+sta_mx en_y
+.era_enx
+	inx
+	jmp .era_el
 .era_rts
 	rts
 
@@ -358,7 +385,8 @@ elev_update_floor
 	rts
 
 ; ------------------------------------------------------------------
-; elev_noise_on / elev_noise_off — refcount only. IRQ programs SID V3.
+; elev_noise_on / elev_noise_off — refcount only. IRQ programs SID V3
+; when the world channel is idle and the chainsaw is not out (a8_saw).
 elev_noise_on
 	inc elev_noise_n
 	rts

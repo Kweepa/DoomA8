@@ -998,10 +998,11 @@ wpn1_held	= $CFDA + A8_OFF		; 1 = key 1 still down; one toggle per press
 scan_best_i	= $CFDB + A8_OFF		; scan_shoot_*: best thing / switch index ($ff none)
 scan_best_z	= $CFDC + A8_OFF		; its CAM_ZH
 scan_off	= $CFDD + A8_OFF		; screen X aim offset (scan_aim for barrels, 0 for switches)
-elev_ride_i	= $CFDE + A8_OFF		; elev SoA index while carrying pickups
+elev_ride_i	= $CFDE + A8_OFF		; elev SoA index while carrying riders
 elev_ride_dy	= $CFDF + A8_OFF		; signed Y step ($01 / $ff, or reseat delta)
-elev_ride_top	= $CFE0 + A8_OFF		; surface those pickups must match
-; $CFE1–$CFFF reserved. Charset A is $D000. Do not slide.
+elev_ride_top	= $CFE0 + A8_OFF		; surface those riders must match
+saw_rng		= $CFE1 + A8_OFF		; chainsaw bite LFSR; IRQ only, not saved
+; $CFE2–$CFFF reserved. Charset A is $D000. Do not slide.
 HAVE_YELLOW	= 1
 HAVE_BLUE	= 2
 HAVE_RED	= 4
