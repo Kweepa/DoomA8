@@ -248,140 +248,112 @@ hud_print
 ; Bullets, shells, rockets + health + armour.
 ; Call on init, spend, backpack, damage — not every frame.
 hud_ammo
-	lda #<HUD_SCR + HUD_OFF_SHELL
+	lda #<HUD_SCR + HUD_OFF_SHELL + HUD_AMMO_NUM
 	sta dst_ptr
-	lda #>HUD_SCR + HUD_OFF_SHELL
+	lda #>HUD_SCR + HUD_OFF_SHELL + HUD_AMMO_NUM
 	sta dst_ptr+1
-	ldx #HUD_AMMO_NUM
 	lda ammo_bullets
 	jsr .u8_3at
-	lda #<HUD_SCR + HUD_OFF_SHELLS
+	lda #<HUD_SCR + HUD_OFF_SHELLS + HUD_AMMO_NUM
 	sta dst_ptr
-	lda #>HUD_SCR + HUD_OFF_SHELLS
+	lda #>HUD_SCR + HUD_OFF_SHELLS + HUD_AMMO_NUM
 	sta dst_ptr+1
-	ldx #HUD_AMMO_NUM
 	lda ammo_shells
 	jsr .u8_3at
-	lda #<HUD_SCR + HUD_OFF_RKT
+	lda #<HUD_SCR + HUD_OFF_RKT + HUD_AMMO_NUM
 	sta dst_ptr
-	lda #>HUD_SCR + HUD_OFF_RKT
+	lda #>HUD_SCR + HUD_OFF_RKT + HUD_AMMO_NUM
 	sta dst_ptr+1
-	ldx #HUD_AMMO_NUM
 	lda ammo_rockets
 	jsr .u8_3at
-	ldx #HUD_HP_NUM
+	lda #<HUD_SCR + HUD_OFF_RKT + HUD_HP_NUM
+	sta dst_ptr
+	lda #>HUD_SCR + HUD_OFF_RKT + HUD_HP_NUM
+	sta dst_ptr+1
 	lda player_hp
 	jsr .u8_3at
-	ldx #HUD_AR_NUM
+	lda #<HUD_SCR + HUD_OFF_RKT + HUD_AR_NUM
+	sta dst_ptr
+	lda #>HUD_SCR + HUD_OFF_RKT + HUD_AR_NUM
+	sta dst_ptr+1
 	lda player_armour
 	; fall through
 
-; A unsigned -> 3 digits at (dst_ptr)+X, matrix A
+; A unsigned -> 3 ASCII digits at (dst_ptr)+0..2.
+; Hundreds in X, tens in Y, both start at '0' (jsw PrintDec3).
 .u8_3at
-	stx pp_col
-	sta pp_tmp_l
-	ldx #0
-.uh3h
-	lda pp_tmp_l
+	ldx #$30
+.u8h
 	cmp #100
-	bcc .uh3t
+	bcc .u8t
 	sbc #100
-	sta pp_tmp_l
 	inx
-	bne .uh3h
-.uh3t
-	stx hud_n
-	ldy #0
-.uh3tl
-	lda pp_tmp_l
+	bcs .u8h
+.u8t
+	ldy #$30
+.u8tl
 	cmp #10
-	bcc .uh3o
+	bcc .u8o
 	sbc #10
-	sta pp_tmp_l
 	iny
-	bne .uh3tl
-.uh3o
+	bne .u8tl
+.u8o
+	pha
 	tya
-	ora #$30
-	sta pp_tmp_h
-	lda hud_n
-	ora #$30
-	ldy pp_col
+	pha
+	txa
+	ldy #0
 	sta (dst_ptr),y
-	iny
-	lda pp_tmp_h
+	pla
+	ldy #1
 	sta (dst_ptr),y
-	iny
-	lda pp_tmp_l
+	pla
 	ora #$30
+	ldy #2
 	sta (dst_ptr),y
 	rts
 
 !if  HUD_POS = 1 {
 ; A signed → sign + 3 digits at HUD_OFF2+X (horizon pitch = 0)
 .s8_3
-	stx pp_col
+	ldy #HUD_CH_PLUS
 	cmp #0
 	bpl .spos
-	ldx pp_col
-	pha
-	lda #HUD_CH_MINUS
-	sta HUD_SCR + HUD_OFF2,x
-	pla
+	ldy #HUD_CH_MINUS
 	eor #$ff
 	clc
 	adc #1
-	inx
-	stx pp_col
-	jmp .u8_3
 .spos
-	ldx pp_col
 	pha
-	lda #HUD_CH_PLUS
-	sta HUD_SCR + HUD_OFF2,x
-	pla
-	inx
-	stx pp_col
-	jmp .u8_3
-}
-
-; A unsigned 0–255 → 3 ASCII digits at HUD_OFF2+X (also pp_col)
-.u8_3
-	stx pp_col
-	sta pp_tmp_l
-	ldx #0
-.uhund
-	lda pp_tmp_l
-	cmp #100
-	bcc .utens
-	sbc #100
-	sta pp_tmp_l
-	inx
-	bne .uhund
-.utens
-	ldy #0
-.utenlp
-	lda pp_tmp_l
-	cmp #10
-	bcc .uones
-	sbc #10
-	sta pp_tmp_l
-	iny
-	bne .utenlp
-.uones
-	txa
-	ora #$30
-	ldx pp_col
-	sta HUD_SCR + HUD_OFF2,x
-	inx
 	tya
-	ora #$30
-	sta HUD_SCR + HUD_OFF2,x
-	inx
-	lda pp_tmp_l
-	ora #$30
-	sta HUD_SCR + HUD_OFF2,x
+	ldy #0
+	jsr .u8_ptr
+	sta (dst_ptr),y
+	inc dst_ptr
+	bne .s8d
+	inc dst_ptr+1
+.s8d
+	pla
+	jmp .u8_3at
+
+; A unsigned → 3 ASCII digits at HUD_OFF2+X
+.u8_3
+	jsr .u8_ptr
+	jmp .u8_3at
+
+; X = column. dst_ptr = HUD_SCR+HUD_OFF2+X. Preserves A and Y.
+.u8_ptr
+	pha
+	clc
+	txa
+	adc #<HUD_SCR + HUD_OFF2
+	sta dst_ptr
+	lda #>HUD_SCR + HUD_OFF2
+	adc #0
+	sta dst_ptr+1
+	pla
 	rts
+}
 
 !if  PROFILE = 1 {
 ; A:Y = cy[2]:cy[1] → ms (>>2) then 4 digits at HUD_OFF+X
