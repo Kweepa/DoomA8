@@ -29,6 +29,49 @@ ai_baron_entry
 	bne +
 	jmp .approach_enter
 +
+	cmp #AI_CMD_DYING_STEP
+	bne +
+	jmp .dying
++
+	rts
+
+; One baron still up: hide every door (the entrance too). Both dying or
+; dead: show them. Barons share one room, so this is the whole map.
+.dying
+	ldx #0
+.dy_scan
+	cpx map_nenemies
+	bcs .dy_show
+	+lda_mx en_type
+	cmp #ENT_BARON
+	bne .dy_scan_n
+	lda en_state,x
+	cmp #EN_DYING
+	bcc .dy_hide
+.dy_scan_n
+	inx
+	bne .dy_scan
+.dy_show
+	ldx #0
+.dy_show_lp
+	cpx map_ndoors
+	bcs .dy_rts
+	+lda_mx door_type
+	and #($ff - DOOR_HIDDEN)
+	+sta_mx door_type
+	inx
+	bne .dy_show_lp
+.dy_hide
+	ldx #0
+.dy_hide_lp
+	cpx map_ndoors
+	bcs .dy_rts
+	+lda_mx door_type
+	ora #DOOR_HIDDEN
+	+sta_mx door_type
+	inx
+	bne .dy_hide_lp
+.dy_rts
 	rts
 
 .approach_move
