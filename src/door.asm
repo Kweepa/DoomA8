@@ -151,6 +151,7 @@ door_y_ok
 ; ------------------------------------------------------------------
 ; try_door_wish — blocked dest-ward wish into a door slab at sill height.
 ; Save cam, add wish on blocked axes, hit door AABB + door_y_ok.
+; DOOR_HIDDEN is not a candidate (no transit, no key HUD).
 ; Forward held and yaw within DOOR_AIM of the through-heading; wish on
 ; the door axis must still point through. Unlocked + other: snap
 ; into dest inset, C=1. Locked: key HUD, restore, C=0.
@@ -202,6 +203,8 @@ try_door_wish
 .tdw
 	cpx door_i1
 	bcs .tdw_miss
+	+lda_mx door_type
+	bmi .tdw_n
 	+lda_mx door_x
 	beq .tdw_x0
 	sec
