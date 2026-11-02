@@ -209,7 +209,7 @@ Vertex tables are 16 slots. Edge clip tables are 32 slots. Unique-X/Z product ta
 | `$CBA9` | 1 | `trig_inside` | Occupancy bits; Nth same-room trigger |
 | `$CBAA` | 2 | `hurt_ms_l/h` | Hurt-trigger cooldown remaining |
 | `$CBAC` | 4 | — | Unused |
-| `$CBB0` | 4 | `elev_y` | `MAP_NELEVS` ≤ 4 |
+| `$CBB0` | 4 | — | Was `elev_y`. Unused. |
 | `$CBB4` | 1 | `elev_noise_n` | SID V3 rumble refcount |
 | `$CBB5` | 1 | `den_arm` | 1 = DEN held off, 2 = view IRQ may set DEN |
 | `$CBB6` | 1 | `pub_ff` | `frame_flag` when the draw buffer was published |
@@ -333,3 +333,7 @@ Vertex tables are 16 slots. Edge clip tables are 32 slots. Unique-X/Z product ta
 | `$CE95` | 24 | `en_pat_n` | `ENEMY_MAX` |
 | `$CEAD` | 24 | `en_pain_i` | `ENEMY_MAX` |
 | `$CEC5` | 1 | `have_keys` | |
+| `$CFE1` | 1 | `saw_rng` | Chainsaw bite LFSR |
+| `$CFE2` | 8 | `elev_y` | `MAP_NELEVS` ≤ 8 |
+| `$CFEA` | 1 | `elev_match` | Tag group while an elevator trigger fans out |
+| `$CFEB` | 1 | `elev_hits` | Cars that started moving on this fan-out |

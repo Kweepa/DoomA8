@@ -2632,10 +2632,40 @@ trig_enter
 	sta hurt_ms_h
 	jsr hurt_amount
 	jmp take_damage
+; Group id does not say how many cars share it. Count starts; two or more
+; is a stair, so latch gate id 15. Cook never assigns 15, so nothing re-arms it.
+; One car stays a toggle. X is the trigger index on entry.
 .te_elev
 	+lda_mx tr_arg
+	sta elev_match
+	lda #0
+	sta elev_hits
+	txa
+	pha
+	ldx #0
+.te_el
+	cpx map_nelevs
+	beq .te_el_done
+	+lda_mx elev_grp
+	cmp elev_match
+	bne .te_eln
+	jsr elev_activate
+	bcs .te_eln
+	inc elev_hits
+.te_eln
+	inx
+	jmp .te_el
+.te_el_done
+	pla
 	tax
-	jmp elev_activate
+	lda elev_hits
+	cmp #2
+	bcc .te_el_rts
+	+lda_mx tr_purpose
+	ora #$f0
+	+sta_mx tr_purpose
+.te_el_rts
+	rts
 .te_summon
 	+lda_mx tr_arg
 	tax

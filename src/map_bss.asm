@@ -143,7 +143,8 @@ en_z	= $04E8
 en_type	= $04EA
 en_rot	= $04EC
 en_room	= $04EE
-; (was en_patrol, en_id)
+elev_grp	= $04F0		; cooked tag group; 0 = none. Hole was en_patrol.
+; (was en_id)
 tr_x	= $04F4
 tr_y	= $04F6
 tr_z	= $04F8

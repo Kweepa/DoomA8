@@ -2584,7 +2584,10 @@ function renderLayoutObjectFields(root, objs) {
           "Tag",
           textInputMixed(tagCur, {
             maxLength: MAX_TAG_LEN,
-            placeholder: "destination tag",
+            placeholder:
+              purpose === "elevator"
+                ? "every elevator with this tag"
+                : "destination tag",
             onChange: (v) => apply((obj) => (obj.tag = clampTag(v))),
           })
         )

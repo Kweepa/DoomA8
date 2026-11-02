@@ -1,5 +1,6 @@
 ; Mode-E stroke. Callers pass hires x 0..191. draw_line halves both ends,
 ; then an unrolled body walks colour-clock pixels (0..95). y stays 0..127.
+; dx = 0 (after the halve) is a column: one mask, ±32 on colptr.
 ; plot_pixel is the particle dots. The muzzle stores mode-E bytes.
 !zone line
 
@@ -92,9 +93,50 @@ draw_line
 	sta dy
 	stx sy
 	lda dx
-	ora dy
 	bne .draw
+	lda dy
+	bne .vline
 	jmp plot_pixel
+.vline
+	jsr a8_addr
+	ldy #0
+	lda x0
+	and #3
+	tax
+	lda a8_pair,x
+	sta err_l
+	ldx dy
+	inx
+	lda sy
+	bmi .vup
+.vdn
+	lda (colptr),y
+	ora err_l
+	sta (colptr),y
+	dex
+	beq .vdone
+	clc
+	lda colptr
+	adc #BMP_STRIDE
+	sta colptr
+	bcc .vdn
+	inc colptr+1
+	jmp .vdn
+.vup
+	lda (colptr),y
+	ora err_l
+	sta (colptr),y
+	dex
+	beq .vdone
+	sec
+	lda colptr
+	sbc #BMP_STRIDE
+	sta colptr
+	bcs .vup
+	dec colptr+1
+	jmp .vup
+.vdone
+	rts
 .draw
 	jsr a8_addr
 	ldy #0

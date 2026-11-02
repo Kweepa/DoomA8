@@ -31,7 +31,7 @@ CRATE_MAX = 16
 SLOPE_MAX = 16
 PLAT_MAX = 20
 SWITCH_MAX = 16
-ELEV_MAX = 4
+ELEV_MAX = 8
 ENEMY_MAX = 24  # keep in sync with src/mem.asm and editor/js/model.js
 TRIG_MAX = 16
 TRIG_ROOM_MAX = 8
@@ -386,12 +386,22 @@ def cook_one(level: dict, map_key: str) -> bytes:
         "rune of earth magic": 12,
     }
 
-    # Tag → elevator index
+    # Tag → first elevator index. Shared tags are one group (elev_grp).
+    # Switch and summon stay single-car; a repeated tag is a cook error there.
     elev_by_tag: dict[str, int] = {}
+    elev_tag_n: dict[str, int] = {}
+    elev_grp_of: dict[str, int] = {}
+    elev_grp: list[int] = []
     for i, e in enumerate(elevs):
         tag = (e.get("tag") or "").strip()
-        if tag:
+        if not tag:
+            elev_grp.append(0)
+            continue
+        elev_tag_n[tag] = elev_tag_n.get(tag, 0) + 1
+        if tag not in elev_grp_of:
+            elev_grp_of[tag] = len(elev_grp_of) + 1
             elev_by_tag[tag] = i
+        elev_grp.append(elev_grp_of[tag])
 
     TRIG_MSG = 0
     TRIG_END = 1
@@ -415,7 +425,7 @@ def cook_one(level: dict, map_key: str) -> bytes:
     SW_DEST_TRIG = 2
     SW_SHOOT = 0x80
     TRIG_ENABLE_SHIFT = 4
-    TRIG_ENABLE_MAX = 15
+    TRIG_ENABLE_MAX = 14  # 15 is the spent fan-out gate (world.asm .te_elev)
 
     doors_by_tag: dict[str, list] = {}
     for d in doors:
@@ -737,8 +747,8 @@ def cook_one(level: dict, map_key: str) -> bytes:
                 if raised is not None:
                     home = raised
         else:
-            low = int(e.get("elevLow") or 0)
-            high = int(e.get("elevHigh") or 1)
+            low = 0 if e.get("elevLow") is None else int(e["elevLow"])
+            high = 1 if e.get("elevHigh") is None else int(e["elevHigh"])
             if high <= low:
                 high = low + 1
             dest = floor_y + low
@@ -767,6 +777,10 @@ def cook_one(level: dict, map_key: str) -> bytes:
                 f"{map_key} switch tag {tag!r} matches more than one of elevator, doorway, trigger"
             )
         elif in_elev:
+            if elev_tag_n[tag] > 1:
+                raise SystemExit(
+                    f"{map_key} switch tag {tag!r} matches more than one elevator"
+                )
             kind, arg = SW_DEST_ELEV, elev_by_tag[tag]
         elif tagged_doors:
             for d in tagged_doors:
@@ -829,11 +843,19 @@ def cook_one(level: dict, map_key: str) -> bytes:
             chars = ascii_screen(text)
             text_blob.extend(chars)
             text_blob.append(0)  # NUL
-        elif purpose in (TRIG_ELEV, TRIG_SUMMON):
+        elif purpose == TRIG_ELEV:
             tag = (t.get("tag") or "").strip()
-            kind = "elevator" if purpose == TRIG_ELEV else "summon"
+            if tag not in elev_grp_of:
+                raise SystemExit(f"elevator trigger tag {tag!r} has no elevator")
+            arg = elev_grp_of[tag]
+        elif purpose == TRIG_SUMMON:
+            tag = (t.get("tag") or "").strip()
             if tag not in elev_by_tag:
-                raise SystemExit(f"{kind} trigger tag {tag!r} has no elevator")
+                raise SystemExit(f"summon trigger tag {tag!r} has no elevator")
+            if elev_tag_n[tag] > 1:
+                raise SystemExit(
+                    f"{map_key} summon trigger tag {tag!r} matches more than one elevator"
+                )
             arg = elev_by_tag[tag]
         elif purpose == TRIG_UNLOCK:
             tag = obj_tag(t)
@@ -1069,6 +1091,7 @@ def cook_one(level: dict, map_key: str) -> bytes:
     add(elev_dest)
     add(elev_room)
     add(elev_id)
+    add(elev_grp)
     add(sw_x)
     add(sw_y)
     add(sw_z)
@@ -1117,7 +1140,7 @@ CRATE_MAX	= 16
 SLOPE_MAX	= 16
 PLAT_MAX	= 20
 SWITCH_MAX	= 16
-ELEV_MAX	= 4
+ELEV_MAX	= 8
 TRIG_MAX	= 16
 TRIG_ROOM_MAX	= 8
 ROOM_MAX_TYPES	= 2

@@ -2872,12 +2872,10 @@
       []
     ]
   },
+  "customSkeleton": true,
   "weaponVert": 9,
   "hp": 60,
   "painChance": 64,
-  "customSkeleton": true,
-  "stockGraph": null,
-  "customGraph": null,
   "exportClips": [
     "stand",
     "walk",

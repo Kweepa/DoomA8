@@ -481,7 +481,7 @@ HURT_MS		= 1000			; hurt trigger period (both sizes)
 HURT_SM_HP	= 2			; small hurt, once per second
 HURT_LG_HP	= 10			; large hurt, once per second
 
-elev_y		= $CBB0 + A8_OFF			; MAP_NELEVS (≤4)
+; $CBB0–$CBB3 was elev_y (now $CFE2, 8 bytes). Leave unused.
 elev_noise_n	= $CBB4 + A8_OFF			; refcount: SID V3 rumble while elevs move
 den_arm		= $CBB5 + A8_OFF			; 1 = DEN held off, 2 = view IRQ may set DEN
 pub_ff		= $CBB6 + A8_OFF			; frame_flag when the draw buffer was published
@@ -1002,7 +1002,10 @@ elev_ride_i	= $CFDE + A8_OFF		; elev SoA index while carrying riders
 elev_ride_dy	= $CFDF + A8_OFF		; signed Y step ($01 / $ff, or reseat delta)
 elev_ride_top	= $CFE0 + A8_OFF		; surface those riders must match
 saw_rng		= $CFE1 + A8_OFF		; chainsaw bite LFSR; IRQ only, not saved
-; $CFE2–$CFFF reserved. Charset A is $D000. Do not slide.
+elev_y		= $CFE2 + A8_OFF		; MAP_NELEVS (≤8); page $CF so ,x stays in-page
+elev_match	= $CFEA + A8_OFF		; tag group while fanning elev_activate
+elev_hits	= $CFEB + A8_OFF		; cars that started moving this fan-out
+; $CFEC–$CFFF reserved. Charset A is $D000. Do not slide.
 HAVE_YELLOW	= 1
 HAVE_BLUE	= 2
 HAVE_RED	= 4

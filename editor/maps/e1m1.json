@@ -447,8 +447,8 @@
       "doorType": "Tech",
       "doorScale": 1,
       "tag": "",
-      "locked": false,
-      "otherRoomId": "7829dd75-fb2b-45f0-8433-12f03dd4f80f"
+      "otherRoomId": "7829dd75-fb2b-45f0-8433-12f03dd4f80f",
+      "locked": false
     },
     {
       "id": "c216093a-c07c-4f1b-a8ed-cd540f0f3146",

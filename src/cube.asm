@@ -657,6 +657,7 @@ proj_cam_to_proj
 ; Near-plane interpolate, then 16-bit screen Cohen-Sutherland.
 ; Trivial accept/reject runs on per-vertex VOC/VSX/VSY hoisted into
 ; mesh_project — no PROJ/CAM reads unless an edge needs real work.
+; An in-front edge with equal PROJ_X skips that: clamp Y and stroke.
 mesh_clip
 cube_clip
 	lda mesh_ne
@@ -705,6 +706,25 @@ cube_clip
 	sta oc1
 	ora oc0
 	bmi .near
+	lda PROJ_X,x
+	cmp PROJ_X,y
+	bne .cset
+	lda PROJ_XH,x
+	cmp PROJ_XH,y
+	bne .cset
+	lda PROJ_X,x
+	clc
+	adc #SCREEN_CX
+	sta x0
+	sta x1
+	jsr .vsy
+	sta y0
+	ldx ei1
+	jsr .vsy
+	sta y1
+	jsr draw_line
+	jmp .next
+.cset
 	lda PROJ_X,x
 	sta ox0l
 	lda PROJ_XH,x
@@ -991,6 +1011,33 @@ cube_clip
 	rts
 .mk1
 	sta oc1
+	rts
+
+; X = vertex, in front. Screen y 0..127 with PROJ_Y clamped to [-64, 63].
+; X kept. Same 8-bit map as .stroke (63 - oy lo).
+.vsy
+	lda PROJ_YH,x
+	beq .vsy0
+	bpl .vsy_bot
+	cmp #$ff
+	bne .vsy_top
+	lda PROJ_Y,x
+	cmp #<CLIP_YMIN
+	bcs .vsy_in
+.vsy_top
+	lda #127			; 63 - CLIP_YMIN
+	rts
+.vsy0
+	lda PROJ_Y,x
+	cmp #CLIP_YMAX+1
+	bcs .vsy_bot
+.vsy_in
+	lda #63
+	sec
+	sbc PROJ_Y,x
+	rts
+.vsy_bot
+	lda #0
 	rts
 
 ; ox/oy inside the window (outcodes 0) → x0..y1, stroke.
