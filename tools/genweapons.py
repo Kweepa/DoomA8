@@ -273,10 +273,6 @@ def main() -> None:
         "\t!byte >spr_fist_b, >spr_hand_b, >spr_shot_b, >spr_shot_cock_b, >spr_chain_b, >spr_chain2_b, >spr_rkt_b, >spr_pist_b, >spr_saw_b",
         "wpn_fr_base",
         "\t!byte 0, 2, 4, 6, 7, 8",
-        "wpn_fl4_lo",
-        "\t!byte <spr_muzzle_b, <spr_muzzle_b, <spr_muzzle_b, <spr_muzzle_b, <spr_muzzle_b, <spr_muzzle_b",
-        "wpn_fl4_hi",
-        "\t!byte >spr_muzzle_b, >spr_muzzle_b, >spr_muzzle_b, >spr_muzzle_b, >spr_muzzle_b, >spr_muzzle_b",
         "",
     ]
     parts += emit_bytes("spr_fist_b", fist_b)

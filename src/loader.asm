@@ -172,8 +172,6 @@ LoadLevel
 	jsr blank_screen
 	lda #1
 	sta den_arm
-	jmp .ll_dos
-
 .ll_dos
 
 	lda #<HEAP_LIM
@@ -1000,7 +998,6 @@ game_zp_init
 	sta keys
 	sta anim_acc_l
 	sta anim_acc_h
-	lda #0
 	sta mesh_nv
 	sta mesh_ne
 	lda #<ident_col
@@ -1089,18 +1086,13 @@ play_up1
 
 ; Charsets, HUD, world. Ends with CLI (room_idx valid: pulls its poses).
 play_up2
-
-	jsr init_hud
-	jsr hud_ammo
-	jsr hud_keys
 	jsr mulset_init
 	jsr world_init
 	jsr maybe_stream_room
 	jsr init_hud
 	jsr hud_ammo
 	jsr hud_keys
-	jsr a8_nmi_on
-	rts
+	jmp a8_nmi_on
 
 
 ; TRIG_END: next e1mN, or episode done → menu endings.

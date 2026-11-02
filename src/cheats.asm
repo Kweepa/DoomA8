@@ -172,12 +172,6 @@ cheat_clear_suf
 	sta cheat_god,x
 	dex
 	bpl .cs_b
-	lda #0
-	ldx #4				; cheat_was[4] + cheat_dig_prev
-.cs_w
-	sta cheat_was,x
-	dex
-	bpl .cs_w
 	rts
 
 cheat_reset_all

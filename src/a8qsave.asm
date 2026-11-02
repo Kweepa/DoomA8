@@ -157,6 +157,7 @@ qso_restore
 	jsr qso_fields			; WLD: position, pickups, enemies, drops, triggers
 	jsr qso_doors
 	jsr qso_elevs
+	jsr elev_reseat_pickups		; authored-on-car pickups follow the restored stop
 	ldx #0				; living enemies wake up idle at frame 0, hp kept
 .rs_en
 	cpx map_nenemies

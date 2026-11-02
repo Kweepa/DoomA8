@@ -24,6 +24,7 @@ REQUIRED = [
     "hud_ammo",
     "hud_keys",
     "switch_weapon",
+    "elev_reseat_pickups",
 ]
 
 

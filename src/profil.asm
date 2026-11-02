@@ -112,9 +112,6 @@ dt_pal_x4
 	sta dt_msh
 	rts
 
-prof_frame_sample
-	rts
-
 !if  PROFILE = 1 {
 ; VBI is scanline 248 (VCOUNT 124) on both. Clock counts up in CPU cycles:
 ; vbi_count * 29868 (PAL init patches 35568) + (VCOUNT steps since 124) * 228.

@@ -174,6 +174,10 @@ elev_pu_le
 	cmp PROC_B,x
 	beq .eple_done
 	bcc .eple_done
+	lda #$ff
+	jsr elev_carry			; riders, then the car
+	ldy PROC_L,x
+	lda elev_y,y
 	sec
 	sbc #1
 	sta elev_y,y
@@ -197,6 +201,10 @@ elev_pu_re
 	lda elev_y,y
 	cmp PROC_B,x
 	bcs .epre_done
+	lda #1
+	jsr elev_carry
+	ldy PROC_L,x
+	lda elev_y,y
 	clc
 	adc #1
 	sta elev_y,y
@@ -208,6 +216,92 @@ elev_pu_re
 	sta PROC_KIND,x
 	jsr elev_noise_off
 	jmp proc_update_next
+
+; ------------------------------------------------------------------
+; elev_carry — Y = elev index, A = dy ($01 / $ff). X (proc slot) kept.
+; Pickups on this car's current top, in its room, move by dy first.
+; ------------------------------------------------------------------
+elev_carry
+	sta elev_ride_dy
+	sty elev_ride_i
+	txa
+	pha
+	ldx elev_ride_i
+	clc
+	lda elev_y,x
+	+adc_mx elev_sy
+	sta elev_ride_top
+	jsr elev_ride_apply
+	pla
+	tax
+	rts
+
+; elev_reseat_pickups — after quickload. Map th_y is authored again;
+; a pickup that started on the car (top = elev_y0 + sy) follows elev_y.
+elev_reseat_pickups
+	ldx #0
+.ers_lp
+	cpx	map_nelevs
+	bcs .ers_rts
+	stx elev_ride_i
+	sec
+	lda elev_y,x
+	+sbc_mx elev_y0
+	beq .ers_n			; still at the start height
+	sta elev_ride_dy
+	clc
+	+lda_mx elev_y0
+	+adc_mx elev_sy
+	sta elev_ride_top
+	jsr elev_ride_apply
+.ers_n
+	ldx elev_ride_i
+	inx
+	bne .ers_lp
+.ers_rts
+	rts
+
+; elev_ride_i / dy / top set. Things in this elev's room only.
+; Light posts and barrels stay. X clobbered.
+elev_ride_apply
+	ldx elev_ride_i
+	+lda_mx elev_x
+	sta box_x
+	+lda_mx elev_z
+	sta box_z
+	+lda_mx elev_sx
+	sta box_sx
+	+lda_mx elev_sz
+	sta box_sz
+	+lda_mx elev_room
+	tay
+	+slice_x room_th_o
+.era_lp
+	cpx sl_end
+	bcs .era_rts
+	lda th_taken,x
+	bne .era_n
+	+lda_mx th_type
+	cmp #TH_LIGHTPOST
+	bcs .era_n
+	+lda_mx th_y
+	cmp elev_ride_top
+	bne .era_n
+	+lda_mx th_x
+	sta col_x
+	+lda_mx th_z
+	sta col_z
+	jsr point_in_floor_xz
+	bcc .era_n
+	clc
+	+lda_mx th_y
+	adc elev_ride_dy
+	+sta_mx th_y
+.era_n
+	inx
+	jmp .era_lp
+.era_rts
+	rts
 
 ; ------------------------------------------------------------------
 ; elev_update_floor — board elev top in active room (obj_i = prior rider)

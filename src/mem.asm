@@ -995,7 +995,13 @@ saw_flip	= $CFD7 + A8_OFF		; bit 0 drop, bit 1 idle half-rate
 saw_amp		= $CFD8 + A8_OFF		; 1 idle, 2 firing, 2..5 biting
 saw_bite	= $CFD9 + A8_OFF		; 1 = last chainsaw tick hit
 wpn1_held	= $CFDA + A8_OFF		; 1 = key 1 still down; one toggle per press
-; $CFDB–$CFFF reserved. Charset A is $D000. Do not slide.
+scan_best_i	= $CFDB + A8_OFF		; scan_shoot_*: best thing / switch index ($ff none)
+scan_best_z	= $CFDC + A8_OFF		; its CAM_ZH
+scan_off	= $CFDD + A8_OFF		; screen X aim offset (scan_aim for barrels, 0 for switches)
+elev_ride_i	= $CFDE + A8_OFF		; elev SoA index while carrying pickups
+elev_ride_dy	= $CFDF + A8_OFF		; signed Y step ($01 / $ff, or reseat delta)
+elev_ride_top	= $CFE0 + A8_OFF		; surface those pickups must match
+; $CFE1–$CFFF reserved. Charset A is $D000. Do not slide.
 HAVE_YELLOW	= 1
 HAVE_BLUE	= 2
 HAVE_RED	= 4

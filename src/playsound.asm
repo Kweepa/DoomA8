@@ -75,12 +75,6 @@ play_sound_init
 	rts
 
 
-; Default PW 50% + ADSR on all voices (per-sound AD on commit).
-sfx_voice_adsr_all
-
-	rts
-
-
 ; ------------------------------------------------------------------
 ; play_sound — A = sound index; stage for mid-split IRQ.
 ; Queue length update is sei-atomic vs flush_sfx. Preserves X,Y; A clobbered.
@@ -180,9 +174,6 @@ stop_streamed_sfx
 	sta sfx_index,x
 	lda #0
 	sta sfx_priority,x
-	cpx #2
-	bne .sss_n
-	jsr elev_noise_restore
 .sss_n
 	dex
 	bpl .sss_lp
@@ -245,11 +236,6 @@ update_sfx
 	sta sfx_index,x
 	lda #0
 	sta sfx_priority,x
-	cpx #2
-	bne .us_stop_vol
-	jsr elev_noise_restore
-.us_stop_vol
-
 	jmp .us_next
 
 ; sfx_id = POKEY AUDF (0 = silence); sfx_ch = channel.
@@ -278,20 +264,5 @@ sfx_gate_off
 
 	rts
 
-; ------------------------------------------------------------------
-; elev_noise_restore / elev_noise_program — V3 rumble helpers
-; restore: only if elevators moving and world channel idle
-; program: write V3 noise rumble registers (no refcount)
-; ------------------------------------------------------------------
-elev_noise_restore
-	lda elev_noise_n
-	beq .enr_rts
-	lda sfx_index+2
-	bpl .enr_rts				; world SFX still owns V3
-elev_noise_program
-
-	rts
-
-.enr_rts
-	rts
+; V3 elevator rumble is written by a8_noise (a8irq.asm).
 

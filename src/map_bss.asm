@@ -43,7 +43,8 @@ room_sx	= $041E
 room_sy	= $0420
 room_sz	= $0422
 room_bg	= $0424
-; $0426..$042B were room_line / room_fx / room_wpn
+slope_flags	= $0426		; was room_line
+; $0428..$042B were room_fx / room_wpn
 ; (was room_id, unused)
 rc_x	= $042E
 rc_y	= $0430
@@ -86,7 +87,7 @@ door_sz	= $0478
 door_face	= $047A
 door_key	= $047C
 door_type	= $047E
-door_id	= $0480
+; $0480 was door_id (never read)
 door_other	= $0482
 door_tag	= $0484
 crate_x	= $0486
@@ -161,11 +162,11 @@ th_room	= $0510
 room_th_o	= $0512
 map_name	= $0514
 map_text	= $0516
-slope_flags	= $0518
-!if (slope_flags - room_x) & 1 {
+; $0518 was slope_flags (moved to $0426 so every bind_tab field id is < 128)
+!if (map_text - room_x) & 1 {
 	!error "map pointer table is not aligned words"
 }
-!if (slope_flags - room_x) / 2 > 255 {
+!if (map_text - room_x) / 2 > 255 {
 	!error "map pointer table exceeds 256 fields"
 }
 ; MAP_BSS_END = $051A  size=282

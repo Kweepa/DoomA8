@@ -53,23 +53,16 @@ stamp_view
 	lda wpn_pose
 	cmp #POSE_COCK
 	beq .no5
-	lda flash_phase
-	beq .no4
-	ldx cur_weapon
-	lda wpn_fl4_lo,x
+	lda #<spr_muzzle_b		; both flashes share this rect; stamp_flash keeps init_ptr
 	sta init_ptr
-	lda wpn_fl4_hi,x
+	lda #>spr_muzzle_b
 	sta init_ptr+1
 	lda flash_phase
+	beq .no4
 	jsr stamp_flash
 .no4
 	lda flash5_phase
 	beq .no5
-	lda #<spr_muzzle_b
-	sta init_ptr
-	lda #>spr_muzzle_b
-	sta init_ptr+1
-	lda flash5_phase
 	jsr stamp_flash
 .no5
 	lda emuz_on

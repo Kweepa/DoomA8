@@ -10,10 +10,6 @@ wpn_fr_hi
 	!byte >spr_fist_b, >spr_hand_b, >spr_shot_b, >spr_shot_cock_b, >spr_chain_b, >spr_chain2_b, >spr_rkt_b, >spr_pist_b, >spr_saw_b
 wpn_fr_base
 	!byte 0, 2, 4, 6, 7, 8
-wpn_fl4_lo
-	!byte <spr_muzzle_b, <spr_muzzle_b, <spr_muzzle_b, <spr_muzzle_b, <spr_muzzle_b, <spr_muzzle_b
-wpn_fl4_hi
-	!byte >spr_muzzle_b, >spr_muzzle_b, >spr_muzzle_b, >spr_muzzle_b, >spr_muzzle_b, >spr_muzzle_b
 
 spr_fist_b
 	!byte $00,$00,$08,$20,$ff,$ff,$ff,$ff,$ff,$ff,$c3,$ff,$ff,$ff,$ff,$ff

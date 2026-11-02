@@ -73,7 +73,7 @@ def bind_sequence() -> list[tuple[str, str]]:
     """[(field, count_expr)] in bind_tab order, count_expr already resolved
     for the two bind_n recomputations."""
     text = OVERLAY.read_text(encoding="utf-8", errors="replace")
-    m = re.search(r"^bind_tab\b(.*?)^\s*!word\s+0,\s*0\s*$", text, re.M | re.S)
+    m = re.search(r"^bind_tab\b(.*?)^\s*!byte\s+\$ff\s*$", text, re.M | re.S)
     if not m:
         raise SystemExit("perroom: no bind_tab in overlay.asm")
     body = m.group(1)

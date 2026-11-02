@@ -9,13 +9,11 @@ set_room_idx
 	lda #0
 	sta trig_inside
 	lda msg_on
-	bne .sri_blank
-	lda room_idx
-	rts
-.sri_blank
+	beq .sri_out
 	lda #0
 	sta msg_on
 	jsr hud_msg_blank
+.sri_out
 	lda room_idx
 	rts
 

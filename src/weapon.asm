@@ -93,9 +93,9 @@ fxh_lo
 fxh_hi
 	!byte >fxh_flash4, >fxh_flash5, >fxh_emuz, >fxh_splat, >fxh_explode
 fx_exp_lo
-	!byte <flash4_expired, <flash5_expired, <emuz_expired, <splat_expired, <fx_zero_header
+	!byte <flash_expired, <flash_expired, <emuz_expired, <splat_expired, <fx_zero_header
 fx_exp_hi
-	!byte >flash4_expired, >flash5_expired, >emuz_expired, >splat_expired, >fx_zero_header
+	!byte >flash_expired, >flash_expired, >emuz_expired, >splat_expired, >fx_zero_header
 
 ; Shotgun: snap up for shot, kick down, settle. Rocket: snap down, recover.
 recoil_shot_y
@@ -785,36 +785,25 @@ fx_zero_header
 	sta (fx_ptr),y
 	rts
 
-flash4_expired
-	lda flash_phase
+; X = 0 (sprite 4) / 1 (sprite 5): yellow → red, else off. Preserves X.
+flash_expired
+	ldy #FXH_ON
+	lda (fx_ptr),y
 	cmp #1
 	bne fx_zero_header
 	lda #2
-	sta flash_phase
+	sta (fx_ptr),y
 	lda #COL_FLASH_R
-	sta flash4_col
+	sta flash4_col,x		; flash5_col follows
+	iny
 	lda #1
-	sta flash_skip
+	sta (fx_ptr),y
+	iny
 	lda #<FLASH_RED_MS
-	sta flash_ms_l
+	sta (fx_ptr),y
+	iny
 	lda #>FLASH_RED_MS
-	sta flash_ms_h
-	rts
-
-flash5_expired
-	lda flash5_phase
-	cmp #1
-	bne fx_zero_header
-	lda #2
-	sta flash5_phase
-	lda #COL_FLASH_R
-	sta flash5_col
-	lda #1
-	sta flash5_skip
-	lda #<FLASH_RED_MS
-	sta flash5_ms_l
-	lda #>FLASH_RED_MS
-	sta flash5_ms_h
+	sta (fx_ptr),y
 	rts
 
 emuz_expired

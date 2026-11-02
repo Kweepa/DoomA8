@@ -113,7 +113,8 @@ def stream_freq(pc_byte: int) -> int:
 def main() -> None:
     seen: set[str] = set()
     equates: list[str] = []
-    blocks: list[str] = []
+    block_of: dict[tuple[int, ...], list[str]] = {}
+    block_order: list[tuple[list[str], list[int]]] = []
     res_words: list[str] = []
     ids: dict[str, int] = {}
     total = 0
@@ -127,11 +128,23 @@ def main() -> None:
             raise SystemExit(f"{name}: {len(freq)} ticks > {MAX_TICKS}")
         body = [len(freq), voice & 3, priority & 255, *[stream_freq(f) for f in freq]]
         label = "pc_" + name.lower()
-        total += len(body)
         equates.append(f"SOUND_{name}\t= {i}")
-        blocks.append(f"{label}\n{emit_bytes(body)}")
+        # Byte-identical blocks (header included) share one copy.
+        key = tuple(body)
+        if key in block_of:
+            labels = block_of[key]
+            labels.append(label)
+        else:
+            labels = [label]
+            block_of[key] = labels
+            block_order.append((labels, body))
+            total += len(body)
         res_words.append(label)
         ids[name] = i
+
+    blocks = [
+        "\n".join(labels) + "\n" + emit_bytes(body) for labels, body in block_order
+    ]
 
     if total > PAYLOAD_MAX:
         raise SystemExit(f"resident sound payload {total} bytes > {PAYLOAD_MAX}")

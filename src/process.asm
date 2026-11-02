@@ -109,68 +109,10 @@ proc_update_next
 	bcc proc_update_loop
 	rts
 proc_update_work
-	cmp #PROC_TIMER
-	bne .pu_n1
-	jmp .pu_timer
-.pu_n1
 	cmp #PROC_LOWER_ELEV
 	bne .pu_n2
 	jmp elev_pu_le
 .pu_n2
 	cmp #PROC_RAISE_ELEV
-	bne .pu_n3
+	bne proc_update_next
 	jmp elev_pu_re
-.pu_n3
-	jmp proc_update_next
-
-.pu_timer
-	stx proc_tmp5
-	sec
-	lda PROC_C,x
-	sbc dt_ms
-	sta PROC_C,x
-	lda PROC_D,x
-	sbc dt_msh
-	sta PROC_D,x
-	bcs .pu_tstill
-	; fired (went negative) or hit zero
-.pu_tfire
-	lda PROC_L,x
-	pha				; local SoA for successor
-	lda PROC_A,x
-	sta proc_tmp1			; world id
-	lda PROC_B,x
-	sta proc_tmp0			; next kind
-	lda PROC_E,x
-	sta proc_tmp2			; elev home if raise
-	lda #PROC_FREE
-	sta PROC_KIND,x
-	lda proc_tmp0
-	cmp #PROC_RAISE_ELEV
-	beq .pu_talloc
-	; non-raise successors still allocate (elev lower, etc.)
-.pu_talloc
-	lda #0
-	sta proc_tmp3
-	sta proc_tmp4
-	jsr proc_alloc
-	bcs .pu_talloc_fail
-	pla
-	sta PROC_L,y
-	lda proc_tmp0
-	cmp #PROC_RAISE_ELEV
-	bne .pu_talloc_ok
-	jsr elev_noise_on
-.pu_talloc_ok
-	ldx proc_tmp5
-	jmp proc_update_next
-.pu_talloc_fail
-	pla
-	ldx proc_tmp5
-	jmp proc_update_next
-.pu_tstill
-	lda PROC_C,x
-	ora PROC_D,x
-	beq .pu_tfire
-	ldx proc_tmp5
-	jmp proc_update_next

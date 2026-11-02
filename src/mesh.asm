@@ -56,14 +56,8 @@ box_xid
 	!byte 0,1,1,0, 0,1,1,0
 box_zid
 	!byte 0,0,1,1, 0,0,1,1
-sw_z_xid
-	!byte 1,0,2
-sw_z_zid
-	!byte 0,0,0
-sw_x_xid
-	!byte 0,0,0
-sw_x_zid
-	!byte 1,0,2
+sw_xz_tab				; z-face: xid@0 zid@3; x-face: xid@3 zid@6
+	!byte 1,0,2, 0,0,0, 1,0,2
 slope_x_xid
 	!byte 0,0,1,1
 slope_x_zid
@@ -201,106 +195,52 @@ box_apply_face
 .baf_rts
 	rts
 
-; 8-bit back-face planes → face_bits (interior inverts via XOR)
+; 8-bit back-face planes → face_bits (interior inverts via XOR). X preserved.
 cull_box_faces
 	lda #0
 	sta face_bits
-	; -X: cam < box_x
-	lda #0
-	sta rot0
+	txa
+	pha
+	ldx #0
 	lda cam_xh
-	cmp box_x
-	bcs .cf_px
-	inc rot0
-.cf_px
-	lda rot0
 	ldy #$01
-	jsr box_apply_face
-	; +X: cam >= x1 (wrap → exterior never)
-	clc
-	lda box_x
-	adc box_sx
-	bcc .cf_x1
-	lda #0
-	ldy #$02
-	jsr box_apply_face
-	jmp .cf_y
-.cf_x1
-	sta rot1
-	lda #0
-	sta rot0
-	lda cam_xh
-	cmp rot1
-	bcc .cf_pxk
-	inc rot0
-.cf_pxk
-	lda rot0
-	ldy #$02
-	jsr box_apply_face
-.cf_y
-	; -Y
-	lda #0
-	sta rot0
+	jsr cull_axis
+	ldx #1
 	lda cam_yh
-	cmp box_y
-	bcs .cf_py
-	inc rot0
-.cf_py
-	lda rot0
 	ldy #$04
-	jsr box_apply_face
-	; +Y
-	clc
-	lda box_y
-	adc box_sy
-	bcc .cf_y1
-	lda #0
-	ldy #$08
-	jsr box_apply_face
-	jmp .cf_z
-.cf_y1
-	sta rot1
-	lda #0
-	sta rot0
-	lda cam_yh
-	cmp rot1
-	bcc .cf_pyk
-	inc rot0
-.cf_pyk
-	lda rot0
-	ldy #$08
-	jsr box_apply_face
-.cf_z
-	; -Z
-	lda #0
-	sta rot0
+	jsr cull_axis
+	ldx #2
 	lda cam_zh
-	cmp box_z
-	bcs .cf_pz
-	inc rot0
-.cf_pz
-	lda rot0
 	ldy #$10
-	jsr box_apply_face
-	; +Z
-	clc
-	lda box_z
-	adc box_sz
-	bcc .cf_z1
-	lda #0
-	ldy #$20
-	jmp box_apply_face
-.cf_z1
-	sta rot1
-	lda #0
+	jsr cull_axis
+	pla
+	tax
+	rts
+
+; A = cam coord, X = axis (box_x/y/z + X), Y = -face bit (+face is Y<<1).
+; -face: cam < min. +face: cam >= min+size (a wrapping max is never exterior).
+; box_apply_face keeps X/Y and rot*.
+cull_axis
 	sta rot0
-	lda cam_zh
-	cmp rot1
-	bcc .cf_pzk
-	inc rot0
-.cf_pzk
+	sty rot1
+	cmp box_x,x
+	lda #0
+	rol
+	eor #1
+	jsr box_apply_face
+	lda rot1
+	asl
+	tay
 	lda rot0
-	ldy #$20
+	sec
+	sbc box_x,x
+	bcc .ca_no
+	cmp box_sx,x
+	lda #0
+	rol
+	jmp box_apply_face
+.ca_no
+	lda #0
 	jmp box_apply_face
 
 ; Pack edges with a visible face into box_vis_a/b; mesh_ne = count
@@ -682,6 +622,30 @@ fill_item_verts
 	bne +
 	ldy #TH_BACKPACK
 +
+	lda #0
+	sta rot1				; no door scale
+	jsr fill_item_slot
+	; Props stay put. Other pickups yaw-spin about box+ITEM_BIAS.
+	ldy rot0
+	lda item_spin
+	cpy #TH_LIGHTPOST
+	beq .fi_still
+	cpy #TH_BARREL
+	bne .fi_spin
+.fi_still
+	lda #0
+.fi_spin
+	sta ent_rot
+	jmp xform_item_spin
+
+; Y = door type. rot1 = scale (0 ×1, 1 ×3/2, 2 ×2). Door meshes follow the TH_* slots.
+fill_door_slot
+	tya
+	clc
+	adc #ITEM_DOOR_BASE
+	tay
+; Y = slot. rot1 = U/VY scale (0 for items). Fills mesh tables, rot0 = slot.
+fill_item_slot
 	lda item_nv,y
 	sta mesh_nv
 	lda item_ne,y
@@ -690,7 +654,7 @@ fill_item_verts
 	sta mesh_nx
 	lda item_nz,y
 	sta mesh_nz
-	sty rot0				; slot
+	sty rot0
 	; UX/UZ stay local (editor 0 = spin centre). World centre is box+ITEM_BIAS.
 	clc
 	lda #<item_ux
@@ -704,6 +668,7 @@ fill_item_verts
 	cpy mesh_nx
 	bcs .fi_uz
 	lda (src_ptr),y
+	jsr scale_door_u
 	sta UX,y
 	iny
 	bne .fi_ux
@@ -738,6 +703,7 @@ fill_item_verts
 	cpy mesh_nv
 	bcs .fi_ptr
 	lda (src_ptr),y
+	jsr scale_door_u
 	sta VY,y
 	iny
 	bne .fi_vyl
@@ -778,18 +744,7 @@ fill_item_verts
 	lda #>item_eb
 	adc #0
 	sta edge_b+1
-	; Props stay put. Other pickups yaw-spin about box+ITEM_BIAS.
-	ldy rot0
-	lda item_spin
-	cpy #TH_LIGHTPOST
-	beq .fi_still
-	cpy #TH_BARREL
-	bne .fi_spin
-.fi_still
-	lda #0
-.fi_spin
-	sta ent_rot
-	jmp xform_item_spin
+	rts
 
 ; Face width 4/6/8 → rot1 = ×1 / ×1.5 / ×2 (nearest bucket).
 door_mesh_scale
@@ -846,110 +801,7 @@ fill_door_type_verts
 	jsr fill_door_origin
 	jmp xform_item_at
 
-; Y = type slot. rot1 = scale (0 ×1, 1 ×3/2, 2 ×2). Fills mesh tables.
-fill_door_slot
-	lda door_nv,y
-	bne +
-	ldy #0
-+
-	lda door_nv,y
-	sta mesh_nv
-	lda door_ne,y
-	sta mesh_ne
-	lda door_nx,y
-	sta mesh_nx
-	lda door_nz,y
-	sta mesh_nz
-	sty rot0
-	clc
-	lda #<door_ux
-	adc door_uo,y
-	sta src_ptr
-	lda #>door_ux
-	adc #0
-	sta src_ptr+1
-	ldy #0
-.fdt_ux
-	cpy mesh_nx
-	bcs .fdt_uz
-	lda (src_ptr),y
-	jsr scale_door_u
-	sta UX,y
-	iny
-	bne .fdt_ux
-.fdt_uz
-	ldy rot0
-	clc
-	lda #<door_uz
-	adc door_zo,y
-	sta src_ptr
-	lda #>door_uz
-	adc #0
-	sta src_ptr+1
-	ldy #0
-.fdt_uzl
-	cpy mesh_nz
-	bcs .fdt_vy
-	lda (src_ptr),y
-	sta UZ,y
-	iny
-	bne .fdt_uzl
-.fdt_vy
-	ldy rot0
-	clc
-	lda #<door_vy
-	adc door_vo,y
-	sta src_ptr
-	lda #>door_vy
-	adc #0
-	sta src_ptr+1
-	ldy #0
-.fdt_vyl
-	cpy mesh_nv
-	bcs .fdt_ptr
-	lda (src_ptr),y
-	jsr scale_door_u
-	sta VY,y
-	iny
-	bne .fdt_vyl
-.fdt_ptr
-	ldy rot0
-	clc
-	lda #<door_xid
-	adc door_vo,y
-	sta xid_ptr
-	lda #>door_xid
-	adc #0
-	sta xid_ptr+1
-	clc
-	lda #<door_zid
-	adc door_vo,y
-	sta zid_ptr
-	lda #>door_zid
-	adc #0
-	sta zid_ptr+1
-	clc
-	lda #<door_col
-	adc door_vo,y
-	sta col_ptr
-	lda #>door_col
-	adc #0
-	sta col_ptr+1
-	clc
-	lda #<door_ea
-	adc door_eo,y
-	sta edge_ptr
-	lda #>door_ea
-	adc #0
-	sta edge_ptr+1
-	clc
-	lda #<door_eb
-	adc door_eo,y
-	sta edge_b
-	lda #>door_eb
-	adc #0
-	sta edge_b+1
-	rts
+
 
 ; ent_wx/wy/wz = door AABB bottom-centre on the outward face; ent_rot from face.
 fill_door_origin
@@ -1164,27 +1016,8 @@ fill_switch_verts
 	sta UX+2
 	lda #3
 	sta mesh_nx
-	clc
-	lda box_y
-	adc box_sy
-	sta VY
-	lda box_sy
-	lsr
-	clc
-	adc box_y
-	sta VY+1
-	sta VY+2
-	lda #<sw_z_xid
-	sta xid_ptr
-	lda #>sw_z_xid
-	sta xid_ptr+1
-	lda #<sw_z_zid
-	sta zid_ptr
-	lda #>sw_z_zid
-	sta zid_ptr+1
-	lda #3
-	sta mesh_nv
-	jmp xform_mesh_xz
+	ldx #0
+	beq .fs_tail
 .fsx
 	cmp #FACE_MX
 	beq .fsmx
@@ -1211,6 +1044,9 @@ fill_switch_verts
 	sta UZ+2
 	lda #3
 	sta mesh_nz
+	ldx #3
+; X = offset into sw_xz_tab: xid at X, zid at X+3
+.fs_tail
 	clc
 	lda box_y
 	adc box_sy
@@ -1221,13 +1057,19 @@ fill_switch_verts
 	adc box_y
 	sta VY+1
 	sta VY+2
-	lda #<sw_x_xid
+	clc
+	txa
+	adc #<sw_xz_tab
 	sta xid_ptr
-	lda #>sw_x_xid
+	lda #>sw_xz_tab
+	adc #0
 	sta xid_ptr+1
-	lda #<sw_x_zid
+	clc
+	lda xid_ptr
+	adc #3
 	sta zid_ptr
-	lda #>sw_x_zid
+	lda xid_ptr+1
+	adc #0
 	sta zid_ptr+1
 	lda #3
 	sta mesh_nv

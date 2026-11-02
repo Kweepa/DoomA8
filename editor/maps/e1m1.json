@@ -448,7 +448,7 @@
       "doorScale": 1,
       "tag": "",
       "locked": false,
-      "otherRoomId": null
+      "otherRoomId": "7829dd75-fb2b-45f0-8433-12f03dd4f80f"
     },
     {
       "id": "c216093a-c07c-4f1b-a8ed-cd540f0f3146",
@@ -985,7 +985,7 @@
       "dir": 1,
       "roomId": "00aeb867-15d6-47b6-b4b4-a470a4532db4",
       "lockKey": "unlocked",
-      "doorType": "Tech",
+      "doorType": "Arch",
       "doorScale": 1,
       "tag": "",
       "otherRoomId": "7829dd75-fb2b-45f0-8433-12f03dd4f80f",

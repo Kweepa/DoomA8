@@ -352,7 +352,7 @@ def steps(exe: str) -> list[Step]:
         ),
         Step(
             "genmap",
-            lambda: [TOOLS / "genmap.py", TOOLS / "roomgeom.py", *map_json()],
+            lambda: [TOOLS / "genmap.py", TOOLS / "roomgeom.py", ROOT / "src" / "overlay.asm", *map_json()],
             # Map PRGs are rewritten by mkreloc. Counts/sizes are not.
             lambda: [SRC / "map_counts.asm", SRC / "map_sizes.asm", *map_prgs()],
             lambda: tool("genmap.py"),

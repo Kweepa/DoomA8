@@ -13,72 +13,50 @@ overlay_entry
 bind_apply
 	sta src_ptr
 	sty src_ptr+1
+	ldy #0
 .ba_lp
-	ldy #0
 	lda (src_ptr),y
-	sta dst_ptr
-	iny
-	lda (src_ptr),y
-	sta dst_ptr+1
-	ora dst_ptr
-	beq patch_map_smc
-	lda dst_ptr+1
-	bne .ba_fld
-	lda dst_ptr
-	cmp #1
-	beq .ba_n3
-	cmp #2
-	beq .ba_n2
-	cmp #3
-	beq .ba_n1
-.ba_fld
-	ldy #0
+	iny				; table < 256 bytes (asserted at bind_tab)
+	asl				; C = header; else A = field id*2 (word offset from room_x)
+	bcs .ba_hdr
+	tax
 	lda bind_cur
-	sta (dst_ptr),y
-	iny
+	sta room_x,x
 	lda bind_cur+1
-	sta (dst_ptr),y
-	ldy #2
-	lda (src_ptr),y
-	sta dst_ptr
-	iny
-	lda (src_ptr),y
-	sta dst_ptr+1
+	sta room_x+1,x
 	clc
-	ldy #0
 	lda bind_cur
-	adc (dst_ptr),y
+	adc bind_n
 	sta bind_cur
-	bcc .ba_nxt
-	inc bind_cur+1
-.ba_nxt
-	clc
-	lda src_ptr
-	adc #4
-	sta src_ptr
 	bcc .ba_lp
-	inc src_ptr+1
-	bcs .ba_lp
-.ba_n3
+	inc bind_cur+1
+	bcs .ba_lp			; C=1 here
+.ba_hdr
+	lsr				; k = header & $7f ($7f = end); $11/$12/$13 = nrooms*3 / *2 / +1
+	cmp #$7f
+	beq patch_map_smc
+	tax
+	cpx #$11
+	bcs .ba_spec
+	lda map_nrooms,x
+.ba_set
+	sta bind_n
+	clc
+	bcc .ba_lp
+.ba_spec
 	lda map_nrooms
+	cpx #$13
+	bne .ba_x23
+	clc
+	adc #1
+	bcc .ba_set
+.ba_x23
 	asl
+	cpx #$12
+	beq .ba_set
 	clc
 	adc map_nrooms
-	sta bind_n
-	clc
-	bcc .ba_nxt
-.ba_n1
-	lda map_nrooms
-	sta bind_n
-	inc bind_n
-	clc
-	bcc .ba_nxt
-.ba_n2
-	lda map_nrooms
-	asl
-	sta bind_n
-	clc
-	bcc .ba_nxt
+	bcc .ba_set
 
 ; Reloc: count word, then count × (dest word, field id byte).
 patch_map_smc
@@ -112,22 +90,12 @@ patch_map_smc
 	sta dst_ptr+1
 	iny
 	lda (src_ptr),y
-	asl
-	bcs .hi
+	asl				; field id < 128 (mkreloc checks)
 	tay
 	lda room_x,y
 	sta mp_l
 	lda room_x+1,y
 	sta mp_h
-	clc
-	bcc .wr
-.hi
-	tay
-	lda room_x + $100,y
-	sta mp_l
-	lda room_x + $101,y
-	sta mp_h
-.wr
 	ldy #0
 	lda mp_l
 	sta (dst_ptr),y
@@ -153,21 +121,34 @@ patch_map_smc
 	rts
 
 ; +bind_add lines: tools/perroom.py replays packed order from this table.
+; Stream: field id (bit7 clear, (ptr-room_x)/2) writes bind_cur then adds bind_n.
+; $80|k loads bind_n from map_nrooms+k ($11/$12/$13 = nrooms*3 / nrooms*2 / nrooms+1).
+; $ff ends. Headers are emitted only when the count source changes.
+!set bind_cc = $ffff
+!set bind_ncode = $11
 !macro bind_add .ptr, .n {
-	!word .ptr
-	!word .n
+	!if .n = bind_n {
+		!set bind_c = bind_ncode
+	} else {
+		!set bind_c = .n - map_nrooms
+	}
+	!if bind_c != bind_cc {
+		!byte $80 | bind_c
+		!set bind_cc = bind_c
+	}
+	!if (.ptr - room_x) / 2 > $7f {
+		!error "bind_add: field id past 127"
+	}
+	!byte (.ptr - room_x) / 2
 }
 !macro bind_set_n3 {
-	!word 1
-	!word 0
+	!set bind_ncode = $11
 }
 !macro bind_set_n2 {
-	!word 2
-	!word 0
+	!set bind_ncode = $12
 }
 !macro bind_set_n1 {
-	!word 3
-	!word 0
+	!set bind_ncode = $13
 }
 
 bind_tab
@@ -220,7 +201,6 @@ bind_tab
 	+bind_add door_face, map_ndoors
 	+bind_add door_key, map_ndoors
 	+bind_add door_type, map_ndoors
-	+bind_add door_id, map_ndoors
 	+bind_add door_other, map_ndoors
 	+bind_add door_tag, map_ndoors
 	+bind_add crate_x, map_ncrates
@@ -293,4 +273,7 @@ bind_tab
 	+bind_add room_plat_o, bind_n
 	+bind_add room_trig_o, bind_n
 	+bind_add room_th_o, bind_n
-	!word 0, 0
+	!byte $ff
+!if * - bind_tab > 255 {
+	!error "bind_tab >= 256 bytes"
+}

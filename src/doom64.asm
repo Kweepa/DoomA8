@@ -79,7 +79,6 @@ main
 	lda #2
 	sta den_arm
 .den_pub
-	jsr prof_frame_sample
 	jsr calc_frame_dt
 	jsr update_hurt_flash
 	jsr tick_crack

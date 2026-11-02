@@ -33,7 +33,6 @@ init_hud
 
 	jsr hud_stax
 
-	lda #COL_HUD_DIM
 
 	inx
 	bne -
@@ -63,7 +62,6 @@ init_hud
 
 	jsr hud_stax
 
-	lda #COL_HUD_DIM
 
 	inx
 	iny
@@ -77,7 +75,6 @@ init_hud
 	sta HUD_SCR + HUD_OFF_SHELLS + HUD_AMMO_ICON
 	lda #HUD_CH_ROCKET
 	sta HUD_SCR + HUD_OFF_RKT + HUD_AMMO_ICON
-	lda #COL_HUD_DIM
 
 
 	ldx #0
@@ -92,7 +89,6 @@ init_hud
 
 	jsr hud_stax
 
-	lda #COL_HUD_DIM
 
 	inx
 	bne -
@@ -109,7 +105,6 @@ init_hud
 
 	jsr hud_stax
 
-	lda #COL_HUD_DIM
 
 	inx
 	bne -
@@ -129,7 +124,6 @@ init_hud
 	sta HUD_SCR + HUD_OFF + 24
 	lda #HUD_CH_U
 	sta HUD_SCR + HUD_OFF + 29
-	lda #COL_HUD_DIM
 
 
 	lda #HUD_CH_R
@@ -138,7 +132,6 @@ init_hud
 	sta HUD_SCR + HUD_OFF_MAP + 4
 	lda #HUD_CH_K
 	sta HUD_SCR + HUD_OFF_MAP + 8
-	lda #COL_HUD_DIM
 
 
 }
@@ -154,7 +147,6 @@ init_hud
 	sta HUD_SCR + HUD_OFF2 + 15
 	lda #HUD_CH_P
 	sta HUD_SCR + HUD_OFF2 + 19
-	lda #COL_HUD_DIM
 
 
 }

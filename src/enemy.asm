@@ -70,14 +70,12 @@ enemies_update
 	jmp eu_next
 
 eu_state_lo
-	!byte <eu_idle, <eu_idle, <eu_alert, <eu_approach, <eu_attack
-	!byte <eu_pain, <eu_dying, <eu_dead, <eu_gone
+	!byte <eu_idle, <eu_idle, <eu_next, <eu_approach, <eu_next
+	!byte <eu_next, <eu_next, <eu_next, <eu_next
 eu_state_hi
-	!byte >eu_idle, >eu_idle, >eu_alert, >eu_approach, >eu_attack
-	!byte >eu_pain, >eu_dying, >eu_dead, >eu_gone
-
-eu_gone
-	jmp eu_next
+	!byte >eu_idle, >eu_idle, >eu_next, >eu_approach, >eu_next
+	!byte >eu_next, >eu_next, >eu_next, >eu_next
+; alert / attack / pain / dying / dead / gone do nothing per think.
 
 ; ------------------------------------------------------------------
 eu_idle
@@ -95,18 +93,8 @@ eu_idle
 	lda en_timer,x
 	ora en_timer_h,x
 	beq .eu_id_sight
-	sec
-	lda en_timer,x
-	sbc dt_ms
-	sta en_timer,x
-	lda en_timer_h,x
-	sbc dt_msh
-	sta en_timer_h,x
-	bcs .eu_id_held
-	lda #0
-	sta en_timer,x
-	sta en_timer_h,x
-	jmp .eu_id_retry
+	jsr en_timer_sub
+	bcc .eu_id_retry
 .eu_id_held
 	lda gunshot_wake
 	bne .eu_id_retry
@@ -137,26 +125,12 @@ eu_idle
 	jmp eu_next
 
 ; ------------------------------------------------------------------
-eu_alert
-	jmp eu_next
-
-; ------------------------------------------------------------------
 eu_approach
 	ldx enemy_idx
 	lda en_timer,x
 	ora en_timer_h,x
 	beq .eu_ap_step
-	sec
-	lda en_timer,x
-	sbc dt_ms
-	sta en_timer,x
-	lda en_timer_h,x
-	sbc dt_msh
-	sta en_timer_h,x
-	bcs .eu_ap_step
-	lda #0
-	sta en_timer,x
-	sta en_timer_h,x
+	jsr en_timer_sub
 .eu_ap_step
 	+ldy_mx en_type
 	lda #AI_CMD_APPROACH_MOVE
@@ -209,25 +183,22 @@ eu_approach
 	jmp eu_next
 
 ; ------------------------------------------------------------------
-eu_attack
-	ldx enemy_idx
-	+ldy_mx en_type
-	lda #AI_CMD_ATTACK_TICK
-	jsr ai_invoke
-	jmp eu_next
-
-; ------------------------------------------------------------------
-eu_pain
-	jmp eu_next
-
-; ------------------------------------------------------------------
-eu_dying
-	jmp eu_next
-
-; ------------------------------------------------------------------
-; Last death frame. Stays until the level reloads.
-eu_dead
-	jmp eu_next
+; X = enemy. en_timer -= dt. C=1 still running; C=0 elapsed (timer zeroed).
+en_timer_sub
+	sec
+	lda en_timer,x
+	sbc dt_ms
+	sta en_timer,x
+	lda en_timer_h,x
+	sbc dt_msh
+	sta en_timer_h,x
+	bcs .ent_rts
+	lda #0
+	sta en_timer,x
+	sta en_timer_h,x
+	clc
+.ent_rts
+	rts
 
 eu_next
 	ldx enemy_idx
@@ -1034,8 +1005,6 @@ take_damage
 	lda #SOUND_PLDETH
 	jsr play_sound
 	jmp death_restart
-.td_rts
-	rts
 td_saved	!byte 0
 sg_hit		!byte 0
 
@@ -1565,13 +1534,7 @@ pick_var_n
 	lda #1
 .pvn_st
 	sta random8
-	jsr rnd8
-.pvn_mod
-	cmp rot1
-	bcc .pvn_store
-	sbc rot1
-	jmp .pvn_mod
-.pvn_store
+	jsr rnd_mod_rot1
 	sta en_pain_i,x
 	rts
 .pvn_one
@@ -1715,17 +1678,20 @@ roll_upto
 	cmp #1
 	beq .ru_rts
 	sta rot1
-	jsr rnd8
-.ru_mod
-	cmp rot1
-	bcc .ru_one
-	sbc rot1
-	jmp .ru_mod
-.ru_one
+	jsr rnd_mod_rot1
 	clc
 	adc #1
 .ru_rts
 	rts
+
+; A = rnd8 % rot1. X preserved.
+rnd_mod_rot1
+	jsr rnd8
+-	cmp rot1
+	bcc +
+	sbc rot1
+	bcs -
++	rts
 
 ; ------------------------------------------------------------------
 ; Hitscan: mid-body project → |sx−(CX+aim)|≤limit (no screen-Y gate;
@@ -1807,33 +1773,16 @@ shotgun_hitscan
 .sg_rts
 	rts
 
+; Chaingun and pistol differ only in the X band. $2c skips the other lda.
 chaingun_hitscan
-	lda #0
-	sta scan_aim
 	lda #CHAIN_HIT_X
-	sta scan_hit_x
-	lda #$ff
-	sta scan_hit_y
-	lda #PISTOL_DMG_MAX
-	sta scan_dmg_max
-	lda #SCAN_FLAT
-	sta scan_dmg_all
-	lda #3
-	sta scan_jx_mask
-	lda #2
-	sta scan_jx_bias
-	lda #3
-	sta scan_jy_mask
-	lda #2
-	sta scan_jy_bias
-	jmp gun_hitscan
-
+	!byte $2c
 ; One bullet, nearest body in the center band, flat 1..16.
 pistol_hitscan
-	lda #0
-	sta scan_aim
 	lda #PISTOL_HIT_X
 	sta scan_hit_x
+	lda #0
+	sta scan_aim
 	lda #$ff
 	sta scan_hit_y
 	lda #PISTOL_DMG_MAX
@@ -1848,8 +1797,6 @@ pistol_hitscan
 	sta scan_jy_mask
 	lda #2
 	sta scan_jy_bias
-	jmp gun_hitscan
-
 gun_hitscan
 	lda #$ff
 	sta shot_hit_i
@@ -2225,16 +2172,17 @@ shotgun_miss_splat
 
 ; Closest barrel in the cone. A = index ($ff none), Y = its CAM_ZH.
 ; View trig already loaded. Screen X matches a body: scan_aim, scan_hit_x.
-; Best index/depth sit on the stack across the line and project calls.
+; Best index/depth sit in scan_best_i/z across the line and project calls.
 scan_shoot_barrels
+	lda scan_aim
+	sta scan_off
 	lda #$ff
-	pha
-	pha
+	sta scan_best_i
+	sta scan_best_z
 	ldx #0
 .sb_lp
 	cpx	map_nthings
-	bcs .sb_done
-.sb_body
+	bcs scan_best_ret
 	stx enemy_idx
 	lda th_taken,x
 	bne .sb_n
@@ -2254,93 +2202,43 @@ scan_shoot_barrels
 	lda pv2
 	sta ln_bz
 	sta ent_wz
-	jsr ln_a_from_cam
-	ldy room_idx
-	jsr line_solids_blocked
-	bcs .sb_n
-	jsr xform_ent_view
-	lda CAM_ZH
-	bmi .sb_n
-	cmp #SHOT_Z_MAX
-	bcs .sb_n
-	sta gidx
-	bne .sb_proj
-	lda CAM_Z
-	beq .sb_n
-.sb_proj
-	jsr project_cam0_screen
-	bcc .sb_n
-	sec
-	sbc #SCREEN_CX
-	sec
-	sbc scan_aim
-	bpl .sb_xabs
-	eor #$ff
-	clc
-	adc #1
-.sb_xabs
-	cmp scan_hit_x
-	beq .sb_xok
-	bcs .sb_n
-.sb_xok
-	pla
-	cmp gidx
-	bcc .sb_keep
-	beq .sb_keep
-	pla
-	lda enemy_idx
-	pha
-	lda gidx
-	pha
-	jmp .sb_n
-.sb_keep
-	pha
+	jsr scan_cand
 .sb_n
 	ldx enemy_idx
 	inx
 	jmp .sb_lp
-.sb_done
-	pla
-	tay
-	pla
+scan_best_ret
+	ldy scan_best_z
+	lda scan_best_i
 	rts
 
 ; Closest shootable switch in the cone. A = index ($ff none), Y = its CAM_ZH.
 ; Body must overlap the switch AABB (no pitching up or down onto it).
-; Best index/depth sit on the stack across the line and project calls.
 scan_shoot_switches
+	lda #0
+	sta scan_off
 	lda #$ff
-	pha
-	pha
+	sta scan_best_i
+	sta scan_best_z
 	ldx #0
 .ss_lp
 	cpx	map_nswitches
-	bcc .ss_body
-	jmp .ss_done
-.ss_body
+	bcs scan_best_ret
 	stx enemy_idx
 	+lda_mx sw_room
 	cmp room_idx
-	beq .ss_room
-	jmp .ss_n
-.ss_room
+	bne .ss_n
 	+lda_mx sw_kind
-	bmi .ss_bit
-	jmp .ss_n
-.ss_bit
+	bpl .ss_n
 	and #$7f
 	cmp #SW_DEST_TRIG + 1
-	bcc .ss_dest
-	jmp .ss_n
-.ss_dest
+	bcs .ss_n
 	+lda_mx sw_y
 	sta box_y
 	+lda_mx sw_sy
 	sta box_sy
 	jsr player_overlaps_y
-	bcs .ss_level
-	jmp .ss_n
-.ss_level
+	bcc .ss_n
 	+lda_mx sw_sx
 	lsr
 	clc
@@ -2359,58 +2257,52 @@ scan_shoot_switches
 	+adc_mx sw_z
 	sta ln_bz
 	sta ent_wz
-	jsr ln_a_from_cam
-	ldy room_idx
-	jsr line_solids_blocked
-	bcs .ss_n
-	jsr xform_ent_view
-	lda CAM_ZH
-	bpl .ss_zpos
-	jmp .ss_n
-.ss_zpos
-	cmp #SHOT_Z_MAX
-	bcc .ss_zok
-	jmp .ss_n
-.ss_zok
-	sta gidx
-	bne .ss_proj
-	lda CAM_Z
-	bne .ss_proj
-	jmp .ss_n
-.ss_proj
-	jsr project_cam0_screen
-	bcc .ss_n
-	sec
-	sbc #SCREEN_CX
-	bpl .ss_xabs
-	eor #$ff
-	clc
-	adc #1
-.ss_xabs
-	cmp scan_hit_x
-	beq .ss_xok
-	bcs .ss_n
-.ss_xok
-	pla
-	cmp gidx
-	bcc .ss_keep
-	beq .ss_keep
-	pla
-	lda enemy_idx
-	pha
-	lda gidx
-	pha
-	jmp .ss_n
-.ss_keep
-	pha
+	jsr scan_cand
 .ss_n
 	ldx enemy_idx
 	inx
 	jmp .ss_lp
-.ss_done
-	pla
-	tay
-	pla
+
+; Candidate at ent_w* / ln_b*. Keeps the nearest in scan_best_i/z. Clobbers X.
+scan_cand
+	jsr ln_a_from_cam
+	ldy room_idx
+	jsr line_solids_blocked
+	bcs .sc_rts
+	jsr xform_ent_view
+	lda CAM_ZH
+	bmi .sc_rts
+	cmp #SHOT_Z_MAX
+	bcs .sc_rts
+	sta gidx
+	bne .sc_proj
+	lda CAM_Z
+	beq .sc_rts
+.sc_proj
+	jsr project_cam0_screen
+	bcc .sc_rts
+	sec
+	sbc #SCREEN_CX
+	sec
+	sbc scan_off
+	bpl .sc_xabs
+	eor #$ff
+	clc
+	adc #1
+.sc_xabs
+	cmp scan_hit_x
+	beq .sc_xok
+	bcs .sc_rts
+.sc_xok
+	lda scan_best_z
+	cmp gidx
+	bcc .sc_rts
+	beq .sc_rts
+	lda enemy_idx
+	sta scan_best_i
+	lda gidx
+	sta scan_best_z
+.sc_rts
 	rts
 
 ; A/Y = base sx/sy → /2, then splat_aim_half.

@@ -2153,21 +2153,12 @@ pickup_sound
 .ps_ok
 	tay
 	lda gb_snd,y
-	beq .ps_hp
 	cmp #PS_AMMO
 	beq .ps_ammo
-	cmp #PS_BONUS
-	beq .ps_bonus
-	lda #SOUND_ITEMUP
-	jmp play_sound
-.ps_bonus
 	lda #SOUND_ITEMUP
 	jmp play_sound
 .ps_ammo
 	lda #SOUND_WPNUP
-	jmp play_sound
-.ps_hp
-	lda #SOUND_ITEMUP
 	jmp play_sound
 
 ; C=1 if door_blk pushes into sw_face from the air side. X preserved.

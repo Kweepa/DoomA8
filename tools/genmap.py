@@ -637,7 +637,6 @@ def cook_one(level: dict, map_key: str) -> bytes:
     door_face: list[int] = []
     door_key: list[int] = []
     door_type: list[int] = []
-    door_id: list[int] = []
     door_other: list[int] = []
     door_tag: list[int] = []
     room_door_o: list[int] = []
@@ -655,7 +654,6 @@ def cook_one(level: dict, map_key: str) -> bytes:
             door_face.append(inst["face"])
             door_key.append(inst["key"])
             door_type.append(inst["type"])
-            door_id.append(inst["id"])
             door_other.append(inst["other"])
             door_tag.append(inst["tag"])
 
@@ -1034,7 +1032,6 @@ def cook_one(level: dict, map_key: str) -> bytes:
     add(door_face)
     add(door_key)
     add(door_type)
-    add(door_id)
     add(door_other)
     add(door_tag)
     add(crate_x)
