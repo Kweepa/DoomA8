@@ -1089,7 +1089,7 @@ enemy_try_step
 .ets_rts
 	rts
 
-; Clamp en_x/z: matching-top rb (standing, else nearest), not lid union.
+; Clamp en_x/z: matching-top rb if standing in one, else room collider.
 enemy_clamp_room
 	ldx enemy_idx
 	+lda_mx en_x
@@ -1097,13 +1097,7 @@ enemy_clamp_room
 	+lda_mx en_z
 	sta col_z
 	jsr enemy_cutout_idx
-	bcs .ecr_this
-	jsr enemy_nearest_cutout
-	cpx #$ff
-	beq .ecr_ncut
-	+lda_mx rb_sx
-	beq .ecr_ncut
-.ecr_this
+	bcc .ecr_ncut
 	jsr load_box_rb
 	jmp clamp_to_box_inset1
 .ecr_ncut
@@ -1116,61 +1110,6 @@ enemy_clamp_room
 	jsr load_box_rc
 	jmp clamp_to_box_inset1
 .ecr_rts
-	rts
-
-; X = nearest matching-top rb for en_room, or $ff if none.
-enemy_nearest_cutout
-	lda #$ff
-	sta proc_tmp1
-	sta proc_tmp2
-	ldx enemy_idx
-	+lda_mx en_room
-	asl
-	sta proc_tmp0
-	tax
-	jsr .enc_cand
-	ldx proc_tmp0
-	inx
-	jsr .enc_cand
-	ldx proc_tmp2
-	rts
-.enc_cand
-	jsr enemy_rb_top_ok
-	bcc .enc_cno
-	jsr .enc_dist
-	cmp proc_tmp1
-	bcs .enc_cno
-	sta proc_tmp1
-	stx proc_tmp2
-.enc_cno
-	rts
-.enc_dist
-	+lda_mx rb_sx
-	lsr
-	clc
-	+adc_mx rb_x
-	ldy enemy_idx
-	sec
-	+sbc_my en_x
-	bcs .enc_ax
-	eor #$ff
-	clc
-	adc #1
-.enc_ax
-	sta proc_tmp3
-	+lda_mx rb_sz
-	lsr
-	clc
-	+adc_mx rb_z
-	sec
-	+sbc_my en_z
-	bcs .enc_az
-	eor #$ff
-	clc
-	adc #1
-.enc_az
-	clc
-	adc proc_tmp3
 	rts
 
 ; X = matching-Y collider of en_room. C=1 found.
@@ -1356,13 +1295,25 @@ enemy_floor_ok
 	sec
 	rts
 
-; If the room has a matching-top rb, dest must lie in one (inset 1).
+; If standing in a matching-top rb, dest must lie in one (inset 1).
+; col_x/z is the dest; the standing test uses en_x/en_z.
 enemy_cutout_ok
 	lda col_x
 	sta proc_tmp4
 	lda col_z
 	sta proc_tmp5
-	jsr enemy_any_cutout_top
+	ldx enemy_idx
+	+lda_mx en_x
+	sta col_x
+	+lda_mx en_z
+	sta col_z
+	jsr enemy_cutout_idx
+	php
+	lda proc_tmp4
+	sta col_x
+	lda proc_tmp5
+	sta col_z
+	plp
 	bcc .eco_free
 	ldx enemy_idx
 	+lda_mx en_room
@@ -1390,19 +1341,6 @@ enemy_cutout_ok
 	lda proc_tmp5
 	sta col_z
 	sec
-	rts
-
-; C=1 if any rb_* for en_room has |top − en_y| ≤ FALL_LEDGE.
-enemy_any_cutout_top
-	ldx enemy_idx
-	+lda_mx en_room
-	asl
-	tax
-	jsr enemy_rb_top_ok
-	bcs .eact_yes
-	inx
-	jmp enemy_rb_top_ok
-.eact_yes
 	rts
 
 ; X = rb_*. C=1 if occupied and |top − en_y| ≤ FALL_LEDGE.

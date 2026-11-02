@@ -33,11 +33,13 @@ ai_poss_entry
 .attack_go
 	jmp enemy_enter_attack
 
+; 0–1023 ms. enemy_enter_approach adds 0–255 when this is non-zero.
 .approach_enter
 	ldx enemy_idx
-	lda #<GRUNT_ATK_MS
+	jsr rnd8
 	sta en_timer,x
-	lda #>GRUNT_ATK_MS
+	jsr rnd8
+	and #3
 	sta en_timer_h,x
 	jmp select_dodge_dir
 
@@ -72,7 +74,16 @@ ai_poss_entry
 	rts
 
 .attack_end
-	jmp enemy_enter_approach
+	jsr enemy_enter_approach
+	ldx enemy_idx
+	jsr rnd8
+	clc
+	adc #<GRUNT_ATK_MS
+	sta en_timer,x
+	lda #>GRUNT_ATK_MS
+	adc #0
+	sta en_timer_h,x
+	rts
 
 .step
 	ldx enemy_idx

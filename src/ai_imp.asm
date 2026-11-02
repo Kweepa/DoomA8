@@ -33,6 +33,24 @@ ai_imp_entry
 
 .approach_move
 	ldx enemy_idx
+	lda en_timer,x
+	ora en_timer_h,x
+	beq .mv
+	lda atk_kind,x
+	beq .mv				; claw recovery keeps the pause
+	jsr enemy_shot_clear
+	bcc .mv
+	jsr enemy_chebyshev
+	cmp #DEMON_MELEE_R
+	bcs .mv
+	jsr enemy_same_floor
+	bcc .mv
+	ldx enemy_idx
+	lda #0
+	sta en_timer,x
+	sta en_timer_h,x
+.mv
+	ldx enemy_idx
 	clc
 	lda en_step,x
 	adc dt_ms
@@ -64,8 +82,6 @@ ai_imp_entry
 	rts
 
 .approach_attack
-	jsr .fireball_live
-	bcs .aa_rts
 	jsr enemy_shot_clear
 	bcc .aa_rts
 	jsr enemy_chebyshev
@@ -78,6 +94,8 @@ ai_imp_entry
 	sta atk_kind,x
 	jmp enemy_enter_demon_attack
 .aa_miss
+	jsr .fireball_live
+	bcs .aa_rts
 	jsr .missile_ok
 	bcc .aa_rts
 	ldx enemy_idx
@@ -118,9 +136,8 @@ ai_imp_entry
 
 .approach_enter
 	ldx enemy_idx
-	lda #<IMP_ATK_MS
+	lda #0
 	sta en_timer,x
-	lda #>IMP_ATK_MS
 	sta en_timer_h,x
 	jmp select_dodge_dir
 
@@ -314,7 +331,16 @@ ai_imp_entry
 	rts
 
 .attack_end
-	jmp enemy_enter_approach
+	jsr enemy_enter_approach
+	ldx enemy_idx
+	jsr rnd8
+	clc
+	adc #<IMP_ATK_MS
+	sta en_timer,x
+	lda #>IMP_ATK_MS
+	adc #0
+	sta en_timer_h,x
+	rts
 
 ; After every opcode so the reloc walk stays aligned.
 .thr	!byte 0
