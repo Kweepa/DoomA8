@@ -137,8 +137,22 @@ elev_act_fail
 
 ; ------------------------------------------------------------------
 ; elev_try_step — like proc_try_step but ELEV_STEP_MS (C=0 if stepped)
+; elev_flags bit0: quarter speed, subtract $0200
 ; ------------------------------------------------------------------
 elev_try_step
+	ldy PROC_L,x
+	+lda_my elev_flags
+	and #ELEV_FLAG_SLOW
+	beq .ees_norm
+	lda PROC_D,x
+	cmp #2				; ELEV_STEP_MS * 4 = $0200
+	bcc .ees_no
+	sec
+	sbc #2
+	sta PROC_D,x
+	clc
+	rts
+.ees_norm
 	lda PROC_D,x
 	bne .ees_hi
 	lda PROC_C,x

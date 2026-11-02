@@ -725,7 +725,7 @@ def cook_one(level: dict, map_key: str) -> bytes:
     elev_x, elev_y, elev_z = [], [], []
     elev_sx, elev_sy, elev_sz = [], [], []
     elev_home, elev_dest, elev_room = [], [], []
-    elev_id = []
+    elev_id, elev_flags = [], []
     for e in elevs:
         ri = room_index(rooms, e, "elevator")
         floor_y = rooms[ri]["y"]
@@ -757,6 +757,7 @@ def cook_one(level: dict, map_key: str) -> bytes:
         elev_dest.append(dest)
         elev_room.append(ri)
         elev_id.append(map_id[id(e)])
+        elev_flags.append(1 if e.get("elevSlow") else 0)
 
     # Switches
     sw_x, sw_y, sw_z = [], [], []
@@ -1092,6 +1093,7 @@ def cook_one(level: dict, map_key: str) -> bytes:
     add(elev_room)
     add(elev_id)
     add(elev_grp)
+    add(elev_flags)
     add(sw_x)
     add(sw_y)
     add(sw_z)

@@ -1904,7 +1904,11 @@ export function clampObject(obj) {
     else obj.roomId = null;
   }
   if (usesLinkTag(obj.kind)) obj.tag = clampTag(obj.tag);
-  if (obj.kind === "elevator") clampElevHeights(obj);
+  if (obj.kind === "elevator") {
+    clampElevHeights(obj);
+    if (obj.elevSlow) obj.elevSlow = true;
+    else delete obj.elevSlow;
+  }
   if (obj.kind === "pickup") obj.pickup = clampPickupType(obj.pickup);
   if (obj.kind === "switch") {
     if (obj.shootable) obj.shootable = true;
@@ -1994,6 +1998,7 @@ export function createObject(kind, x, y, z, extra = {}) {
     obj.elevAuto = extra.elevAuto !== false;
     if (extra.elevLow != null) obj.elevLow = extra.elevLow | 0;
     if (extra.elevHigh != null) obj.elevHigh = extra.elevHigh | 0;
+    if (extra.elevSlow) obj.elevSlow = true;
   }
   if (kind === "pickup") obj.pickup = clampPickupType(extra.pickup);
   if (kind === "doorway") {
@@ -3293,6 +3298,7 @@ function parseObjects(list) {
       elevAuto: o.elevAuto,
       elevLow: o.elevLow,
       elevHigh: o.elevHigh,
+      elevSlow: o.elevSlow,
       pickup: o.pickup,
       backpack: o.backpack,
       order: o.order,
@@ -3365,6 +3371,8 @@ function parseObjects(list) {
       obj.elevAuto = o.elevAuto !== false;
       if (o.elevLow != null) obj.elevLow = o.elevLow | 0;
       if (o.elevHigh != null) obj.elevHigh = o.elevHigh | 0;
+      if (o.elevSlow) obj.elevSlow = true;
+      else delete obj.elevSlow;
       delete obj.elevType;
     }
     if (o.kind === "pickup" || o.kind === "backpack") {

@@ -177,7 +177,9 @@ en_sfx_old	= enemy_sfx_evt_hi + ENEMY_PTR_N	; local frame before this anim step;
 en_sfx_new	= en_sfx_old + 1		; logical frame after the step
 en_sfx_n	= en_sfx_new + 1		; remaining events while scanning
 en_sfx_armed	= en_sfx_n + 1			; 1 = frame changed this anim step
-play_bss_free	= en_sfx_armed + 1		; up to a8_pal_hue
+enter_wait_l	= en_sfx_armed + 1		; enter card hold ms
+enter_wait_h	= enter_wait_l + 1
+play_bss_free	= enter_wait_h + 1		; up to a8_pal_hue
 ; Menu set_video_ms writes this while the boot loader ($0480–boot_end) is still
 ; live. Fixed above that image, below skip_n. GAME loads at $0900 and leaves it.
 ; NTSC never reads it.
@@ -494,6 +496,7 @@ proc_tmp4	= $CBBC + A8_OFF
 proc_tmp5	= $CBBD + A8_OFF
 MOTION_STEP_MS	= 64
 ELEV_STEP_MS	= 128			; half elevator travel speed vs doors
+ELEV_FLAG_SLOW	= 1			; elev_flags bit0: step every 512 ms
 DOOR_RECLOSE_MS	= 5000
 ELEV_WAIT_MS	= 5000
 STATUS_MS	= 5000			; backpack / status HUD line

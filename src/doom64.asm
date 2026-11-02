@@ -46,6 +46,7 @@ start
 	jsr play_up1
 	jsr init_weapon
 	jsr play_up2
+	jsr enter_card
 
 main
 	jsr poll_quick_keys			; Shift-S save / Shift-L load; view stays blank until the next frame

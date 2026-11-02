@@ -239,6 +239,7 @@ bind_tab
 	+bind_add elev_room, map_nelevs
 	+bind_add elev_id, map_nelevs
 	+bind_add elev_grp, map_nelevs
+	+bind_add elev_flags, map_nelevs
 	+bind_add sw_x, map_nswitches
 	+bind_add sw_y, map_nswitches
 	+bind_add sw_z, map_nswitches

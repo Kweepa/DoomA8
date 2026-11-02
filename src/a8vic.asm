@@ -70,6 +70,22 @@ dl_top	!byte $70				; 8
 	!error "dl_top crosses a 1K boundary"
 }
 
+; Enter card. enter_card points dl_top's JMP here for the hold.
+; 12×8 + 4 blanks, plus dl_top's 8, put the 24-line block on the
+; NTSC center. PAL keeps the extra black below.
+enter_dl
+	!byte $70,$70,$70,$70,$70,$70,$70,$70,$70,$70,$70,$70
+	!byte $30
+	!byte $42				; mode 2 LMS, "entering"
+	!word HUD_SCR
+	!byte $70				; the blank line
+	!byte $02				; map name, HUD_SCR+40
+	!byte $41				; JVB
+	!word dl_top
+!if (enter_dl & $fc00) != ((* - 1) & $fc00) {
+	!error "enter_dl crosses a 1K boundary"
+}
+
 ; One shot. A level restart must not copy the bitmap over the list.
 dl_taken	!byte 0
 

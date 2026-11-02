@@ -2290,7 +2290,8 @@
       "tag": "stairgroup",
       "elevAuto": false,
       "elevLow": -1,
-      "elevHigh": 0
+      "elevHigh": 0,
+      "elevSlow": true
     },
     {
       "id": "cd1d4315-0cd7-43b9-9280-bf57f68d3c21",
@@ -2308,7 +2309,8 @@
       "tag": "stairgroup",
       "elevAuto": false,
       "elevLow": -1,
-      "elevHigh": 1
+      "elevHigh": 1,
+      "elevSlow": true
     },
     {
       "id": "f17e0c2d-7759-4ae7-9a1d-5f5b514f103c",
@@ -2326,7 +2328,8 @@
       "tag": "stairgroup",
       "elevAuto": false,
       "elevLow": -1,
-      "elevHigh": 2
+      "elevHigh": 2,
+      "elevSlow": true
     },
     {
       "id": "f4b93bf0-60fd-4930-83cd-8f1dc181dd52",
@@ -2344,7 +2347,8 @@
       "tag": "stairgroup",
       "elevAuto": false,
       "elevLow": -1,
-      "elevHigh": 3
+      "elevHigh": 3,
+      "elevSlow": true
     },
     {
       "id": "19658f23-6df4-4981-b682-b6b04e8b308c",

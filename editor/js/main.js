@@ -2677,6 +2677,15 @@ function renderLayoutObjectFields(root, objs) {
         )
       );
     }
+    const allSlow = objs.every((o) => !!o.elevSlow);
+    root.appendChild(
+      toggleField("Quarter speed", allSlow, () =>
+        apply((obj) => {
+          if (allSlow) delete obj.elevSlow;
+          else obj.elevSlow = true;
+        })
+      )
+    );
   }
 
   if (kind === "platform") {

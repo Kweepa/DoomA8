@@ -1094,6 +1094,69 @@ play_up2
 	jsr hud_keys
 	jmp a8_nmi_on
 
+; "entering" / map name, centered, for ENTER_HOLD_MS. NMI is on and
+; den_arm is 1. Death and quickload do not call this.
+ENTER_HOLD_MS	= 2000
+
+enter_card
+	jsr hud_enter_rows
+	lda #<enter_dl
+	sta dl_top+2
+	lda #>enter_dl
+	sta dl_top+3
+	lda #2
+	sta den_arm
+	lda #0
+	sta enter_wait_l
+	sta enter_wait_h
+.ec_hold
+	lda frame_flag
+.ec_wf
+	cmp frame_flag
+	beq .ec_wf
+	clc
+	lda enter_wait_l
+	adc sample_ms
+	sta enter_wait_l
+	lda enter_wait_h
+	adc #0
+	sta enter_wait_h
+	cmp #>ENTER_HOLD_MS
+	bcc .ec_hold
+	bne .ec_blank
+	lda enter_wait_l
+	cmp #<ENTER_HOLD_MS
+	bcc .ec_hold
+.ec_blank
+	lda #1
+	sta den_arm
+	lda frame_flag
+.ec_bf
+	cmp frame_flag
+	beq .ec_bf
+	lda #<DL
+	sta dl_top+2
+	lda #>DL
+	sta dl_top+3
+	jsr init_hud
+	jsr hud_ammo
+	jsr hud_keys
+	lda #0
+	sta $d40e				; NMI off: sei does not block it
+	tax
+.ec_z
+	sta in_fwd,x
+	inx
+	cpx #12					; in_fwd .. in_turn_r
+	bcc .ec_z
+	sta mouse_turn
+	sta mouse_turn_h
+	lda vbi_count_l
+	sta vbi_last_l
+	lda vbi_count_h
+	sta vbi_last_h
+	jmp a8_nmi_on
+
 
 ; TRIG_END: next e1mN, or episode done → menu endings.
 next_level
@@ -1107,6 +1170,7 @@ next_level
 	bcs episode_done
 	lda #1
 	sta den_arm				; DEN stays off until the next published frame
+	jsr enter_card
 	rts
 
 episode_done

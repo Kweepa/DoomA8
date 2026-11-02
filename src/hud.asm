@@ -168,6 +168,60 @@ hud_stax
 	rts
 hud_ch	!byte 0
 
+; Rows 0 and 1 while DMA is off. The blank line between them is enter_dl.
+; "entering" is 8 wide, so the column is (40-8)/2.
+hud_enter_rows
+	lda #<HUD_SCR
+	sta init_ptr
+	lda #>HUD_SCR
+	sta init_ptr+1
+	ldy #0
+	lda #HUD_CH_SP
+.er_sp
+	sta (init_ptr),y
+	iny
+	cpy #80
+	bcc .er_sp
+
+	ldx #16
+	ldy #0
+.er_en
+	lda hud_str_entering,y
+	beq .er_nm
+	jsr hud_stax
+	inx
+	iny
+	bne .er_en
+.er_nm
+	ldy #0
+.er_len
+	+lda_my map_name
+	beq .er_got
+	iny
+	cpy #HUD_MSG_W
+	bcc .er_len
+.er_got
+	sty hud_n
+	lda #HUD_MSG_W
+	sec
+	sbc hud_n
+	lsr
+	tax
+	ldy #0
+	lda #<HUD_SCR + HUD_OFF_MAP
+	sta init_ptr
+	lda #>HUD_SCR + HUD_OFF_MAP
+	sta init_ptr+1
+.er_cp
+	+lda_my map_name
+	beq .er_done
+	jsr hud_stax
+	inx
+	iny
+	cpy #HUD_MSG_W
+	bcc .er_cp
+.er_done
+	rts
 
 ; Row 0: R/P/K/D/C/U milliseconds. D is unused (lines are inside K).
 ; C is clear. U is everything after the last clip.
@@ -803,5 +857,6 @@ th_name_hi
 
 ; ASCII (UI charset), not PETSCII
 hud_str_title	!text "DoomA8",0
+hud_str_entering	!text "entering",0
 hud_str_health	!text "health",0
 hud_str_armour	!text "armour",0
