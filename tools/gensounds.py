@@ -49,6 +49,7 @@ EFFECTS = [
     ("BRSDTH", "DPBRSDTH", 1, 99),
     ("RLAUNC_E", "DPRLAUNC", 1, 50),
     ("SGCOCK", "DPSGCOCK", 0, 50),
+    ("DORCLS", "DPDORCLS", 2, 20),
 ]
 
 # Cue idents for the four shipped types. melee/shoot are what a clip sound frame plays.

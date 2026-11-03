@@ -2613,7 +2613,8 @@ function renderLayoutObjectFields(root, objs) {
     );
   }
 
-  if (usesLinkTag(kind)) {
+  const switchEnds = kind === "switch" && objs.every((o) => !!o.endLevel);
+  if (usesLinkTag(kind) && !switchEnds) {
     const tagCur = unanimous(objs, (o) => o.tag || "");
     root.appendChild(
       field(
@@ -2636,6 +2637,15 @@ function renderLayoutObjectFields(root, objs) {
     const allOn = objs.every((o) => !!o.shootable);
     root.appendChild(
       toggleField("Shootable", allOn, () => apply((obj) => (obj.shootable = !allOn)))
+    );
+    const allEnd = objs.every((o) => !!o.endLevel);
+    root.appendChild(
+      toggleField("End of level", allEnd, () =>
+        apply((obj) => {
+          if (allEnd) delete obj.endLevel;
+          else obj.endLevel = true;
+        })
+      )
     );
   }
 

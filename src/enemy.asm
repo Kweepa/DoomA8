@@ -2169,7 +2169,7 @@ scan_shoot_switches
 	+lda_mx sw_kind
 	bpl .ss_n
 	and #$7f
-	cmp #SW_DEST_TRIG + 1
+	cmp #SW_DEST_END + 1
 	bcs .ss_n
 	+lda_mx sw_y
 	sta box_y

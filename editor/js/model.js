@@ -1973,6 +1973,8 @@ export function clampObject(obj) {
   if (obj.kind === "switch") {
     if (obj.shootable) obj.shootable = true;
     else delete obj.shootable;
+    if (obj.endLevel) obj.endLevel = true;
+    else delete obj.endLevel;
   }
   if (obj.kind === "doorway") {
     obj.lockKey = clampDoorLock(obj.lockKey);
@@ -2054,6 +2056,7 @@ export function createObject(kind, x, y, z, extra = {}) {
   }
   if (usesLinkTag(kind)) obj.tag = clampTag(extra.tag);
   if (kind === "switch" && extra.shootable) obj.shootable = true;
+  if (kind === "switch" && extra.endLevel) obj.endLevel = true;
   if (kind === "elevator") {
     obj.elevAuto = extra.elevAuto !== false;
     if (extra.elevLow != null) obj.elevLow = extra.elevLow | 0;
@@ -3409,6 +3412,7 @@ function parseObjects(list) {
       allEdges: o.allEdges,
       enemy: o.enemy,
       shootable: o.shootable,
+      endLevel: o.endLevel,
       rot: o.rot,
       text: o.text,
       purpose: o.purpose,

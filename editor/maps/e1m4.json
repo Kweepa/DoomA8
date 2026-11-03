@@ -213,7 +213,7 @@
       "x": 180,
       "y": 79,
       "z": 201,
-      "sx": 41,
+      "sx": 45,
       "sy": 14,
       "sz": 18,
       "face": "+z",
@@ -235,7 +235,7 @@
     {
       "id": "0ebb303f-bc0b-4875-86bc-761428e7338c",
       "kind": "elevator",
-      "x": 216,
+      "x": 220,
       "y": 79,
       "z": 201,
       "sx": 5,
@@ -253,7 +253,7 @@
     {
       "id": "4ed262f6-f341-4966-8b01-35d4bcbcc071",
       "kind": "trigger",
-      "x": 214,
+      "x": 218,
       "y": 79,
       "z": 201,
       "sx": 7,
@@ -270,7 +270,7 @@
     {
       "id": "77717336-e2a8-406d-8b2e-67d36ddce17b",
       "kind": "trigger",
-      "x": 217,
+      "x": 221,
       "y": 80,
       "z": 201,
       "sx": 4,
@@ -318,7 +318,7 @@
     {
       "id": "bf062ef1-1e59-4e5d-a8da-e27f919ad00a",
       "kind": "enemy",
-      "x": 211,
+      "x": 215,
       "y": 79,
       "z": 207,
       "sx": 2,
@@ -334,7 +334,7 @@
     {
       "id": "1fd69efd-3144-4626-b628-f141369c5edb",
       "kind": "pickup",
-      "x": 209,
+      "x": 213,
       "y": 79,
       "z": 202,
       "sx": 0.9270509831248422,
@@ -440,21 +440,21 @@
     {
       "id": "cc53fbe0-fd2e-46d0-b66d-956a2c072d04",
       "kind": "doorway",
-      "x": 214,
+      "x": 212,
       "y": 86,
       "z": 178,
       "sx": 1,
       "sy": 5,
       "sz": 4,
-      "face": "+x",
+      "face": "-x",
       "axis": "z",
       "dir": 1,
+      "roomId": "34639e2f-bec8-4b55-a728-6eaeef20da01",
       "lockKey": "unlocked",
       "doorType": "Arch",
       "doorScale": 1,
       "tag": "",
-      "otherRoomId": "34639e2f-bec8-4b55-a728-6eaeef20da01",
-      "roomId": null,
+      "otherRoomId": "4a6815ab-1284-41b8-84b9-f1975fc255ff",
       "locked": false
     },
     {
@@ -988,8 +988,8 @@
       "doorType": "Tech",
       "doorScale": 1,
       "tag": "",
-      "locked": false,
-      "otherRoomId": null
+      "otherRoomId": "1dea66ce-89f4-4972-848e-3c1439671f36",
+      "locked": false
     },
     {
       "id": "f6562dbb-22b5-4857-9e06-a104eb072409",

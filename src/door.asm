@@ -94,27 +94,55 @@ door_unlock_tag
 ; ------------------------------------------------------------------
 ; door_hide_tag — sw_match = cooked tag. uh_hide nonzero sets DOOR_HIDDEN,
 ; zero clears it. Every baked instance of that tag (both rooms).
+; One open (clear) or close (set) if a hidden bit changes. A restart
+; that leaves them shown is silent.
 ; ------------------------------------------------------------------
 door_hide_tag
+	lda #0
+	pha				; 1 = a hidden bit flipped
 	ldx #0
 .dht
 	cpx	map_ndoors
-	bcs .dht_done
+	bcs .dht_snd
 	+lda_mx door_tag
 	cmp sw_match
 	bne .dht_n
 	+lda_mx door_type
 	ldy uh_hide
 	bne .dht_hide
+	and #DOOR_HIDDEN
+	beq .dht_clr
+	pla
+	lda #1
+	pha
+.dht_clr
+	+lda_mx door_type
 	and #($ff - DOOR_HIDDEN)
 	jmp .dht_st
 .dht_hide
+	+lda_mx door_type
+	and #DOOR_HIDDEN
+	bne .dht_set
+	pla
+	lda #1
+	pha
+.dht_set
+	+lda_mx door_type
 	ora #DOOR_HIDDEN
 .dht_st
 	+sta_mx door_type
 .dht_n
 	inx
 	bne .dht
+.dht_snd
+	pla
+	beq .dht_done
+	lda #SOUND_DOROPN
+	ldy uh_hide
+	beq .dht_play
+	lda #SOUND_DORCLS
+.dht_play
+	jsr play_sound
 .dht_done
 	rts
 

@@ -5191,6 +5191,8 @@ function clampObject(obj) {
   if (obj.kind === "switch") {
     if (obj.shootable) obj.shootable = true;
     else delete obj.shootable;
+    if (obj.endLevel) obj.endLevel = true;
+    else delete obj.endLevel;
   }
   if (obj.kind === "doorway") {
     obj.lockKey = clampDoorLock(obj.lockKey);
@@ -5272,6 +5274,7 @@ function createObject(kind, x, y, z, extra = {}) {
   }
   if (usesLinkTag(kind)) obj.tag = clampTag(extra.tag);
   if (kind === "switch" && extra.shootable) obj.shootable = true;
+  if (kind === "switch" && extra.endLevel) obj.endLevel = true;
   if (kind === "elevator") {
     obj.elevAuto = extra.elevAuto !== false;
     if (extra.elevLow != null) obj.elevLow = extra.elevLow | 0;
@@ -6627,6 +6630,7 @@ function parseObjects(list) {
       allEdges: o.allEdges,
       enemy: o.enemy,
       shootable: o.shootable,
+      endLevel: o.endLevel,
       rot: o.rot,
       text: o.text,
       purpose: o.purpose,
@@ -17171,7 +17175,8 @@ function renderLayoutObjectFields(root, objs) {
     );
   }
 
-  if (usesLinkTag(kind)) {
+  const switchEnds = kind === "switch" && objs.every((o) => !!o.endLevel);
+  if (usesLinkTag(kind) && !switchEnds) {
     const tagCur = unanimous(objs, (o) => o.tag || "");
     root.appendChild(
       field(
@@ -17194,6 +17199,15 @@ function renderLayoutObjectFields(root, objs) {
     const allOn = objs.every((o) => !!o.shootable);
     root.appendChild(
       toggleField("Shootable", allOn, () => apply((obj) => (obj.shootable = !allOn)))
+    );
+    const allEnd = objs.every((o) => !!o.endLevel);
+    root.appendChild(
+      toggleField("End of level", allEnd, () =>
+        apply((obj) => {
+          if (allEnd) delete obj.endLevel;
+          else obj.endLevel = true;
+        })
+      )
     );
   }
 

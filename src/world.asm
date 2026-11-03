@@ -1901,7 +1901,7 @@ try_proximity
 	+lda_mx sw_kind
 	bpl .tp_go
 	and #$7f
-	cmp #SW_DEST_TRIG + 1
+	cmp #SW_DEST_END + 1
 	bcs .tp_go			; $ff: no dest
 	jmp .tp_sn			; shootable: bump does not fire it
 .tp_go
@@ -1923,7 +1923,7 @@ try_proximity
 	rts
 
 ; X = switch. Low 7 bits of sw_kind are the dest. SW_SHOOT is ignored.
-; Switch sound unless the dest is none or elev_activate refuses (C=1).
+; Switch sound unless the dest is none, end-of-level, or elev_activate refuses (C=1).
 fire_switch
 	+lda_mx sw_kind
 	and #$7f
@@ -1935,7 +1935,13 @@ fire_switch
 	cmp #SW_DEST_ELEV
 	beq .fs_elev
 	cmp #SW_DEST_TRIG
+	beq .fs_trig
+	cmp #SW_DEST_END
 	bne .fs_rts
+	pla				; drop this jsr
+	pla				; next_level returns to the bump or shot caller
+	jmp next_level
+.fs_trig
 	+lda_mx sw_tag
 	jsr trig_arm_tag
 	jmp .fs_sfx

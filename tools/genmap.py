@@ -493,6 +493,7 @@ def cook_one(level: dict, map_key: str) -> bytes:
     SW_DEST_DOOR = 0
     SW_DEST_ELEV = 1
     SW_DEST_TRIG = 2
+    SW_DEST_END = 3
     SW_SHOOT = 0x80
     TRIG_ENABLE_SHIFT = 4
     TRIG_ENABLE_MAX = 14  # 15 is the spent fan-out gate (world.asm .te_elev)
@@ -858,7 +859,9 @@ def cook_one(level: dict, map_key: str) -> bytes:
         in_elev = tag in elev_by_tag
         in_trig = tag in enable_tag_ids
         hits = int(in_elev) + int(bool(tagged_doors)) + int(in_trig)
-        if not tag:
+        if s.get("endLevel"):
+            kind, arg = SW_DEST_END, 0
+        elif not tag:
             kind, arg = 255, 0
         elif hits > 1:
             raise SystemExit(
@@ -881,7 +884,7 @@ def cook_one(level: dict, map_key: str) -> bytes:
             kind, arg = SW_DEST_TRIG, enable_tag_ids[tag]
         else:
             raise SystemExit(f"{map_key} switch tag {tag!r} has no destination")
-        if s.get("shootable") and kind <= SW_DEST_TRIG:
+        if s.get("shootable") and kind <= SW_DEST_END:
             kind |= SW_SHOOT
         sw_x.append(s["x"])
         sw_y.append(s["y"])
@@ -1302,6 +1305,7 @@ TRIG_GATED_MASK	= $F0
 SW_DEST_DOOR	= 0
 SW_DEST_ELEV	= 1
 SW_DEST_TRIG	= 2
+SW_DEST_END	= 3
 SW_SHOOT	= $80
 FACE_PZ	= 0
 FACE_MZ	= 1

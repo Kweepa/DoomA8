@@ -33,8 +33,9 @@ SOUND_BRSSIT	= 23
 SOUND_BRSDTH	= 24
 SOUND_RLAUNC_E	= 25
 SOUND_SGCOCK	= 26
-SOUND_COUNT	= 27
-SOUND_RESIDENT_N	= 27
+SOUND_DORCLS	= 27
+SOUND_COUNT	= 28
+SOUND_RESIDENT_N	= 28
 !if SOUND_COUNT * 2 > SOUND_TABLE_MAX {
 	!error "sound_table does not fit its BSS window"
 }
@@ -101,8 +102,11 @@ pc_rlaunc_e
 	!byte 40, 25, 26, 21
 pc_sgcock
 	!byte 12, 0, 50, 94, 64, 0, 0, 0, 0, 0, 0, 0, 60, 60, 83
+pc_dorcls
+	!byte 16, 2, 20, 71, 163, 83, 140, 94, 110, 110, 94, 116, 110, 116, 123, 140
+	!byte 140, 151, 163
 
-; resident sound payload 423 bytes
+; resident sound payload 442 bytes
 ; copied into sound_table[0..SOUND_RESIDENT_N-1] by play_sound_init
 sound_res_words
 	!word pc_shotgn
@@ -132,3 +136,4 @@ sound_res_words
 	!word pc_brsdth
 	!word pc_rlaunc_e
 	!word pc_sgcock
+	!word pc_dorcls
