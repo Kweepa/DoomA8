@@ -251,6 +251,34 @@ def xz_aabb_gap(a: dict, b: dict) -> int:
     return dx + dz
 
 
+def xz_strict_overlap(a: dict, b: dict) -> bool:
+    """XZ interiors overlap. A shared edge is not enough."""
+    return (
+        int(a["x"]) < int(b["x"]) + int(b["sx"])
+        and int(b["x"]) < int(a["x"]) + int(a["sx"])
+        and int(a["z"]) < int(b["z"]) + int(b["sz"])
+        and int(b["z"]) < int(a["z"]) + int(a["sz"])
+    )
+
+
+def elev_rest_floor(elev: dict, room: dict) -> int:
+    """Highest collider floor under the car, else the room AABB min Y."""
+    floor = int(room["y"])
+    elev_y = int(elev["y"])
+    best: int | None = None
+    for c in room_geometry(room).get("colliders") or []:
+        if int(c.get("sx") or 0) <= 0:
+            continue
+        cy = int(c["y"])
+        if cy > elev_y:
+            continue
+        if not xz_strict_overlap(elev, c):
+            continue
+        if best is None or cy > best:
+            best = cy
+    return floor if best is None else best
+
+
 def nearest_floor_home(elev: dict, room: dict, floor_y: int) -> int | None:
     """Upper stop so elev top meets another collider floor in this room, or None."""
     elev_sy = int(elev["sy"])
@@ -784,7 +812,7 @@ def cook_one(level: dict, map_key: str) -> bytes:
     elev_id, elev_flags = [], []
     for e in elevs:
         ri = room_index(rooms, e, "elevator")
-        floor_y = rooms[ri]["y"]
+        room_y = int(rooms[ri]["y"])
         elev_x.append(e["x"])
         elev_y.append(e["y"])
         elev_z.append(e["z"])
@@ -793,6 +821,7 @@ def cook_one(level: dict, map_key: str) -> bytes:
         elev_sz.append(e["sz"])
         auto = e.get("elevAuto") is not False
         if auto:
+            floor_y = elev_rest_floor(e, rooms[ri])
             home = e["y"]
             dest = floor_y
             if e["y"] <= floor_y:
@@ -809,8 +838,8 @@ def cook_one(level: dict, map_key: str) -> bytes:
             high = 1 if e.get("elevHigh") is None else int(e["elevHigh"])
             if high <= low:
                 high = low + 1
-            dest = floor_y + low
-            home = floor_y + high
+            dest = room_y + low
+            home = room_y + high
         elev_home.append(home)
         elev_dest.append(dest)
         elev_room.append(ri)

@@ -470,6 +470,35 @@ function xzAabbGap(a, b) {
   return dx + dz;
 }
 
+/** XZ interiors overlap. A shared edge is not enough. */
+function xzStrictOverlap(a, b) {
+  const ax = a.x | 0;
+  const bx = b.x | 0;
+  const az = a.z | 0;
+  const bz = b.z | 0;
+  return (
+    ax < bx + (b.sx | 0) &&
+    bx < ax + (a.sx | 0) &&
+    az < bz + (b.sz | 0) &&
+    bz < az + (a.sz | 0)
+  );
+}
+
+/** Highest collider floor under the car, else the room AABB min Y. */
+function elevRestFloor(elev, room) {
+  const roomY = room.y | 0;
+  const elevY = elev.y | 0;
+  let best = null;
+  for (const c of roomGeometry(room).colliders || []) {
+    if ((c.sx | 0) <= 0) continue;
+    const cy = c.y | 0;
+    if (cy > elevY) continue;
+    if (!xzStrictOverlap(elev, c)) continue;
+    if (best == null || cy > best) best = cy;
+  }
+  return best == null ? roomY : best;
+}
+
 function nearestFloorHome(elev, room, floorY) {
   const elevSy = elev.sy | 0;
   const elevTop = (elev.y | 0) + elevSy;
@@ -549,11 +578,12 @@ function nearestDoorHome(elev, roomId, doors, floorY) {
  */
 export function elevStopBottoms(doc, elev) {
   const room = roomUnderObject(doc, elev) || roomById(doc, elev.roomId);
-  const floorY = room ? room.y | 0 : 0;
+  const roomY = room ? room.y | 0 : 0;
   if (!elevHeightsAuto(elev)) {
     clampElevHeights(elev);
-    return { dest: floorY + elev.elevLow, home: floorY + elev.elevHigh };
+    return { dest: roomY + elev.elevLow, home: roomY + elev.elevHigh };
   }
+  const floorY = room ? elevRestFloor(elev, room) : roomY;
   let home = elev.y | 0;
   let dest = floorY;
   if ((elev.y | 0) <= floorY && room) {
