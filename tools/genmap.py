@@ -812,7 +812,6 @@ def cook_one(level: dict, map_key: str) -> bytes:
     elev_id, elev_flags = [], []
     for e in elevs:
         ri = room_index(rooms, e, "elevator")
-        room_y = int(rooms[ri]["y"])
         elev_x.append(e["x"])
         elev_y.append(e["y"])
         elev_z.append(e["z"])
@@ -838,8 +837,9 @@ def cook_one(level: dict, map_key: str) -> bytes:
             high = 1 if e.get("elevHigh") is None else int(e["elevHigh"])
             if high <= low:
                 high = low + 1
-            dest = room_y + low
-            home = room_y + high
+            room_min_y = int(rooms[ri]["y"])
+            dest = room_min_y + low
+            home = room_min_y + high
         elev_home.append(home)
         elev_dest.append(dest)
         elev_room.append(ri)
