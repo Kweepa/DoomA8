@@ -498,6 +498,7 @@ MOTION_STEP_MS	= 64
 ELEV_STEP_MS	= 128			; half elevator travel speed vs doors
 ELEV_FLAG_SLOW	= 1			; elev_flags bit0: step every 512 ms
 DOOR_RECLOSE_MS	= 5000
+DOOR_UNHIDE_MS	= 10000		; unhide trigger, then hidden again
 ELEV_WAIT_MS	= 5000
 STATUS_MS	= 5000			; backpack / status HUD line
 
@@ -799,7 +800,7 @@ status_ms_l	= $CE90 + A8_OFF			; status HUD remaining ms
 status_ms_h	= $CE91 + A8_OFF
 door_i0		= $CE92 + A8_OFF			; room door slice start
 door_i1		= $CE93 + A8_OFF			; exclusive end
-sw_match	= $CE94 + A8_OFF			; cooked door/enable-tag id while unlocking/arming
+sw_match	= $CE94 + A8_OFF			; cooked door/enable-tag id while unlocking/arming/unhiding
 ; $CE95–$CEAC is atk_kind (ENEMY_MAX). Do not slide en_pain_i.
 atk_kind	= $CE95 + A8_OFF			; ENEMY_MAX: 0 melee, 1 missile
 en_pain_i	= $CEAD + A8_OFF			; ENEMY_MAX: pain/death variant index
@@ -1008,7 +1009,25 @@ saw_rng		= $CFE1 + A8_OFF		; chainsaw bite LFSR; IRQ only, not saved
 elev_y		= $CFE2 + A8_OFF		; MAP_NELEVS (≤8); page $CF so ,x stays in-page
 elev_match	= $CFEA + A8_OFF		; tag group while fanning elev_activate
 elev_hits	= $CFEB + A8_OFF		; cars that started moving this fan-out
-; $CFEC–$CFFF reserved. Charset A is $D000. Do not slide.
+; Unhide timers. Tag 0 = idle. Charset A is $D000. Do not slide.
+UNHIDE_MAX	= 4
+uh_tag		= $CFEC + A8_OFF		; cooked door tag
+uh_lo		= $CFF0 + A8_OFF		; remaining ms
+uh_hi		= $CFF4 + A8_OFF
+uh_hide		= $CFF8 + A8_OFF		; door_hide_tag: 1 = set DOOR_HIDDEN
+; $CFF9–$CFFF reserved.
+!if uh_tag != elev_hits + 1 {
+	!error "uh_tag must follow elev_hits"
+}
+!if uh_tag + UNHIDE_MAX != uh_lo {
+	!error "uh_lo must follow uh_tag"
+}
+!if uh_lo + UNHIDE_MAX != uh_hi {
+	!error "uh_hi must follow uh_lo"
+}
+!if uh_hi + UNHIDE_MAX != uh_hide {
+	!error "uh_hide must follow uh_hi"
+}
 HAVE_YELLOW	= 1
 HAVE_BLUE	= 2
 HAVE_RED	= 4

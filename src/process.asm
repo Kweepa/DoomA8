@@ -9,6 +9,12 @@ proc_init
 	inx
 	cpx #PROC_NUM
 	bne .pi
+	ldx #UNHIDE_MAX - 1
+	lda #0
+.pi_uh
+	sta uh_tag,x
+	dex
+	bpl .pi_uh
 	jsr elev_init
 	lda #0
 	sta in_use
@@ -99,6 +105,7 @@ proc_add_dt
 ; ------------------------------------------------------------------
 ; Loop / next / work are global so elevator.asm can jmp proc_update_next
 proc_update
+	jsr door_unhide_tick
 	ldx #0
 proc_update_loop
 	lda PROC_KIND,x

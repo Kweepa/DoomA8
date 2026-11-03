@@ -362,8 +362,8 @@ export function usesLinkTag(kind) {
   return kind === "switch" || kind === "elevator";
 }
 
-/** Trigger purposes. Tag is used for elevator / summon / unlock. */
-export const TRIGGER_PURPOSES = ["message", "end_level", "hurt", "hurt_small", "elevator", "summon", "unlock"];
+/** Trigger purposes. Tag is used for elevator / summon / unlock / unhide. */
+export const TRIGGER_PURPOSES = ["message", "end_level", "hurt", "hurt_small", "elevator", "summon", "unlock", "unhide"];
 export const TRIGGER_PURPOSE_LABELS = {
   message: "Display message",
   end_level: "End of level",
@@ -372,6 +372,7 @@ export const TRIGGER_PURPOSE_LABELS = {
   elevator: "Activate elevator",
   summon: "Summon elevator",
   unlock: "Unlock door",
+  unhide: "Unhide door for 30s",
 };
 
 export function clampTriggerPurpose(s) {
@@ -380,7 +381,7 @@ export function clampTriggerPurpose(s) {
 
 export function triggerUsesTag(purpose) {
   const p = clampTriggerPurpose(purpose);
-  return p === "elevator" || p === "summon" || p === "unlock";
+  return p === "elevator" || p === "summon" || p === "unlock" || p === "unhide";
 }
 
 export function doorUsesTag(lockKey) {

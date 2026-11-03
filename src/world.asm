@@ -2614,6 +2614,8 @@ trig_enter
 	beq .te_summon
 	cmp #TRIG_UNLOCK
 	beq .te_unlock
+	cmp #TRIG_UNHIDE
+	beq .te_unhide
 	cmp #TRIG_END
 	bne .te_rts
 	jmp next_level
@@ -2673,3 +2675,6 @@ trig_enter
 .te_unlock
 	+lda_mx tr_arg
 	jmp door_unlock_tag
+.te_unhide
+	+lda_mx tr_arg
+	jmp door_unhide_tag

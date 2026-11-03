@@ -471,8 +471,8 @@
       "doorType": "Tech",
       "doorScale": 1,
       "tag": "",
-      "locked": false,
-      "otherRoomId": "582daacc-2f33-463b-843b-084165465999"
+      "otherRoomId": "582daacc-2f33-463b-843b-084165465999",
+      "locked": false
     },
     {
       "id": "582daacc-2f33-463b-843b-084165465999",
@@ -531,8 +531,8 @@
       "doorType": "Tech",
       "doorScale": 1,
       "tag": "",
-      "locked": false,
-      "otherRoomId": "9e53f226-8f0c-4c1a-a183-8ebe1ace68f3"
+      "otherRoomId": "9e53f226-8f0c-4c1a-a183-8ebe1ace68f3",
+      "locked": false
     },
     {
       "id": "95aaaf27-515e-4a47-89a9-b337f96b1b98",
@@ -611,8 +611,8 @@
       "doorType": "Tech",
       "doorScale": 1,
       "tag": "",
-      "locked": false,
-      "otherRoomId": "c1ddf948-13fb-422f-a1ac-4e23d64d6109"
+      "otherRoomId": "c1ddf948-13fb-422f-a1ac-4e23d64d6109",
+      "locked": false
     },
     {
       "id": "c1ddf948-13fb-422f-a1ac-4e23d64d6109",
@@ -791,8 +791,8 @@
       "doorType": "Tech",
       "doorScale": 1,
       "tag": "",
-      "locked": false,
-      "otherRoomId": "b5d4cecc-4cd5-4301-924d-215c56bebefe"
+      "otherRoomId": "b5d4cecc-4cd5-4301-924d-215c56bebefe",
+      "locked": false
     },
     {
       "id": "a668a5bb-f791-4b70-a714-3a798f181f27",
@@ -1244,8 +1244,8 @@
       "purpose": "elevator",
       "text": "",
       "tag": "raisestairs",
-      "roomId": "6c2145f7-e041-4793-885e-8aa933e23a95",
-      "enableTag": "raisestairswitch"
+      "enableTag": "raisestairswitch",
+      "roomId": "6c2145f7-e041-4793-885e-8aa933e23a95"
     }
   ]
 }

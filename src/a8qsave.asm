@@ -14,7 +14,8 @@
 ;   0 magic  1 version  2 checksum (sum of the slot == 0)  3 level_num
 ;   4 nenemies  5 ndoors  6 nthings  7 nelevs  8 ntrigs
 ;   then the INV fields, the WLD fields, door bytes (key | hidden bit),
-;   elevator destination Y.
+;   elevator destination Y, then UNHIDE_MAX unhide timers (tag, ms lo, ms hi).
+;   A zero tag is idle. Older slots are zero-padded, so they restore as idle.
 ; Map counts that do not match the map that was reloaded (editor rebuilt
 ; the level since the save) restore the inventory only.
 ; Overlay state lives in the overlay's own bytes; ZP pointers are scratch
@@ -94,6 +95,7 @@ qso_save
 	jsr qso_fields
 	jsr qso_doors
 	jsr qso_elevs
+	jsr qso_unhides
 	lda src_ptr+1			; cursor must not pass the slot
 	cmp #>(qso_buf + QSO_BYTES)
 	bcc .sv_fit
@@ -157,6 +159,7 @@ qso_restore
 	jsr qso_fields			; WLD: position, pickups, enemies, drops, triggers
 	jsr qso_doors
 	jsr qso_elevs
+	jsr qso_unhides
 	jsr elev_reseat_pickups		; authored-on-car pickups follow the restored stop
 	ldx #0				; living enemies wake up idle at frame 0, hp kept
 .rs_en
@@ -505,6 +508,35 @@ qso_elevs
 	inx
 	bne .el
 .el_done
+	rts
+
+; UNHIDE_MAX timers: tag, remaining ms lo, remaining ms hi. Tag 0 = idle.
+qso_unhides
+	ldy #0
+.uh
+	cpy #UNHIDE_MAX
+	bcs .uh_done
+	lda qso_op
+	cmp #OP_WRITE
+	bne .uh_ld
+	lda uh_tag,y
+	jsr qso_put
+	lda uh_lo,y
+	jsr qso_put
+	lda uh_hi,y
+	jsr qso_put
+	jmp .uh_n
+.uh_ld
+	jsr qso_get
+	sta uh_tag,y
+	jsr qso_get
+	sta uh_lo,y
+	jsr qso_get
+	sta uh_hi,y
+.uh_n
+	iny
+	bne .uh
+.uh_done
 	rts
 
 ; ---------------------------------------------------------------------

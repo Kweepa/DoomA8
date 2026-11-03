@@ -92,6 +92,107 @@ door_unlock_tag
 	rts
 
 ; ------------------------------------------------------------------
+; door_hide_tag — sw_match = cooked tag. uh_hide nonzero sets DOOR_HIDDEN,
+; zero clears it. Every baked instance of that tag (both rooms).
+; ------------------------------------------------------------------
+door_hide_tag
+	ldx #0
+.dht
+	cpx	map_ndoors
+	bcs .dht_done
+	+lda_mx door_tag
+	cmp sw_match
+	bne .dht_n
+	+lda_mx door_type
+	ldy uh_hide
+	bne .dht_hide
+	and #($ff - DOOR_HIDDEN)
+	jmp .dht_st
+.dht_hide
+	ora #DOOR_HIDDEN
+.dht_st
+	+sta_mx door_type
+.dht_n
+	inx
+	bne .dht
+.dht_done
+	rts
+
+; ------------------------------------------------------------------
+; door_unhide_tag — A = cooked tag. Show those doors for DOOR_UNHIDE_MS.
+; Entering again restarts the same timer. No free slot: leave them hidden.
+; ------------------------------------------------------------------
+door_unhide_tag
+	sta sw_match
+	ldx #0
+.dut_find
+	cpx #UNHIDE_MAX
+	bcs .dut_claim
+	lda uh_tag,x
+	cmp sw_match
+	beq .dut_arm
+	inx
+	jmp .dut_find
+.dut_claim
+	ldx #0
+.dut_free
+	cpx #UNHIDE_MAX
+	bcs .dut_rts
+	lda uh_tag,x
+	beq .dut_take
+	inx
+	jmp .dut_free
+.dut_take
+	lda sw_match
+	sta uh_tag,x
+.dut_arm
+	lda #<DOOR_UNHIDE_MS
+	sta uh_lo,x
+	lda #>DOOR_UNHIDE_MS
+	sta uh_hi,x
+	lda #0
+	sta uh_hide
+	jmp door_hide_tag
+.dut_rts
+	rts
+
+; ------------------------------------------------------------------
+; door_unhide_tick — one frame off each live unhide timer. Expired slots
+; hide their tag again. Called from proc_update.
+; ------------------------------------------------------------------
+door_unhide_tick
+	ldx #0
+.duh
+	cpx #UNHIDE_MAX
+	bcs .duh_done
+	lda uh_tag,x
+	beq .duh_n
+	sec
+	lda uh_lo,x
+	sbc dt_ms
+	sta uh_lo,x
+	lda uh_hi,x
+	sbc dt_msh
+	sta uh_hi,x
+	bcs .duh_n
+	lda uh_tag,x
+	sta sw_match
+	lda #0
+	sta uh_tag,x
+	lda #1
+	sta uh_hide
+	txa
+	pha
+	jsr door_hide_tag
+	pla
+	tax
+.duh_n
+	inx
+	jmp .duh
+.duh_done
+	rts
+
+; ------------------------------------------------------------------
 ; door_blocks — col_x/col_z vs locked door in this room. C=1 blocked
 ; door_blocks_y — Y = room
 ; ------------------------------------------------------------------

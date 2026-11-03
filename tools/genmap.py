@@ -428,10 +428,11 @@ def cook_one(level: dict, map_key: str) -> bytes:
     TRIG_MSG = 0
     TRIG_END = 1
     TRIG_HURT = 2
-    # 3 unused (was teleport). Do not renumber.
+    # 3 unused (was teleport). 8 unused (was electrode). Do not renumber.
     TRIG_ELEV = 4
     TRIG_SUMMON = 5
     TRIG_UNLOCK = 6
+    TRIG_UNHIDE = 7
     TRIG_HURT_SM = 9
     TRIG_PURPOSE = {
         "message": TRIG_MSG,
@@ -441,6 +442,7 @@ def cook_one(level: dict, map_key: str) -> bytes:
         "elevator": TRIG_ELEV,
         "summon": TRIG_SUMMON,
         "unlock": TRIG_UNLOCK,
+        "unhide": TRIG_UNHIDE,
     }
     SW_DEST_DOOR = 0
     SW_DEST_ELEV = 1
@@ -483,6 +485,19 @@ def cook_one(level: dict, map_key: str) -> bytes:
             raise SystemExit(
                 f"{map_key} remote door tag {tag!r} has no switch or unlock trigger"
             )
+
+    # Hidden non-remote doors get a tag id only for unhide triggers.
+    # Assigned after remote ids so existing remote tag numbers stay put.
+    for d in doors:
+        if not d.get("hidden") or door_lock_key(d) == 3:
+            continue
+        tag = obj_tag(d)
+        if not tag or tag in door_tag_ids:
+            continue
+        n = len(door_tag_ids) + 1
+        if n > 255:
+            raise SystemExit(f"{map_key} has too many door tags")
+        door_tag_ids[tag] = n
 
     enable_tag_ids: dict[str, int] = {}
     for t in triggers:
@@ -643,7 +658,8 @@ def cook_one(level: dict, map_key: str) -> bytes:
         if d.get("hidden"):
             dtype |= 0x80
         did = map_id[id(d)]
-        tag_id = door_tag_ids.get(obj_tag(d), 0) if key == 3 else 0
+        ot = obj_tag(d)
+        tag_id = door_tag_ids[ot] if ot and (key == 3 or d.get("hidden")) else 0
         base = {
             "x": d["x"],
             "y": d["y"],
@@ -884,7 +900,10 @@ def cook_one(level: dict, map_key: str) -> bytes:
             arg = elev_by_tag[tag]
         elif purpose == TRIG_UNLOCK:
             tag = obj_tag(t)
-            if tag in door_tag_ids:
+            remote_hit = any(
+                door_lock_key(d) == 3 and obj_tag(d) == tag for d in doors
+            )
+            if remote_hit:
                 arg = door_tag_ids[tag]
             elif tag in elev_by_tag:
                 raise SystemExit(
@@ -898,6 +917,38 @@ def cook_one(level: dict, map_key: str) -> bytes:
                 raise SystemExit(
                     f"{map_key} unlock trigger tag {tag!r} has no remote door"
                 )
+        elif purpose == TRIG_UNHIDE:
+            tag = obj_tag(t)
+            if tag in elev_by_tag:
+                raise SystemExit(
+                    f"{map_key} unhide trigger tag {tag!r} is an elevator (use elevator/summon)"
+                )
+            group = doors_by_tag.get(tag, [])
+            hidden = [d for d in group if d.get("hidden")]
+            if not hidden:
+                if group:
+                    raise SystemExit(
+                        f"{map_key} unhide trigger tag {tag!r} matches a doorway that is not hidden"
+                    )
+                raise SystemExit(
+                    f"{map_key} unhide trigger tag {tag!r} has no hidden door"
+                )
+            if len(hidden) != len(group):
+                raise SystemExit(
+                    f"{map_key} unhide trigger tag {tag!r} matches a doorway that is not hidden"
+                )
+            if any(obj_tag(s) == tag for s in switches):
+                raise SystemExit(
+                    f"{map_key} unhide trigger tag {tag!r} is also a switch"
+                )
+            if any(
+                (u.get("purpose") or "") == "unlock" and obj_tag(u) == tag
+                for u in triggers
+            ):
+                raise SystemExit(
+                    f"{map_key} unhide trigger tag {tag!r} is also an unlock trigger"
+                )
+            arg = door_tag_ids[tag]
         tr_x.append(t["x"])
         tr_y.append(t["y"])
         tr_z.append(t["z"])
@@ -1176,10 +1227,11 @@ MAP_NLEVELS	= 8
 TRIG_MSG	= 0
 TRIG_END	= 1
 TRIG_HURT	= 2
-; 3 unused (was teleport). 7 and 8 unused (were electrode). Do not renumber.
+; 3 unused (was teleport). 8 unused (was electrode). Do not renumber.
 TRIG_ELEV	= 4
 TRIG_SUMMON	= 5
 TRIG_UNLOCK	= 6
+TRIG_UNHIDE	= 7
 TRIG_HURT_SM	= 9
 TRIG_PURPOSE_MASK	= $0F
 TRIG_GATED_MASK	= $F0

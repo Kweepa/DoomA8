@@ -15,10 +15,11 @@ START_LEVEL	= 1
 TRIG_MSG	= 0
 TRIG_END	= 1
 TRIG_HURT	= 2
-; 3 unused (was teleport). 7 and 8 unused (were electrode). Do not renumber.
+; 3 unused (was teleport). 8 unused (was electrode). Do not renumber.
 TRIG_ELEV	= 4
 TRIG_SUMMON	= 5
 TRIG_UNLOCK	= 6
+TRIG_UNHIDE	= 7
 TRIG_HURT_SM	= 9
 TRIG_PURPOSE_MASK	= $0F
 TRIG_GATED_MASK	= $F0

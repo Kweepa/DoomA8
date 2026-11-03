@@ -3576,8 +3576,8 @@ function usesLinkTag(kind) {
   return kind === "switch" || kind === "elevator";
 }
 
-/** Trigger purposes. Tag is used for elevator / summon / unlock. */
-const TRIGGER_PURPOSES = ["message", "end_level", "hurt", "hurt_small", "elevator", "summon", "unlock"];
+/** Trigger purposes. Tag is used for elevator / summon / unlock / unhide. */
+const TRIGGER_PURPOSES = ["message", "end_level", "hurt", "hurt_small", "elevator", "summon", "unlock", "unhide"];
 const TRIGGER_PURPOSE_LABELS = {
   message: "Display message",
   end_level: "End of level",
@@ -3586,6 +3586,7 @@ const TRIGGER_PURPOSE_LABELS = {
   elevator: "Activate elevator",
   summon: "Summon elevator",
   unlock: "Unlock door",
+  unhide: "Unhide door for 30s",
 };
 
 function clampTriggerPurpose(s) {
@@ -3594,7 +3595,7 @@ function clampTriggerPurpose(s) {
 
 function triggerUsesTag(purpose) {
   const p = clampTriggerPurpose(purpose);
-  return p === "elevator" || p === "summon" || p === "unlock";
+  return p === "elevator" || p === "summon" || p === "unlock" || p === "unhide";
 }
 
 function doorUsesTag(lockKey) {
@@ -17044,7 +17045,9 @@ function renderLayoutObjectFields(root, objs) {
             placeholder:
               purpose === "elevator"
                 ? "every elevator with this tag"
-                : "destination tag",
+                : purpose === "unhide"
+                  ? "hidden door tag"
+                  : "destination tag",
             onChange: (v) => apply((obj) => (obj.tag = clampTag(v))),
           })
         )
@@ -17192,14 +17195,16 @@ function renderLayoutObjectFields(root, objs) {
         )
       )
     );
-    if (lockCur !== undefined && doorUsesTag(lockCur)) {
+    const tagForRemote = lockCur !== undefined && doorUsesTag(lockCur);
+    const tagForHidden = objs.some((o) => o.hidden);
+    if (tagForRemote || tagForHidden) {
       const tagCur = unanimous(objs, (o) => o.tag || "");
       root.appendChild(
         field(
           "Tag",
           textInputMixed(tagCur, {
             maxLength: MAX_TAG_LEN,
-            placeholder: "destination tag",
+            placeholder: tagForRemote ? "destination tag" : "unhide trigger tag",
             onChange: (v) => apply((obj) => (obj.tag = clampTag(v))),
           })
         )

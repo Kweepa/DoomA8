@@ -2587,7 +2587,9 @@ function renderLayoutObjectFields(root, objs) {
             placeholder:
               purpose === "elevator"
                 ? "every elevator with this tag"
-                : "destination tag",
+                : purpose === "unhide"
+                  ? "hidden door tag"
+                  : "destination tag",
             onChange: (v) => apply((obj) => (obj.tag = clampTag(v))),
           })
         )
@@ -2735,14 +2737,16 @@ function renderLayoutObjectFields(root, objs) {
         )
       )
     );
-    if (lockCur !== undefined && doorUsesTag(lockCur)) {
+    const tagForRemote = lockCur !== undefined && doorUsesTag(lockCur);
+    const tagForHidden = objs.some((o) => o.hidden);
+    if (tagForRemote || tagForHidden) {
       const tagCur = unanimous(objs, (o) => o.tag || "");
       root.appendChild(
         field(
           "Tag",
           textInputMixed(tagCur, {
             maxLength: MAX_TAG_LEN,
-            placeholder: "destination tag",
+            placeholder: tagForRemote ? "destination tag" : "unhide trigger tag",
             onChange: (v) => apply((obj) => (obj.tag = clampTag(v))),
           })
         )
