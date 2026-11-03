@@ -731,7 +731,7 @@
       "kind": "pickup",
       "x": 176,
       "y": 77,
-      "z": 75,
+      "z": 74,
       "sx": 0.9270509831248422,
       "sy": 1.5,
       "sz": 0.8028497019894523,
@@ -1498,12 +1498,12 @@
       "axis": "z",
       "dir": 1,
       "roomId": "bf6c7d9a-6116-46d9-9eac-7117b317389b",
-      "lockKey": "unlocked",
+      "lockKey": "blue",
       "doorType": "Tech",
       "doorScale": 1,
       "tag": "",
       "otherRoomId": "68f12cc0-5bf8-42c4-b73b-42da1f21a397",
-      "locked": false
+      "locked": true
     },
     {
       "id": "5a6079b3-3420-4401-8234-336c84221b74",
@@ -1625,7 +1625,8 @@
       "axis": "z",
       "dir": 1,
       "roomId": "3dbf9460-cb7f-4633-a5cf-6a6d188b8cb3",
-      "tag": ""
+      "tag": "",
+      "endLevel": true
     },
     {
       "id": "0af21348-275a-4304-be7c-9d3c540809dd",
@@ -2342,21 +2343,6 @@
       "pickup": "barrel"
     },
     {
-      "id": "512cfb04-12f1-4666-a5bf-dcf35762e34e",
-      "kind": "pickup",
-      "x": 170,
-      "y": 69,
-      "z": 32,
-      "sx": 0.9270509831248422,
-      "sy": 1.5,
-      "sz": 0.8028497019894523,
-      "face": "+z",
-      "axis": "z",
-      "dir": 1,
-      "roomId": "98b7247f-8162-445e-a38d-b677e5fc8247",
-      "pickup": "shells"
-    },
-    {
       "id": "409d7713-bf23-49a2-a567-017ad67667c1",
       "kind": "pickup",
       "x": 149,
@@ -2385,6 +2371,51 @@
       "dir": 1,
       "roomId": "b9b32a06-f0f4-4c83-aa8c-5f12b76700fe",
       "pickup": "barrel"
+    },
+    {
+      "id": "b2fbd435-6c75-4e74-8cf0-c9cfef6331c1",
+      "kind": "pickup",
+      "x": 176,
+      "y": 77,
+      "z": 76,
+      "sx": 0.9270509831248422,
+      "sy": 1.5,
+      "sz": 0.8028497019894523,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "roomId": "8a871d3b-2329-48ee-871d-68c2c9dd3715",
+      "pickup": "shotgun"
+    },
+    {
+      "id": "2b63a819-040f-4a3c-a01d-55b1fb99e493",
+      "kind": "pickup",
+      "x": 170,
+      "y": 69,
+      "z": 33,
+      "sx": 0.9270509831248422,
+      "sy": 1.5,
+      "sz": 0.8028497019894523,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "roomId": "98b7247f-8162-445e-a38d-b677e5fc8247",
+      "pickup": "ammo box"
+    },
+    {
+      "id": "aa202e45-b255-4336-b207-ac4b567e35cd",
+      "kind": "pickup",
+      "x": 107,
+      "y": 58,
+      "z": 48,
+      "sx": 0.9270509831248422,
+      "sy": 1.5,
+      "sz": 0.8028497019894523,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "roomId": "b0bd609c-c09c-458a-bed8-bdcdea00052d",
+      "pickup": "small health"
     }
   ]
 }

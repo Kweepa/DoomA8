@@ -1244,7 +1244,8 @@
       "axis": "z",
       "dir": 1,
       "roomId": "475d0d03-6f3d-4cb1-a90f-fef02ceea799",
-      "tag": "endswitch"
+      "tag": "endswitch",
+      "endLevel": true
     },
     {
       "id": "151ec8d1-c561-44d2-8e54-9414776fbf1d",
@@ -1279,24 +1280,6 @@
       "purpose": "elevator",
       "text": "",
       "tag": "endlift",
-      "roomId": "475d0d03-6f3d-4cb1-a90f-fef02ceea799"
-    },
-    {
-      "id": "c7496471-3072-40e3-afe7-3e0a0bd9f183",
-      "kind": "trigger",
-      "x": 154,
-      "y": 26,
-      "z": 168,
-      "sx": 7,
-      "sy": 4,
-      "sz": 6,
-      "face": "+z",
-      "axis": "z",
-      "dir": 1,
-      "purpose": "end_level",
-      "text": "",
-      "tag": "",
-      "enableTag": "endswitch",
       "roomId": "475d0d03-6f3d-4cb1-a90f-fef02ceea799"
     },
     {

@@ -1,5 +1,5 @@
 {
-  "name": "The Door to Chthon",
+  "name": "Central Processing",
   "objects": [
     {
       "id": "534c60db-2c9b-47f4-9432-3e09383a1490",
@@ -529,6 +529,68 @@
       "dir": 1,
       "roomId": "c9287f12-f5e7-4e4b-9241-095208ff4326",
       "pickup": "shells"
+    },
+    {
+      "id": "c5dbcabd-a2a4-4c98-8845-dec46bc292e8",
+      "kind": "pickup",
+      "x": 105,
+      "y": 60,
+      "z": 9,
+      "sx": 0.9270509831248422,
+      "sy": 1.5,
+      "sz": 0.8028497019894523,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "roomId": "534c60db-2c9b-47f4-9432-3e09383a1490",
+      "pickup": "shells"
+    },
+    {
+      "id": "0fc6bbdf-a525-42cb-87b3-1c2252970f8c",
+      "kind": "pickup",
+      "x": 106,
+      "y": 60,
+      "z": 13,
+      "sx": 0.9270509831248422,
+      "sy": 1.5,
+      "sz": 0.8028497019894523,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "roomId": "534c60db-2c9b-47f4-9432-3e09383a1490",
+      "pickup": "shotgun"
+    },
+    {
+      "id": "12507084-eabf-4ca6-840c-46063e39887b",
+      "kind": "pickup",
+      "x": 145,
+      "y": 60,
+      "z": 21,
+      "sx": 0.9270509831248422,
+      "sy": 1.5,
+      "sz": 0.8028497019894523,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "roomId": "534c60db-2c9b-47f4-9432-3e09383a1490",
+      "pickup": "small health"
+    },
+    {
+      "id": "0197519f-8b5a-43ed-ab6c-3b90b166c7b3",
+      "kind": "trigger",
+      "x": 104,
+      "y": 58,
+      "z": 25,
+      "sx": 20,
+      "sy": 1,
+      "sz": 19,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "purpose": "hurt_small",
+      "text": "",
+      "tag": "",
+      "roomId": "c9287f12-f5e7-4e4b-9241-095208ff4326"
     }
   ]
 }

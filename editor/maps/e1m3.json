@@ -1810,25 +1810,8 @@
       "axis": "z",
       "dir": 1,
       "roomId": "244dca84-fe05-4cc8-a3a4-882b23b643cb",
-      "tag": "end"
-    },
-    {
-      "id": "418c224f-162c-4f59-9d46-260ebf484a99",
-      "kind": "trigger",
-      "x": 225,
-      "y": 62,
-      "z": 120,
-      "sx": 8,
-      "sy": 4,
-      "sz": 8,
-      "face": "+z",
-      "axis": "z",
-      "dir": 1,
-      "purpose": "end_level",
-      "text": "",
-      "tag": "",
-      "enableTag": "end",
-      "roomId": "244dca84-fe05-4cc8-a3a4-882b23b643cb"
+      "tag": "end",
+      "endLevel": true
     },
     {
       "id": "2c1961c5-f519-4f0c-9c13-5496e57f1586",

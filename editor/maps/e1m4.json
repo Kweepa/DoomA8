@@ -454,8 +454,8 @@
       "doorType": "Arch",
       "doorScale": 1,
       "tag": "",
-      "otherRoomId": "4a6815ab-1284-41b8-84b9-f1975fc255ff",
-      "locked": false
+      "locked": false,
+      "otherRoomId": null
     },
     {
       "id": "ee56e5aa-2c09-4b48-b096-9742988339cf",
@@ -1550,7 +1550,7 @@
       "axis": "z",
       "dir": 1,
       "name": "",
-      "a8Bg": 36,
+      "a8Bg": 116,
       "shape": "box",
       "rx": 0,
       "ry": 0,
@@ -1613,8 +1613,8 @@
       "doorType": "Tech",
       "doorScale": 1,
       "tag": "",
-      "locked": true,
-      "otherRoomId": null
+      "otherRoomId": "0975f5ea-0981-4d75-ae81-b592e8be0ea5",
+      "locked": true
     },
     {
       "id": "507cc9dd-16fd-42b0-8758-c0dd49dc430b",
@@ -1750,7 +1750,7 @@
       "axis": "z",
       "dir": 1,
       "roomId": "31a71a5a-570c-484a-a741-e5b84ec40921",
-      "tag": "",
+      "tag": "raiseit",
       "elevAuto": true,
       "elevLow": 0,
       "elevHigh": 1
@@ -1768,12 +1768,12 @@
       "axis": "z",
       "dir": 1,
       "roomId": "31a71a5a-570c-484a-a741-e5b84ec40921",
-      "lockKey": "unlocked",
+      "lockKey": "yellow",
       "doorType": "Tech",
       "doorScale": 1,
       "tag": "",
       "otherRoomId": "7c4b2bf6-94b4-4991-b55d-ba306e8c973b",
-      "locked": false
+      "locked": true
     },
     {
       "id": "7c4b2bf6-94b4-4991-b55d-ba306e8c973b",
@@ -1853,7 +1853,7 @@
       "axis": "z",
       "dir": 1,
       "roomId": "7c4b2bf6-94b4-4991-b55d-ba306e8c973b",
-      "tag": ""
+      "tag": "raiseit"
     },
     {
       "id": "46f43fd1-db9b-44c1-b96a-5cdf05299590",
@@ -2233,7 +2233,8 @@
       "axis": "z",
       "dir": 1,
       "roomId": "6f30c671-85b0-43cf-9520-b43cd5ea3b43",
-      "tag": ""
+      "tag": "",
+      "endLevel": true
     },
     {
       "id": "4e4d581c-5560-46a4-b371-300c77859664",
@@ -2367,6 +2368,140 @@
       "dir": 1,
       "roomId": "0975f5ea-0981-4d75-ae81-b592e8be0ea5",
       "pickup": "small health"
+    },
+    {
+      "id": "29a0f37f-1491-43fe-a484-eac04546838f",
+      "kind": "crate",
+      "x": 128,
+      "y": 86,
+      "z": 208,
+      "sx": 4,
+      "sy": 2,
+      "sz": 21,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "roomId": "d36447c0-989d-4bc6-8252-4061a7f0f2e3"
+    },
+    {
+      "id": "efd54b92-1e1b-448e-a0f2-d5cd825cabd6",
+      "kind": "crate",
+      "x": 122,
+      "y": 86,
+      "z": 212,
+      "sx": 6,
+      "sy": 2,
+      "sz": 4,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "roomId": "d36447c0-989d-4bc6-8252-4061a7f0f2e3"
+    },
+    {
+      "id": "89a95151-a3cb-4aa1-a5ee-63af1ceec837",
+      "kind": "crate",
+      "x": 132,
+      "y": 86,
+      "z": 222,
+      "sx": 6,
+      "sy": 2,
+      "sz": 4,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "roomId": "d36447c0-989d-4bc6-8252-4061a7f0f2e3"
+    },
+    {
+      "id": "e853293c-f874-48c2-abb2-c0aaedca5b35",
+      "kind": "enemy",
+      "x": 123,
+      "y": 86,
+      "z": 220,
+      "sx": 2,
+      "sy": 4,
+      "sz": 2,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "rot": 2,
+      "enemy": "Possessed",
+      "roomId": "d36447c0-989d-4bc6-8252-4061a7f0f2e3"
+    },
+    {
+      "id": "852c00d1-c4b3-4fb3-ae21-3462e60a197d",
+      "kind": "enemy",
+      "x": 135,
+      "y": 86,
+      "z": 216,
+      "sx": 2,
+      "sy": 4,
+      "sz": 2,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "rot": 6,
+      "enemy": "Possessed",
+      "roomId": "d36447c0-989d-4bc6-8252-4061a7f0f2e3"
+    },
+    {
+      "id": "8c2e67d0-baef-4428-b5ee-c5c3fc7afad9",
+      "kind": "pickup",
+      "x": 111,
+      "y": 86,
+      "z": 149,
+      "sx": 0.9270509831248422,
+      "sy": 1.5,
+      "sz": 0.8028497019894523,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "roomId": "bbb49c0c-ad31-4c30-a425-16eace3447b6",
+      "pickup": "lightpost"
+    },
+    {
+      "id": "0ef09fd9-36e6-4206-8a02-9e4ec5a385c3",
+      "kind": "pickup",
+      "x": 117,
+      "y": 86,
+      "z": 149,
+      "sx": 0.9270509831248422,
+      "sy": 1.5,
+      "sz": 0.8028497019894523,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "roomId": "bbb49c0c-ad31-4c30-a425-16eace3447b6",
+      "pickup": "lightpost"
+    },
+    {
+      "id": "cf020fd8-a7c4-401e-b3c2-938a2bc5cedc",
+      "kind": "pickup",
+      "x": 72,
+      "y": 83,
+      "z": 113,
+      "sx": 0.9270509831248422,
+      "sy": 1.5,
+      "sz": 0.8028497019894523,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "roomId": "f1db2246-be92-4d60-8353-39a9b1b57415",
+      "pickup": "box of rockets"
+    },
+    {
+      "id": "adfd09b0-9286-4c0d-9d23-f7f532811390",
+      "kind": "pickup",
+      "x": 85,
+      "y": 83,
+      "z": 146,
+      "sx": 0.9270509831248422,
+      "sy": 1.5,
+      "sz": 0.8028497019894523,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "roomId": "e948e468-b963-4ab5-bfc0-7badb1d401d6",
+      "pickup": "large health"
     }
   ]
 }

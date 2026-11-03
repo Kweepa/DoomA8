@@ -729,7 +729,8 @@
       "axis": "z",
       "dir": 1,
       "roomId": "7402caf1-af1e-4f03-ab38-5a008a255b7f",
-      "tag": "end"
+      "tag": "end",
+      "endLevel": true
     },
     {
       "id": "560263f7-4d73-41a2-8629-d050ed58bb42",
@@ -810,24 +811,6 @@
       "rot": 0,
       "enemy": "Imp",
       "roomId": "7829dd75-fb2b-45f0-8433-12f03dd4f80f"
-    },
-    {
-      "id": "c38ef37f-a08f-42d6-b356-517ee4fbea81",
-      "kind": "trigger",
-      "x": 114,
-      "y": 57,
-      "z": 58,
-      "sx": 8,
-      "sy": 4,
-      "sz": 8,
-      "face": "+z",
-      "axis": "z",
-      "dir": 1,
-      "purpose": "end_level",
-      "text": "",
-      "tag": "",
-      "enableTag": "end",
-      "roomId": "7402caf1-af1e-4f03-ab38-5a008a255b7f"
     },
     {
       "id": "ae284ada-6156-47d8-9fc7-5af715465936",
