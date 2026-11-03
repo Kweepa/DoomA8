@@ -74,8 +74,8 @@
       "doorType": "Tech",
       "doorScale": 1,
       "tag": "",
-      "locked": false,
-      "otherRoomId": "34639e2f-bec8-4b55-a728-6eaeef20da01"
+      "otherRoomId": "34639e2f-bec8-4b55-a728-6eaeef20da01",
+      "locked": false
     },
     {
       "id": "0f08715e-3a90-4759-a6ae-2b2db8d968d6",
@@ -245,7 +245,7 @@
       "axis": "z",
       "dir": 1,
       "roomId": "7e31831c-f9c3-45a3-a138-bf1032fdc3ad",
-      "tag": "",
+      "tag": "e0ebb303fbc0b487",
       "elevAuto": true,
       "elevLow": 0,
       "elevHigh": 1
@@ -264,7 +264,7 @@
       "dir": 1,
       "purpose": "summon",
       "text": "",
-      "tag": "",
+      "tag": "e0ebb303fbc0b487",
       "roomId": "7e31831c-f9c3-45a3-a138-bf1032fdc3ad"
     },
     {
@@ -281,7 +281,7 @@
       "dir": 1,
       "purpose": "elevator",
       "text": "",
-      "tag": "",
+      "tag": "e0ebb303fbc0b487",
       "roomId": "7e31831c-f9c3-45a3-a138-bf1032fdc3ad"
     },
     {
@@ -768,7 +768,7 @@
       "axis": "z",
       "dir": 1,
       "roomId": "aa8f1942-9a1a-4deb-9453-ea1345b5e955",
-      "tag": "",
+      "tag": "e6f3e5bcc5148431",
       "elevAuto": true,
       "elevLow": 0,
       "elevHigh": 1
@@ -827,7 +827,7 @@
       "dir": 1,
       "purpose": "summon",
       "text": "",
-      "tag": "",
+      "tag": "e6f3e5bcc5148431",
       "roomId": "aa8f1942-9a1a-4deb-9453-ea1345b5e955"
     },
     {
@@ -844,7 +844,7 @@
       "dir": 1,
       "purpose": "elevator",
       "text": "",
-      "tag": "",
+      "tag": "e6f3e5bcc5148431",
       "roomId": "aa8f1942-9a1a-4deb-9453-ea1345b5e955"
     },
     {
@@ -1131,7 +1131,7 @@
       "axis": "z",
       "dir": 1,
       "roomId": "1dea66ce-89f4-4972-848e-3c1439671f36",
-      "tag": "",
+      "tag": "e7f6bd5902aaf44a",
       "elevAuto": true,
       "elevLow": 0,
       "elevHigh": 1
@@ -1148,9 +1148,9 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "purpose": "message",
+      "purpose": "summon",
       "text": "",
-      "tag": "",
+      "tag": "e7f6bd5902aaf44a",
       "roomId": "1dea66ce-89f4-4972-848e-3c1439671f36"
     },
     {
@@ -1167,7 +1167,7 @@
       "dir": 1,
       "purpose": "elevator",
       "text": "",
-      "tag": "",
+      "tag": "e7f6bd5902aaf44a",
       "roomId": "1dea66ce-89f4-4972-848e-3c1439671f36"
     },
     {
