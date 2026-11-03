@@ -123,6 +123,7 @@ def main() -> None:
         <ul id="enemy-list" class="object-list"></ul>
         <div class="toolbar-actions mdl-overlay-row">
           <button type="button" id="btn-mdl-overlay" class="toggle active">Ref sprite</button>
+          <button type="button" id="btn-collision-overlay" class="toggle active" title="Player-vs-enemy block volume (ENEMY_BLOCK_R x ENEMY_CULL_H)">Collision</button>
         </div>
         <div class="btn-row">
           <button type="button" id="btn-anim-folder">Open shareware folder</button>

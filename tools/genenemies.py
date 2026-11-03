@@ -25,7 +25,7 @@ TYPES = ["Possessed", "Baron", "Pinky", "Imp"]
 DOS_NAME = ["poss", "baron", "pinky", "imp"]
 ENEMY_POSE_MAX = 7680
 ENEMY_DATA_BASE = 0x0701  # mem.asm asserts its ENEMY_DATA_BASE == $0701
-META_ROW = 33  # mem.asm META_ROW; prepended to every .pose
+META_ROW = 34  # mem.asm META_ROW; prepended to every .pose
 PAIN_MAX = 4
 PAIN_KEY = re.compile(r"^pain[a-z]?$")
 DEATH_KEY = re.compile(r"^(bdeath|death[a-z]?)$")
@@ -51,6 +51,9 @@ RANGE = {
 DEFAULT_PAIN_CHANCE = 0x80
 PAIN_CHANCE = {"Imp": 0xFF, "Pinky": 0xFF, "Baron": 0}
 ENEMY_CLASS = {}
+# Editor blockR wins. Footprint is (2R+1) cells square.
+DEFAULT_BLOCK_R = 1
+BLOCK_R_MAX = 3
 
 # Single roles: (clip_name, len_override|None). Attack: first matching clip name.
 # Imp and Baron share that one clip between claw and fireball.
@@ -367,7 +370,7 @@ def pad_variants(clips: list[tuple[int, int]]) -> tuple[int, list[int], list[int
 
 
 def build_meta_row(name: str, enemy: dict, nframes: int, n_stored: int) -> bytes:
-    """33-byte pose prefix. Offsets match copy_meta_row in loader.asm."""
+    """34-byte pose prefix. Offsets match copy_meta_row in loader.asm."""
     row = bytearray(META_ROW)
     o = 0
     for role in ("stand", "alert", "run", "walk"):
@@ -406,6 +409,8 @@ def build_meta_row(name: str, enemy: dict, nframes: int, n_stored: int) -> bytes
     row[o] = ENEMY_CLASS.get(name, 0)
     o += 1
     row[o] = n_stored & 0xFF
+    o += 1
+    row[o] = enemy_block_r_byte(enemy)
     o += 1
     if o != META_ROW:
         raise SystemExit(f"{name}: meta row wrote {o} bytes, expected {META_ROW}")
@@ -633,6 +638,16 @@ def enemy_pain_chance_byte(enemy: dict, name: str) -> int:
     return max(0, min(255, v))
 
 
+def enemy_block_r_byte(enemy: dict) -> int:
+    """Player-vs-enemy Chebyshev radius in cells (editor blockR, 0..3)."""
+    raw = enemy.get("blockR", DEFAULT_BLOCK_R)
+    try:
+        v = int(raw)
+    except (TypeError, ValueError):
+        v = DEFAULT_BLOCK_R
+    return max(0, min(BLOCK_R_MAX, v))
+
+
 def main() -> None:
     doc = load_doc()
     by_name = {e["name"]: e for e in doc["enemies"]}
@@ -736,6 +751,7 @@ def main() -> None:
     for label in (
         "enemy_class",
         "enemy_nframes",
+        "enemy_block_r",
     ):
         parts.append(f"{label}\t!byte {slot2}")
     parts.append("meta_slot_type\t!byte $ff, $ff")

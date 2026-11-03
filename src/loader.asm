@@ -812,6 +812,9 @@ copy_meta_row
 	iny
 	lda (src_ptr),y
 	sta enemy_nframes,x
+	iny
+	lda (src_ptr),y
+	sta enemy_block_r,x
 	clc
 	lda load_dest
 	adc #META_ROW

@@ -218,7 +218,7 @@ player_overlaps_y
 	rts
 
 ; X = enemy. box_x/box_z = test point.
-; C=1 if Chebyshev vs en_x/en_z <= ENEMY_BLOCK_R. Preserves X.
+; C=1 if Chebyshev vs en_x/en_z < box_sx (set_blk_lim). Preserves X.
 body_vs_en
 	+lda_mx en_x
 	sec
@@ -228,7 +228,7 @@ body_vs_en
 	clc
 	adc #1
 +
-	cmp #ENEMY_BLOCK_R + 1
+	cmp box_sx
 	bcs .bve_no
 	+lda_mx en_z
 	sec
@@ -238,7 +238,7 @@ body_vs_en
 	clc
 	adc #1
 +
-	cmp #ENEMY_BLOCK_R + 1
+	cmp box_sx
 	bcs .bve_no
 	sec
 	rts
@@ -247,7 +247,7 @@ body_vs_en
 	rts
 
 ; box_x/box_z = test point.
-; C=1 if Chebyshev vs cam_xh/cam_zh <= ENEMY_BLOCK_R.
+; C=1 if Chebyshev vs cam_xh/cam_zh < box_sx (set_blk_lim).
 body_vs_cam
 	lda cam_xh
 	sec
@@ -257,7 +257,7 @@ body_vs_cam
 	clc
 	adc #1
 +
-	cmp #ENEMY_BLOCK_R + 1
+	cmp box_sx
 	bcs .bvc_no
 	lda cam_zh
 	sec
@@ -267,12 +267,22 @@ body_vs_cam
 	clc
 	adc #1
 +
-	cmp #ENEMY_BLOCK_R + 1
+	cmp box_sx
 	bcs .bvc_no
 	sec
 	rts
 .bvc_no
 	clc
+	rts
+
+; X = enemy. box_sx := enemy_block_r[slot] + 1 (body_vs_en / body_vs_cam limit).
+; Preserves X. Clobbers A, Y.
+set_blk_lim
+	jsr ldy_slot
+	lda enemy_block_r,y
+	clc
+	adc #1
+	sta box_sx
 	rts
 
 ; col_x/col_z dest vs alive same-room enemies. C=1 ok, C=0 newly overlapping.
@@ -297,6 +307,7 @@ enemies_block_player
 	jsr player_overlaps_y
 	ldx obj_i
 	bcc .ebp_n
+	jsr set_blk_lim
 	lda col_x
 	sta box_x
 	lda col_z

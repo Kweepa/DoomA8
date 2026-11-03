@@ -1477,6 +1477,7 @@ button:disabled {
         <ul id="enemy-list" class="object-list"></ul>
         <div class="toolbar-actions mdl-overlay-row">
           <button type="button" id="btn-mdl-overlay" class="toggle active">Ref sprite</button>
+          <button type="button" id="btn-collision-overlay" class="toggle active" title="Player-vs-enemy block volume (ENEMY_BLOCK_R x ENEMY_CULL_H)">Collision</button>
         </div>
         <div class="btn-row">
           <button type="button" id="btn-anim-folder">Open shareware folder</button>
@@ -3608,6 +3609,10 @@ function doorUsesTag(lockKey) {
 
 /** Layout placements draw the first stick frame at this fraction of anim units (Possessed ~4 world high). */
 const LAYOUT_ENEMY_SCALE = 1 / 4;
+/** mem.asm ENEMY_BLOCK_R: player cell vs enemy cell, Chebyshev (cells). */
+const GAME_ENEMY_BLOCK_R = 1;
+/** mem.asm ENEMY_CULL_H: enemy body height for the player Y-overlap gate (world units). */
+const GAME_ENEMY_CULL_H = 6;
 
 /** Yaw octants, 0 = +Z (N / game forward). */
 const ENEMY_FACINGS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
@@ -4739,6 +4744,16 @@ function clampEnemyPainChance(n, name) {
   const v = Number(n);
   if (!Number.isFinite(v)) return defaultEnemyPainChance(name);
   return Math.max(0, Math.min(255, v | 0));
+}
+
+const DEFAULT_ENEMY_BLOCK_R = GAME_ENEMY_BLOCK_R;
+const ENEMY_BLOCK_R_MAX = 3;
+
+/** Game byte written to enemy_block_r: player-vs-enemy Chebyshev radius in cells. */
+function clampEnemyBlockR(n) {
+  const v = Number(n);
+  if (!Number.isFinite(v)) return DEFAULT_ENEMY_BLOCK_R;
+  return Math.max(0, Math.min(ENEMY_BLOCK_R_MAX, v | 0));
 }
 
 function enemyHp(name, enemies) {
@@ -6581,6 +6596,7 @@ function createEnemy(name = "Possessed") {
     weaponVert: WEAPON_VERT,
     hp: defaultEnemyHp(name),
     painChance: defaultEnemyPainChance(name),
+    blockR: DEFAULT_ENEMY_BLOCK_R,
   };
 }
 
@@ -7047,6 +7063,7 @@ function normalizeDocument(raw) {
       enemy.weaponVert = clampWeaponVert(e.weaponVert, enemy.verts);
       enemy.hp = clampEnemyHp(e.hp, enemy.name);
       enemy.painChance = clampEnemyPainChance(e.painChance, enemy.name);
+      enemy.blockR = clampEnemyBlockR(e.blockR);
       const exportClips = normalizeExportClips(e.exportClips);
       if (exportClips) enemy.exportClips = exportClips;
       doc.enemies.push(enemy);
@@ -12411,6 +12428,38 @@ class AnimView {
     }
   }
 
+  /** Player-blocking volume (world.asm body_vs_en + player_overlaps_y), in anim units. */
+  #drawCollision(ctx, cam, w, h) {
+    const s = LAYOUT_ENEMY_SCALE;
+    const cell = 1 / s;
+    const R = clampEnemyBlockR(this.opts.getEnemy()?.blockR);
+    const half = (R + 0.5) * cell;
+    const top = GAME_ENEMY_CULL_H * cell;
+    const col = "#c8603c";
+    // Floor cell divisions inside the footprint (player position is cell-quantised).
+    for (let k = -R; k < R; k++) {
+      const c = (k + 0.5) * cell;
+      this.#strokeSeg(ctx, cam, w, h, { x: c, y: 0, z: -half }, { x: c, y: 0, z: half }, "rgba(200, 96, 60, 0.35)");
+      this.#strokeSeg(ctx, cam, w, h, { x: -half, y: 0, z: c }, { x: half, y: 0, z: c }, "rgba(200, 96, 60, 0.35)");
+    }
+    ctx.setLineDash([4, 3]);
+    const xs = [-half, half];
+    for (const y of [0, top]) {
+      for (const x of xs) this.#strokeSeg(ctx, cam, w, h, { x, y, z: -half }, { x, y, z: half }, col, 1.25);
+      for (const z of xs) this.#strokeSeg(ctx, cam, w, h, { x: -half, y, z }, { x: half, y, z }, col, 1.25);
+    }
+    for (const x of xs) {
+      for (const z of xs) this.#strokeSeg(ctx, cam, w, h, { x, y: 0, z }, { x, y: top, z }, col, 1.25);
+    }
+    ctx.setLineDash([]);
+    const label = projectPoint({ x: half, y: top, z: half }, cam, w, h);
+    if (label.ok) {
+      ctx.fillStyle = col;
+      ctx.font = "11px Segoe UI, sans-serif";
+      ctx.fillText(`player block R${R}`, label.sx + 4, label.sy - 4);
+    }
+  }
+
   #drawGizmo(ctx, cam, w, h, v) {
     drawTranslateGizmo(ctx, v, cam, w, h, { hoverGizmo: this.hoverGizmo, drag: this.drag });
   }
@@ -12456,6 +12505,7 @@ class AnimView {
     this.#strokeSeg(ctx, cam, w, h, { x: 0, y: 0, z: 0 }, { x: 0, y: 24, z: 0 }, "#6a6");
     this.#strokeSeg(ctx, cam, w, h, { x: 0, y: 0, z: -20 }, { x: 0, y: 0, z: 20 }, "#66a");
     this.#drawForwardArrow(ctx, cam, w, h);
+    if (this.opts.showCollision?.() !== false) this.#drawCollision(ctx, cam, w, h);
 
     if (overlay) {
       ctx.lineWidth = 1;
@@ -14778,6 +14828,7 @@ let sharewareWeapons = {};
 let sharewareWeaponMissing = [];
 let overlayOn = true;
 let refSpriteOn = true;
+let collisionOn = true;
 let stickWireOn = true;
 let drawingOrtho = false;
 let doomSprites = null;
@@ -14928,6 +14979,7 @@ const previewView = new PreviewView(document.getElementById("preview-canvas"), {
 
 const animView = new AnimView(document.getElementById("view-canvas"), {
   stage: document.getElementById("map-stage"),
+  showCollision: () => collisionOn,
   getEnemy: () => doc.enemies[enemyIndex],
   getFrame: () => {
     const e = doc.enemies[enemyIndex];
@@ -17561,10 +17613,28 @@ function renderInspector() {
     markDirty();
     refreshAll();
   });
+  const blockInp = document.createElement("input");
+  blockInp.type = "number";
+  blockInp.min = "0";
+  blockInp.max = String(ENEMY_BLOCK_R_MAX);
+  blockInp.step = "1";
+  blockInp.value = String(clampEnemyBlockR(e.blockR));
+  blockInp.title = "Player collision radius in cells: blocks a (2R+1)-cell square";
+  blockInp.addEventListener("change", () => {
+    pushUndo();
+    e.blockR = clampEnemyBlockR(blockInp.value);
+    blockInp.value = String(e.blockR);
+    markDirty();
+    refreshAll();
+  });
   const statRow = document.createElement("div");
   statRow.className = "field-pair";
   statRow.append(field("Hit points", hpInp), field("Pain chance", painInp));
   root.appendChild(statRow);
+  const blockRow = document.createElement("div");
+  blockRow.className = "field-pair";
+  blockRow.append(field("Block radius", blockInp));
+  root.appendChild(blockRow);
 
   const timeline = getTimeline(e);
   const spriteEnemy = enemyHasSprites(e);
@@ -18601,6 +18671,11 @@ document.getElementById("btn-mode-build")?.addEventListener("click", () => {
 });
 document.getElementById("btn-mdl-overlay").addEventListener("click", () => {
   setRefSpriteOn(!refSpriteOn);
+});
+document.getElementById("btn-collision-overlay")?.addEventListener("click", (e) => {
+  collisionOn = !collisionOn;
+  e.currentTarget.classList.toggle("active", collisionOn);
+  animView.draw();
 });
 document.getElementById("weapon-scale").addEventListener("input", (e) => {
   doc.weapons.scale = clampWeaponScale(e.target.value);

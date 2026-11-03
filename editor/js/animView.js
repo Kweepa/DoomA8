@@ -3,6 +3,9 @@ import {
   clipForFrame,
   clampVertFor,
   enemyHasSprites,
+  clampEnemyBlockR,
+  GAME_ENEMY_CULL_H,
+  LAYOUT_ENEMY_SCALE,
   ANIM_ORBIT_DIST_MIN,
   ANIM_ORBIT_DIST_MAX,
 } from "./model.js";
@@ -644,6 +647,38 @@ export class AnimView {
     }
   }
 
+  /** Player-blocking volume (world.asm body_vs_en + player_overlaps_y), in anim units. */
+  #drawCollision(ctx, cam, w, h) {
+    const s = LAYOUT_ENEMY_SCALE;
+    const cell = 1 / s;
+    const R = clampEnemyBlockR(this.opts.getEnemy()?.blockR);
+    const half = (R + 0.5) * cell;
+    const top = GAME_ENEMY_CULL_H * cell;
+    const col = "#c8603c";
+    // Floor cell divisions inside the footprint (player position is cell-quantised).
+    for (let k = -R; k < R; k++) {
+      const c = (k + 0.5) * cell;
+      this.#strokeSeg(ctx, cam, w, h, { x: c, y: 0, z: -half }, { x: c, y: 0, z: half }, "rgba(200, 96, 60, 0.35)");
+      this.#strokeSeg(ctx, cam, w, h, { x: -half, y: 0, z: c }, { x: half, y: 0, z: c }, "rgba(200, 96, 60, 0.35)");
+    }
+    ctx.setLineDash([4, 3]);
+    const xs = [-half, half];
+    for (const y of [0, top]) {
+      for (const x of xs) this.#strokeSeg(ctx, cam, w, h, { x, y, z: -half }, { x, y, z: half }, col, 1.25);
+      for (const z of xs) this.#strokeSeg(ctx, cam, w, h, { x: -half, y, z }, { x: half, y, z }, col, 1.25);
+    }
+    for (const x of xs) {
+      for (const z of xs) this.#strokeSeg(ctx, cam, w, h, { x, y: 0, z }, { x, y: top, z }, col, 1.25);
+    }
+    ctx.setLineDash([]);
+    const label = projectPoint({ x: half, y: top, z: half }, cam, w, h);
+    if (label.ok) {
+      ctx.fillStyle = col;
+      ctx.font = "11px Segoe UI, sans-serif";
+      ctx.fillText(`player block R${R}`, label.sx + 4, label.sy - 4);
+    }
+  }
+
   #drawGizmo(ctx, cam, w, h, v) {
     drawTranslateGizmo(ctx, v, cam, w, h, { hoverGizmo: this.hoverGizmo, drag: this.drag });
   }
@@ -689,6 +724,7 @@ export class AnimView {
     this.#strokeSeg(ctx, cam, w, h, { x: 0, y: 0, z: 0 }, { x: 0, y: 24, z: 0 }, "#6a6");
     this.#strokeSeg(ctx, cam, w, h, { x: 0, y: 0, z: -20 }, { x: 0, y: 0, z: 20 }, "#66a");
     this.#drawForwardArrow(ctx, cam, w, h);
+    if (this.opts.showCollision?.() !== false) this.#drawCollision(ctx, cam, w, h);
 
     if (overlay) {
       ctx.lineWidth = 1;

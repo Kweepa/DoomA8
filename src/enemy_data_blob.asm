@@ -31,6 +31,7 @@ enemy_pain_chance	!byte 0, 0
 enemy_fire_frame	!byte 0, 0
 enemy_class	!byte 0, 0
 enemy_nframes	!byte 0, 0
+enemy_block_r	!byte 0, 0
 meta_slot_type	!byte $ff, $ff
 meta_scratch	!byte 0
 

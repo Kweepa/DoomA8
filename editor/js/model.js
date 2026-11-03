@@ -390,6 +390,10 @@ export function doorUsesTag(lockKey) {
 
 /** Layout placements draw the first stick frame at this fraction of anim units (Possessed ~4 world high). */
 export const LAYOUT_ENEMY_SCALE = 1 / 4;
+/** mem.asm ENEMY_BLOCK_R: player cell vs enemy cell, Chebyshev (cells). */
+export const GAME_ENEMY_BLOCK_R = 1;
+/** mem.asm ENEMY_CULL_H: enemy body height for the player Y-overlap gate (world units). */
+export const GAME_ENEMY_CULL_H = 6;
 
 /** Yaw octants, 0 = +Z (N / game forward). */
 export const ENEMY_FACINGS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
@@ -1521,6 +1525,16 @@ export function clampEnemyPainChance(n, name) {
   const v = Number(n);
   if (!Number.isFinite(v)) return defaultEnemyPainChance(name);
   return Math.max(0, Math.min(255, v | 0));
+}
+
+export const DEFAULT_ENEMY_BLOCK_R = GAME_ENEMY_BLOCK_R;
+export const ENEMY_BLOCK_R_MAX = 3;
+
+/** Game byte written to enemy_block_r: player-vs-enemy Chebyshev radius in cells. */
+export function clampEnemyBlockR(n) {
+  const v = Number(n);
+  if (!Number.isFinite(v)) return DEFAULT_ENEMY_BLOCK_R;
+  return Math.max(0, Math.min(ENEMY_BLOCK_R_MAX, v | 0));
 }
 
 export function enemyHp(name, enemies) {
@@ -3363,6 +3377,7 @@ export function createEnemy(name = "Possessed") {
     weaponVert: WEAPON_VERT,
     hp: defaultEnemyHp(name),
     painChance: defaultEnemyPainChance(name),
+    blockR: DEFAULT_ENEMY_BLOCK_R,
   };
 }
 
@@ -3829,6 +3844,7 @@ export function normalizeDocument(raw) {
       enemy.weaponVert = clampWeaponVert(e.weaponVert, enemy.verts);
       enemy.hp = clampEnemyHp(e.hp, enemy.name);
       enemy.painChance = clampEnemyPainChance(e.painChance, enemy.name);
+      enemy.blockR = clampEnemyBlockR(e.blockR);
       const exportClips = normalizeExportClips(e.exportClips);
       if (exportClips) enemy.exportClips = exportClips;
       doc.enemies.push(enemy);

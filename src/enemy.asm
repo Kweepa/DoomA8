@@ -1218,6 +1218,8 @@ player_blocks_enemy
 	sta box_sy
 	jsr player_overlaps_y
 	bcc .pbe_ok
+	ldx enemy_idx
+	jsr set_blk_lim
 	lda col_x
 	sta box_x
 	lda col_z

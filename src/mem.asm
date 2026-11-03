@@ -211,7 +211,7 @@ ENEMY_DATA_BASE	= $0701			; boot-loaded enemy_data_blob.asm
 }
 ; Pose prefix copied into one of two resident rows. Offsets match genenemies.py.
 META_STAND_START	= 0
-META_ROW		= 33
+META_ROW		= 34
 AI_ENTRY_LO	= $0850			; streamed AI entry pointer per enemy type
 AI_ENTRY_HI	= AI_ENTRY_LO + ENEMY_PTR_N
 ENEMY_DATA_LIMIT	= AI_ENTRY_LO
@@ -410,7 +410,7 @@ DOOR_Y_SLACK	= 1			; |feet − door_y| to fire a wish-through
 DOOR_AIM	= 32			; yaw ticks (45°) of through-heading to transit
 MOVE_SPEED	= 2			; 8.8 step scale (asl count after wish)
 PLAYER_R	= 1			; XZ collision radius
-ENEMY_BLOCK_R	= 1			; XZ Chebyshev vs player (same cell + neighbors)
+; XZ Chebyshev vs player is per type: enemy_block_r (editor blockR, meta row tail)
 FALL_LEDGE	= 1			; start fall if feet-floor > this
 STEP_UP		= 2			; max walk-up; 2 units plays SOUND_OOF
 FALL_TICK_MS	= 32			; gravity cadence (like MOTION_STEP_MS)

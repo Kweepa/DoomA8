@@ -99,6 +99,8 @@ import {
   clampMdlScale,
   clampEnemyHp,
   clampEnemyPainChance,
+  clampEnemyBlockR,
+  ENEMY_BLOCK_R_MAX,
   clampWeaponVert,
   WEAPON_VERT,
   WEAPON_KEYS,
@@ -216,6 +218,7 @@ let sharewareWeapons = {};
 let sharewareWeaponMissing = [];
 let overlayOn = true;
 let refSpriteOn = true;
+let collisionOn = true;
 let stickWireOn = true;
 let drawingOrtho = false;
 let doomSprites = null;
@@ -366,6 +369,7 @@ const previewView = new PreviewView(document.getElementById("preview-canvas"), {
 
 const animView = new AnimView(document.getElementById("view-canvas"), {
   stage: document.getElementById("map-stage"),
+  showCollision: () => collisionOn,
   getEnemy: () => doc.enemies[enemyIndex],
   getFrame: () => {
     const e = doc.enemies[enemyIndex];
@@ -2999,10 +3003,28 @@ function renderInspector() {
     markDirty();
     refreshAll();
   });
+  const blockInp = document.createElement("input");
+  blockInp.type = "number";
+  blockInp.min = "0";
+  blockInp.max = String(ENEMY_BLOCK_R_MAX);
+  blockInp.step = "1";
+  blockInp.value = String(clampEnemyBlockR(e.blockR));
+  blockInp.title = "Player collision radius in cells: blocks a (2R+1)-cell square";
+  blockInp.addEventListener("change", () => {
+    pushUndo();
+    e.blockR = clampEnemyBlockR(blockInp.value);
+    blockInp.value = String(e.blockR);
+    markDirty();
+    refreshAll();
+  });
   const statRow = document.createElement("div");
   statRow.className = "field-pair";
   statRow.append(field("Hit points", hpInp), field("Pain chance", painInp));
   root.appendChild(statRow);
+  const blockRow = document.createElement("div");
+  blockRow.className = "field-pair";
+  blockRow.append(field("Block radius", blockInp));
+  root.appendChild(blockRow);
 
   const timeline = getTimeline(e);
   const spriteEnemy = enemyHasSprites(e);
@@ -4039,6 +4061,11 @@ document.getElementById("btn-mode-build")?.addEventListener("click", () => {
 });
 document.getElementById("btn-mdl-overlay").addEventListener("click", () => {
   setRefSpriteOn(!refSpriteOn);
+});
+document.getElementById("btn-collision-overlay")?.addEventListener("click", (e) => {
+  collisionOn = !collisionOn;
+  e.currentTarget.classList.toggle("active", collisionOn);
+  animView.draw();
 });
 document.getElementById("weapon-scale").addEventListener("input", (e) => {
   doc.weapons.scale = clampWeaponScale(e.target.value);
