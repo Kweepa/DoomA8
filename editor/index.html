@@ -3707,6 +3707,7 @@ function nearestFloorHome(elev, room, floorY) {
   return bestHome;
 }
 
+/** Upper stop so elev top meets nearest same-room solid platform top, or null. */
 function nearestPlatHome(elev, roomId, plats, floorY) {
   const elevSy = elev.sy | 0;
   const elevTop = (elev.y | 0) + elevSy;
@@ -3714,10 +3715,35 @@ function nearestPlatHome(elev, roomId, plats, floorY) {
   let bestHome = null;
   for (const p of plats) {
     if (p.roomId !== roomId) continue;
+    if (p.collide === false) continue;
     const surface = (p.y | 0) + ((p.sy | 0) || 1);
     const home = surface - elevSy;
     if (home <= floorY) continue;
     const key = [xzAabbGap(elev, p), Math.abs(surface - elevTop)];
+    if (
+      bestKey == null ||
+      key[0] < bestKey[0] ||
+      (key[0] === bestKey[0] && key[1] < bestKey[1])
+    ) {
+      bestKey = key;
+      bestHome = home;
+    }
+  }
+  return bestHome;
+}
+
+/** Upper stop so elev top meets a doorway sill on this room, or null. */
+function nearestDoorHome(elev, roomId, doors, floorY) {
+  const elevSy = elev.sy | 0;
+  const elevTop = (elev.y | 0) + elevSy;
+  let bestKey = null;
+  let bestHome = null;
+  for (const d of doors) {
+    if (d.roomId !== roomId && d.otherRoomId !== roomId) continue;
+    const surface = d.y | 0;
+    const home = surface - elevSy;
+    if (home <= floorY) continue;
+    const key = [xzAabbGap(elev, d), Math.abs(surface - elevTop)];
     if (
       bestKey == null ||
       key[0] < bestKey[0] ||
@@ -3746,9 +3772,12 @@ function elevStopBottoms(doc, elev) {
   if ((elev.y | 0) <= floorY && room) {
     dest = elev.y | 0;
     const map = activeMap(doc);
-    const plats = (map?.objects || []).filter((o) => o.kind === "platform");
+    const objs = map?.objects || [];
+    const plats = objs.filter((o) => o.kind === "platform");
+    const doors = objs.filter((o) => o.kind === "doorway");
     let raised = nearestFloorHome(elev, room, floorY);
     if (raised == null) raised = nearestPlatHome(elev, elev.roomId, plats, floorY);
+    if (raised == null) raised = nearestDoorHome(elev, room.id, doors, floorY);
     if (raised != null) home = raised;
   }
   return { dest, home };

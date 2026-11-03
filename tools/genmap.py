@@ -258,7 +258,7 @@ def nearest_floor_home(elev: dict, room: dict, floor_y: int) -> int | None:
 def nearest_plat_home(
     elev: dict, room_i: int, plats: list[dict], plat_rooms: list[int], floor_y: int
 ) -> int | None:
-    """Upper stop so elev top meets nearest same-room platform top, or None."""
+    """Upper stop so elev top meets nearest same-room solid platform top, or None."""
     elev_sy = int(elev["sy"])
     elev_top = int(elev["y"]) + elev_sy
     best_key: tuple[int, int] | None = None
@@ -266,11 +266,33 @@ def nearest_plat_home(
     for pi, p in enumerate(plats):
         if plat_rooms[pi] != room_i:
             continue
+        if p.get("collide") is False:
+            continue
         surface = int(p["y"]) + int(p.get("sy") or 1)
         home = surface - elev_sy
         if home <= floor_y:
             continue
         key = (xz_aabb_gap(elev, p), abs(surface - elev_top))
+        if best_key is None or key < best_key:
+            best_key = key
+            best_home = home
+    return best_home
+
+
+def nearest_door_home(elev: dict, room_id, doors: list[dict], floor_y: int) -> int | None:
+    """Upper stop so elev top meets a doorway sill on this room, or None."""
+    elev_sy = int(elev["sy"])
+    elev_top = int(elev["y"]) + elev_sy
+    best_key: tuple[int, int] | None = None
+    best_home: int | None = None
+    for d in doors:
+        if d.get("roomId") != room_id and d.get("otherRoomId") != room_id:
+            continue
+        surface = int(d["y"])
+        home = surface - elev_sy
+        if home <= floor_y:
+            continue
+        key = (xz_aabb_gap(elev, d), abs(surface - elev_top))
         if best_key is None or key < best_key:
             best_key = key
             best_home = home
@@ -744,6 +766,8 @@ def cook_one(level: dict, map_key: str) -> bytes:
                 raised = nearest_floor_home(e, rooms[ri], floor_y)
                 if raised is None:
                     raised = nearest_plat_home(e, ri, plats, plat_room, floor_y)
+                if raised is None:
+                    raised = nearest_door_home(e, rooms[ri].get("id"), doors, floor_y)
                 if raised is not None:
                     home = raised
         else:

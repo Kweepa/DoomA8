@@ -34,7 +34,7 @@
       "axis": "z",
       "dir": 1,
       "rot": 0,
-      "enabled": false,
+      "enabled": true,
       "roomId": "a61a19be-0a10-4114-b03f-c8437539e5b5"
     },
     {
@@ -2365,22 +2365,6 @@
       "purpose": "elevator",
       "text": "",
       "tag": "stairgroup",
-      "roomId": "195d0799-0ee2-47d5-8630-3a457ac1fe5e"
-    },
-    {
-      "id": "2838c8b5-7ecc-48da-9658-3efbe0d2179f",
-      "kind": "spawn",
-      "x": 182,
-      "y": 57,
-      "z": 127,
-      "sx": 2,
-      "sy": 4,
-      "sz": 2,
-      "face": "+z",
-      "axis": "z",
-      "dir": 1,
-      "rot": 2,
-      "enabled": true,
       "roomId": "195d0799-0ee2-47d5-8630-3a457ac1fe5e"
     }
   ]

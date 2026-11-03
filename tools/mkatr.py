@@ -27,7 +27,7 @@ FILES = [
     ("TAB", ROOT / "tab.prg", None),
     ("MENU", ROOT / "menu.prg", None),
     ("QSAVE", ROOT / "qsave.prg", None),
-] + [(f"E1M{i}", ROOT / "maps" / f"e1m{i}.prg", None) for i in range(1, 8)] + [
+] + [(f"E1M{i}", ROOT / "maps" / f"e1m{i}.prg", None) for i in range(1, 9)] + [
     ("POSS", ROOT / "enemies" / "poss.prg", None),
     ("BARON", ROOT / "enemies" / "baron.prg", None),
     ("PINKY", ROOT / "enemies" / "pinky.prg", None),

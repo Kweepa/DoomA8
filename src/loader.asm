@@ -1158,12 +1158,11 @@ enter_card
 	jmp a8_nmi_on
 
 
-; TRIG_END: next e1mN, or episode done → menu endings.
 next_level
-	lda level_num
-	cmp #MAP_NLEVELS
-	bcs episode_done
 	inc level_num
+	lda level_num
+	cmp #MAP_NLEVELS+1
+	bcs episode_done
 	lda #0					; keys are per-map
 	sta have_keys
 	jsr restart_level

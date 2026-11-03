@@ -29,7 +29,7 @@ MAPS = ROOT / "maps"
 STAMPS = ROOT / "build" / "stamps"
 
 DOS = ["poss", "baron", "pinky", "imp"]
-DISK_MAPS = [f"e1m{i}" for i in range(1, 8)]
+DISK_MAPS = [f"e1m{i}" for i in range(1, 9)]
 
 SOURCE_RE = re.compile(
     r'(?m)^[ \t]*!(?:source|src|binary|bin)\s+"([^"]+)"'
