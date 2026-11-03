@@ -875,9 +875,11 @@ async function saveNow(okMsg = "Saved") {
       return;
     }
     await writeEnemyFiles(enemyFileRecords(doc));
-    await writeMapFiles(mapFileRecords(doc));
+    const mapRecords = mapFileRecords(doc);
+    await writeMapFiles(mapRecords);
     markClean();
     persistMdlRigBackup();
+    if (mapRecords.tagsFilled) renderInspector();
     setStatus(`${okMsg} ${docFileName()}`);
   } catch (err) {
     setStatus(String(err.message || err), true);
@@ -2267,6 +2269,7 @@ function field(label, input) {
 function toggleField(label, active, onToggle) {
   const btn = document.createElement("button");
   btn.type = "button";
+  btn.className = "toggle";
   btn.textContent = label;
   btn.classList.toggle("active", !!active);
   btn.addEventListener("click", () => onToggle(btn));
@@ -2586,10 +2589,12 @@ function renderLayoutObjectFields(root, objs) {
             maxLength: MAX_TAG_LEN,
             placeholder:
               purpose === "elevator"
-                ? "every elevator with this tag"
-                : purpose === "unhide"
-                  ? "hidden door tag"
-                  : "destination tag",
+                ? "every elevator with this tag, or blank for nearest"
+                : purpose === "summon"
+                  ? "destination tag, or blank for nearest"
+                  : purpose === "unhide"
+                    ? "hidden door tag"
+                    : "destination tag",
             onChange: (v) => apply((obj) => (obj.tag = clampTag(v))),
           })
         )
@@ -3073,8 +3078,9 @@ function renderInspector() {
     const loopBtn = document.createElement("button");
     loopBtn.id = "btn-anim-loop";
     loopBtn.type = "button";
+    loopBtn.className = "toggle";
     loopBtn.textContent = "Loop";
-    if (animLoop) loopBtn.className = "active";
+    if (animLoop) loopBtn.classList.add("active");
     loopBtn.addEventListener("click", () => {
       animLoop = !animLoop;
       updateLoopButton();

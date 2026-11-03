@@ -3175,17 +3175,83 @@ export function enemyFileRecords(doc) {
     .filter((r) => r.dos);
 }
 
+function xzCenterDist2(a, b) {
+  const ac = aabbCenter(a);
+  const bc = aabbCenter(b);
+  const dx = ac.x - bc.x;
+  const dz = ac.z - bc.z;
+  return dx * dx + dz * dz;
+}
+
+function mintElevTag(elev, used) {
+  const raw = String(elev.id || "").replace(/[^a-z0-9]/gi, "");
+  const stem = clampTag("e" + raw) || "e";
+  let tag = stem;
+  let n = 1;
+  while (used.has(tag)) {
+    const suf = String(n++);
+    if (suf.length >= MAX_TAG_LEN) break;
+    tag = clampTag(stem.slice(0, MAX_TAG_LEN - suf.length) + suf);
+  }
+  return tag;
+}
+
+/** Blank elevator/summon tags copy the nearest elevator (xz centers). Returns true if a tag was written. */
+export function assignNearestElevatorTags(objects) {
+  if (!Array.isArray(objects) || !objects.length) return false;
+  const elevs = objects.filter((o) => o.kind === "elevator");
+  if (!elevs.length) return false;
+  const used = new Set();
+  for (const o of objects) {
+    const tag = clampTag(o?.tag || "");
+    if (tag) used.add(tag);
+    const enable = clampTag(o?.enableTag || "");
+    if (enable) used.add(enable);
+  }
+  let changed = false;
+  for (const t of objects) {
+    if (t.kind !== "trigger") continue;
+    const purpose = clampTriggerPurpose(t.purpose);
+    if (purpose !== "elevator" && purpose !== "summon") continue;
+    if (clampTag(t.tag || "")) continue;
+    let best = null;
+    let bestD = Infinity;
+    for (const e of elevs) {
+      const d = xzCenterDist2(t, e);
+      if (d < bestD) {
+        bestD = d;
+        best = e;
+      }
+    }
+    if (!best) continue;
+    let tag = clampTag(best.tag || "");
+    if (!tag) {
+      tag = mintElevTag(best, used);
+      best.tag = tag;
+      used.add(tag);
+    }
+    t.tag = tag;
+    changed = true;
+  }
+  return changed;
+}
+
 export function mapFileRecords(doc) {
-  return LEVEL_NAMES.map((name) => {
+  let tagsFilled = false;
+  const records = LEVEL_NAMES.map((name) => {
     const map = doc.maps?.[name] || {};
+    const objects = Array.isArray(map.objects) ? map.objects : [];
+    if (assignNearestElevatorTags(objects)) tagsFilled = true;
     return {
       file: `${name.toLowerCase()}.json`,
       data: {
         name: clampName(map.name),
-        objects: Array.isArray(map.objects) ? map.objects : [],
+        objects,
       },
     };
   });
+  records.tagsFilled = tagsFilled;
+  return records;
 }
 
 function persistFrames(frames, fine) {

@@ -585,6 +585,10 @@ button.armed {
   color: var(--accent);
 }
 
+button.toggle:not(.active) {
+  color: var(--muted);
+}
+
 button.search-hit {
   background: rgba(212, 160, 23, 0.3);
   border-color: var(--accent);

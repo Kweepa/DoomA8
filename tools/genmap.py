@@ -111,6 +111,24 @@ def aabb_volume(box: dict) -> int:
     return int(box["sx"]) * int(box["sy"]) * int(box["sz"])
 
 
+def closest_elevator(trigger: dict, elevs: list[dict]) -> int | None:
+    """Index of the nearest elevator by xz footprint center. Ties keep the earlier car."""
+    if not elevs:
+        return None
+    tx = trigger["x"] + trigger["sx"] / 2
+    tz = trigger["z"] + trigger["sz"] / 2
+    best_i = 0
+    best_d = None
+    for i, elev in enumerate(elevs):
+        dx = tx - (elev["x"] + elev["sx"] / 2)
+        dz = tz - (elev["z"] + elev["sz"] / 2)
+        d = dx * dx + dz * dz
+        if best_d is None or d < best_d:
+            best_d = d
+            best_i = i
+    return best_i
+
+
 def room_index(rooms: list[dict], obj: dict, kind: str) -> int:
     rid = obj.get("roomId")
     id_to_i = {r.get("id"): i for i, r in enumerate(rooms)}
@@ -871,6 +889,7 @@ def cook_one(level: dict, map_key: str) -> bytes:
     tr_sx, tr_sy, tr_sz, tr_room = [], [], [], []
     tr_purpose, tr_arg, tr_id = [], [], []
     text_blob: list[int] = []
+    next_grp = len(elev_grp_of)
     for t in triggers:
         ri = room_index(rooms, t, "trigger")
         purpose_s = t.get("purpose") or "message"
@@ -886,18 +905,34 @@ def cook_one(level: dict, map_key: str) -> bytes:
             text_blob.append(0)  # NUL
         elif purpose == TRIG_ELEV:
             tag = (t.get("tag") or "").strip()
-            if tag not in elev_grp_of:
+            if not tag:
+                i = closest_elevator(t, elevs)
+                if i is None:
+                    raise SystemExit(f"elevator trigger tag {tag!r} has no elevator")
+                # Untagged cars are group 0, which would match every untagged car.
+                if elev_grp[i] == 0:
+                    next_grp += 1
+                    elev_grp[i] = next_grp
+                arg = elev_grp[i]
+            elif tag not in elev_grp_of:
                 raise SystemExit(f"elevator trigger tag {tag!r} has no elevator")
-            arg = elev_grp_of[tag]
+            else:
+                arg = elev_grp_of[tag]
         elif purpose == TRIG_SUMMON:
             tag = (t.get("tag") or "").strip()
-            if tag not in elev_by_tag:
+            if not tag:
+                i = closest_elevator(t, elevs)
+                if i is None:
+                    raise SystemExit(f"summon trigger tag {tag!r} has no elevator")
+                arg = i
+            elif tag not in elev_by_tag:
                 raise SystemExit(f"summon trigger tag {tag!r} has no elevator")
-            if elev_tag_n[tag] > 1:
+            elif elev_tag_n[tag] > 1:
                 raise SystemExit(
                     f"{map_key} summon trigger tag {tag!r} matches more than one elevator"
                 )
-            arg = elev_by_tag[tag]
+            else:
+                arg = elev_by_tag[tag]
         elif purpose == TRIG_UNLOCK:
             tag = obj_tag(t)
             remote_hit = any(

@@ -85,8 +85,8 @@ def main() -> None:
     <div class="toolbar-actions" id="draw-mode-group" role="group" aria-label="Draw mode">
       <button type="button" id="btn-draw-all" class="active">All</button>
       <button type="button" id="btn-draw-local">Local</button>
-      <button type="button" id="btn-draw-neighbours" title="Door-linked rooms (when Local is on)">Neighbours</button>
-      <button type="button" id="btn-draw-rooms-only" title="Hide contents; rooms and doors only">Rooms Only</button>
+      <button type="button" id="btn-draw-neighbours" class="toggle" title="Door-linked rooms (when Local is on)">Neighbours</button>
+      <button type="button" id="btn-draw-rooms-only" class="toggle" title="Hide contents; rooms and doors only">Rooms Only</button>
     </div>
     <div class="toolbar-actions">
       <button type="button" id="btn-undo" title="Ctrl+Z" disabled>Undo</button>
@@ -122,7 +122,7 @@ def main() -> None:
         <h2>Enemies</h2>
         <ul id="enemy-list" class="object-list"></ul>
         <div class="toolbar-actions mdl-overlay-row">
-          <button type="button" id="btn-mdl-overlay" class="active">Ref sprite</button>
+          <button type="button" id="btn-mdl-overlay" class="toggle active">Ref sprite</button>
         </div>
         <div class="btn-row">
           <button type="button" id="btn-anim-folder">Open shareware folder</button>
