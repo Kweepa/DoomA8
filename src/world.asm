@@ -760,6 +760,113 @@ sync_eye
 	rts
 
 ; ------------------------------------------------------------------
+; ledge_unstick — landed eye is inside a room box but outside PLAYER_R.
+; A vertical L/T/S lip is one cell deep; step to a cardinal that is inset
+; at floor_y. cam_yh restored so fall_y0 stays the height the drop started.
+; X/Z fraction parks on the near edge of the new cell ($ff down, 0 up).
+; ------------------------------------------------------------------
+ledge_unstick
+	lda cam_yh
+	pha
+	clc
+	lda floor_y
+	adc #EYE_HEIGHT
+	sta cam_yh
+	lda cam_xh
+	sta col_x
+	lda cam_zh
+	sta col_z
+	jsr in_room_inset
+	bcs .lu_out
+	ldx #0
+.lu_n
+	cpx #4
+	bcs .lu_out
+	stx ledge_i
+	lda .lu_dx,x
+	ldy #0
+	jsr .lu_ax
+	bcs .lu_sk
+	ldx ledge_i
+	lda .lu_dz,x
+	ldy #1
+	jsr .lu_ax
+	bcs .lu_sk
+	jsr in_room_inset
+	bcc .lu_sk
+	jsr step_up_ok
+	bcc .lu_sk
+	jsr enemies_block_player
+	bcc .lu_sk
+	ldy #1
+	jsr solid_at
+	bcs .lu_sk
+	jmp .lu_take
+.lu_sk
+	ldx ledge_i
+	inx
+	jmp .lu_n
+.lu_take
+	lda col_x
+	cmp cam_xh
+	beq .lu_tz
+	sta cam_xh
+	lda #$ff
+	bcc .lu_fx			; col < cam — decreased
+	lda #0
+.lu_fx
+	sta cam_xl
+.lu_tz
+	lda col_z
+	cmp cam_zh
+	beq .lu_out
+	sta cam_zh
+	lda #$ff
+	bcc .lu_fz
+	lda #0
+.lu_fz
+	sta cam_zl
+.lu_out
+	pla
+	sta cam_yh
+	rts
+
+; A = delta (-1/0/+1). Y = axis (0 x, 1 z). C=1 if the add would wrap.
+; col_x,y set on success. Clobbers X.
+.lu_ax
+	cmp #0
+	beq .lu_cp
+	bmi .lu_sub
+	ldx cam_xh,y
+	cpx #$ff
+	beq .lu_no
+	inx
+	txa
+	sta col_x,y
+	clc
+	rts
+.lu_sub
+	ldx cam_xh,y
+	beq .lu_no
+	dex
+	txa
+	sta col_x,y
+	clc
+	rts
+.lu_cp
+	lda cam_xh,y
+	sta col_x,y
+	clc
+	rts
+.lu_no
+	sec
+	rts
+
+; -x, +x, -z, +z
+.lu_dx	!byte $ff, 1, 0, 0
+.lu_dz	!byte 0, 0, $ff, 1
+
+; ------------------------------------------------------------------
 ; update_fall — snap if gap <= FALL_LEDGE; else accelerate down (no WASD).
 ; Call after update_floor. Landing: snap, maybe take_damage(FALL_DAMAGE).
 ; Step-up: rise <= STEP_UP snaps (SOUND_OOF at exactly 2, unless elevator).
@@ -780,6 +887,7 @@ update_fall
 	cmp #FALL_LEDGE + 1
 	bcs .ufl_start
 .ufl_sync
+	jsr ledge_unstick
 	jmp sync_eye
 
 .ufl_up
@@ -804,6 +912,7 @@ update_fall
 	jmp .ufl_sync
 
 .ufl_start
+	jsr ledge_unstick
 	lda #1
 	sta pl_falling
 	lda #0
