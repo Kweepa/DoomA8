@@ -13,7 +13,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "name": "",
+      "name": "Acid Pit",
       "a8Bg": 54,
       "shape": "T",
       "rx": 0,
@@ -512,7 +512,7 @@
       "doorScale": 1,
       "tag": "",
       "locked": false,
-      "otherRoomId": null
+      "otherRoomId": "69a7dd7a-284b-4eb7-b4f8-45175ba83bc1"
     },
     {
       "id": "ce2c95b1-ec96-4254-b108-1edcbe461ee5",
@@ -667,7 +667,7 @@
       "doorScale": 1,
       "tag": "",
       "locked": false,
-      "otherRoomId": null
+      "otherRoomId": "75486ba6-ee36-4f36-ac4d-2d39f7ae0df0"
     },
     {
       "id": "75486ba6-ee36-4f36-ac4d-2d39f7ae0df0",
@@ -812,7 +812,7 @@
       "doorScale": 1,
       "tag": "",
       "locked": false,
-      "otherRoomId": null
+      "otherRoomId": "6230e05f-ade7-4e89-9f5f-dfc6537a1d49"
     },
     {
       "id": "6230e05f-ade7-4e89-9f5f-dfc6537a1d49",
@@ -1162,7 +1162,7 @@
       "doorScale": 1,
       "tag": "",
       "locked": false,
-      "otherRoomId": null
+      "otherRoomId": "e17caaf0-323a-4968-a289-3e1289854fc8"
     },
     {
       "id": "e17caaf0-323a-4968-a289-3e1289854fc8",
@@ -1176,7 +1176,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "name": "",
+      "name": "Bone Yard",
       "a8Bg": 4,
       "shape": "box",
       "rx": 0,

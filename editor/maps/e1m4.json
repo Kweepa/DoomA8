@@ -154,7 +154,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "name": "",
+      "name": "Acid Pit",
       "a8Bg": 36,
       "shape": "L",
       "rx": 0,
@@ -205,7 +205,7 @@
       "doorScale": 1.5,
       "tag": "",
       "locked": false,
-      "otherRoomId": null
+      "otherRoomId": "7e31831c-f9c3-45a3-a138-bf1032fdc3ad"
     },
     {
       "id": "7e31831c-f9c3-45a3-a138-bf1032fdc3ad",
@@ -219,7 +219,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "name": "",
+      "name": "Bone Yard",
       "a8Bg": 132,
       "shape": "L",
       "rx": 0,
@@ -364,7 +364,7 @@
       "doorScale": 1,
       "tag": "",
       "locked": false,
-      "otherRoomId": null
+      "otherRoomId": "20bfb0a6-254f-49e2-bed5-d49f0ee2414b"
     },
     {
       "id": "20bfb0a6-254f-49e2-bed5-d49f0ee2414b",
@@ -378,7 +378,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "name": "",
+      "name": "Brimstone Hall",
       "a8Bg": 36,
       "shape": "L",
       "rx": 0,
@@ -469,7 +469,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "name": "",
+      "name": "Cacodemon Den",
       "a8Bg": 180,
       "shape": "box",
       "rx": 0,
@@ -493,8 +493,8 @@
       "doorType": "Tech",
       "doorScale": 1.5,
       "tag": "",
-      "otherRoomId": "ee56e5aa-2c09-4b48-b096-9742988339cf",
-      "roomId": null,
+      "otherRoomId": "20bfb0a6-254f-49e2-bed5-d49f0ee2414b",
+      "roomId": "ee56e5aa-2c09-4b48-b096-9742988339cf",
       "locked": false
     },
     {
@@ -633,7 +633,7 @@
       "doorScale": 1,
       "tag": "",
       "locked": false,
-      "otherRoomId": null
+      "otherRoomId": "6859f83d-5457-4f0d-b5a8-02246888d481"
     },
     {
       "id": "96fca4e7-f132-4c66-b902-ee344e023285",
@@ -653,7 +653,7 @@
       "doorScale": 1.5,
       "tag": "",
       "locked": false,
-      "otherRoomId": null
+      "otherRoomId": "bbb49c0c-ad31-4c30-a425-16eace3447b6"
     },
     {
       "id": "57eaee73-c559-40ad-88a2-0c60f93c7b96",
@@ -673,7 +673,7 @@
       "doorScale": 1.5,
       "tag": "",
       "locked": false,
-      "otherRoomId": null
+      "otherRoomId": "33033f11-09cb-443e-90cd-121e7a40d029"
     },
     {
       "id": "7f3ccca6-bc5e-4182-9f17-27ab3c957b84",
@@ -702,7 +702,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "name": "",
+      "name": "Cinder Vault",
       "a8Bg": 36,
       "shape": "box",
       "rx": 0,
@@ -742,7 +742,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "name": "",
+      "name": "Dead End",
       "a8Bg": 36,
       "shape": "L",
       "rx": 0,
@@ -895,7 +895,7 @@
       "doorScale": 1,
       "tag": "",
       "locked": false,
-      "otherRoomId": null
+      "otherRoomId": "89e3773d-bc7b-4339-be3a-cb7487238344"
     },
     {
       "id": "89e3773d-bc7b-4339-be3a-cb7487238344",
@@ -909,7 +909,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "name": "",
+      "name": "Gore Nest",
       "a8Bg": 36,
       "shape": "L",
       "rx": 0,
@@ -1071,7 +1071,7 @@
       "doorScale": 1,
       "tag": "",
       "locked": false,
-      "otherRoomId": null
+      "otherRoomId": "28c6205b-ff20-43cb-a668-d6da77cb5c50"
     },
     {
       "id": "1dea66ce-89f4-4972-848e-3c1439671f36",
@@ -1368,7 +1368,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "name": "",
+      "name": "Grim Annex",
       "a8Bg": 36,
       "shape": "T",
       "rx": 0,
@@ -1397,7 +1397,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "name": "",
+      "name": "Hell Closet",
       "a8Bg": 200,
       "shape": "box",
       "rx": 0,
@@ -1504,7 +1504,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "name": "",
+      "name": "Imp Parlor",
       "a8Bg": 36,
       "shape": "box",
       "rx": 0,
@@ -1524,7 +1524,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "name": "",
+      "name": "Lava Lounge",
       "a8Bg": 36,
       "shape": "L",
       "rx": 1,
@@ -1549,7 +1549,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "name": "",
+      "name": "Meat Locker",
       "a8Bg": 116,
       "shape": "box",
       "rx": 0,
@@ -1978,7 +1978,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "name": "",
+      "name": "Mold Cellar",
       "a8Bg": 4,
       "shape": "L",
       "rx": 0,
@@ -2003,7 +2003,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "name": "",
+      "name": "Ooze Chamber",
       "a8Bg": 4,
       "shape": "box",
       "rx": 0,
@@ -2043,7 +2043,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "name": "",
+      "name": "Pain Pantry",
       "a8Bg": 4,
       "shape": "S",
       "rx": 0,
@@ -2072,7 +2072,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "name": "",
+      "name": "Rust Gallery",
       "a8Bg": 4,
       "shape": "L",
       "rx": 0,
@@ -2137,7 +2137,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "name": "",
+      "name": "Skull Court",
       "a8Bg": 4,
       "shape": "box",
       "rx": 0,
@@ -2198,7 +2198,7 @@
       "doorScale": 1,
       "tag": "",
       "locked": false,
-      "otherRoomId": null
+      "otherRoomId": "6f30c671-85b0-43cf-9520-b43cd5ea3b43"
     },
     {
       "id": "6f30c671-85b0-43cf-9520-b43cd5ea3b43",
@@ -2212,7 +2212,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "name": "",
+      "name": "Slime Gutter",
       "a8Bg": 86,
       "shape": "box",
       "rx": 0,

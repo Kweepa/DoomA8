@@ -64,7 +64,7 @@
       "doorScale": 1,
       "tag": "",
       "locked": false,
-      "otherRoomId": null
+      "otherRoomId": "8c7795de-1189-4111-a97a-4dc8e73e570e"
     },
     {
       "id": "61152cdb-7ece-4903-b701-70a98d0e5e9d",
@@ -179,7 +179,7 @@
       "doorScale": 1,
       "tag": "",
       "locked": false,
-      "otherRoomId": null
+      "otherRoomId": "48afef2d-41c1-4069-9ad4-87a0a99eabd0"
     },
     {
       "id": "fc89ec02-11d7-4095-bbc9-ca80aaf6c27c",
@@ -199,7 +199,7 @@
       "doorScale": 1,
       "tag": "",
       "locked": false,
-      "otherRoomId": null
+      "otherRoomId": "95149b8d-6ced-4e99-9928-93d42ae0421d"
     },
     {
       "id": "b80950cf-cbc0-45ef-b669-d7bb7f44a511",
@@ -345,7 +345,7 @@
       "doorScale": 1,
       "tag": "",
       "locked": false,
-      "otherRoomId": null
+      "otherRoomId": "98b7247f-8162-445e-a38d-b677e5fc8247"
     },
     {
       "id": "98b7247f-8162-445e-a38d-b677e5fc8247",
@@ -500,7 +500,7 @@
       "doorScale": 1,
       "tag": "",
       "locked": false,
-      "otherRoomId": null
+      "otherRoomId": "f17826fd-3bea-45c7-9bee-265d02451500"
     },
     {
       "id": "f17826fd-3bea-45c7-9bee-265d02451500",
@@ -614,7 +614,7 @@
       "doorScale": 1,
       "tag": "",
       "locked": false,
-      "otherRoomId": null
+      "otherRoomId": "466c565a-bae4-4462-903f-6294bf9cc7d2"
     },
     {
       "id": "466c565a-bae4-4462-903f-6294bf9cc7d2",
@@ -628,7 +628,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "name": "",
+      "name": "Acid Pit",
       "a8Bg": 36,
       "shape": "box",
       "rx": 0,
@@ -669,7 +669,7 @@
       "doorScale": 1,
       "tag": "",
       "locked": false,
-      "otherRoomId": null
+      "otherRoomId": "95149b8d-6ced-4e99-9928-93d42ae0421d"
     },
     {
       "id": "95149b8d-6ced-4e99-9928-93d42ae0421d",
@@ -764,7 +764,7 @@
       "doorScale": 1,
       "tag": "",
       "locked": false,
-      "otherRoomId": null
+      "otherRoomId": "b0bd609c-c09c-458a-bed8-bdcdea00052d"
     },
     {
       "id": "803f2fa2-2faf-4bab-865c-cde034ce732c",
@@ -784,7 +784,7 @@
       "doorScale": 1,
       "tag": "",
       "locked": false,
-      "otherRoomId": null
+      "otherRoomId": "132d5774-6af1-4f23-9012-290dd9d65a13"
     },
     {
       "id": "709770fd-4c4e-4125-bc55-2c2b32cc31ea",
@@ -865,7 +865,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "name": "",
+      "name": "Bone Yard",
       "a8Bg": 4,
       "shape": "box",
       "rx": 0,
@@ -885,7 +885,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "name": "",
+      "name": "Brimstone Hall",
       "a8Bg": 6,
       "shape": "box",
       "rx": 0,
@@ -905,7 +905,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "name": "",
+      "name": "Cacodemon Den",
       "a8Bg": 150,
       "shape": "box",
       "rx": 0,
@@ -945,7 +945,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "name": "",
+      "name": "Cinder Vault",
       "a8Bg": 116,
       "shape": "L",
       "rx": 0,
@@ -990,7 +990,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "name": "",
+      "name": "Dead End",
       "a8Bg": 132,
       "shape": "box",
       "rx": 0,
@@ -1030,7 +1030,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "name": "",
+      "name": "Gore Nest",
       "a8Bg": 36,
       "shape": "box",
       "rx": 0,
@@ -1050,7 +1050,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "name": "",
+      "name": "Grim Annex",
       "a8Bg": 36,
       "shape": "box",
       "rx": 0,
@@ -1095,7 +1095,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "name": "",
+      "name": "Hell Closet",
       "a8Bg": 4,
       "shape": "L",
       "rx": 0,
@@ -1120,7 +1120,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "name": "",
+      "name": "Imp Parlor",
       "a8Bg": 4,
       "shape": "L",
       "rx": 0,
@@ -1200,7 +1200,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "name": "",
+      "name": "Lava Lounge",
       "a8Bg": 36,
       "shape": "L",
       "rx": 0,

@@ -882,7 +882,8 @@ async function saveNow(okMsg = "Saved") {
     await writeMapFiles(mapRecords);
     markClean();
     persistMdlRigBackup();
-    if (mapRecords.tagsFilled) renderInspector();
+    if (mapRecords.namesFilled) refreshAll();
+    else if (mapRecords.tagsFilled) renderInspector();
     setStatus(`${okMsg} ${docFileName()}`);
   } catch (err) {
     setStatus(String(err.message || err), true);

@@ -75,7 +75,7 @@
       "doorScale": 1,
       "tag": "",
       "locked": false,
-      "otherRoomId": null
+      "otherRoomId": "490c7e1f-5e06-4ee2-95f6-d4f6d718a717"
     },
     {
       "id": "490c7e1f-5e06-4ee2-95f6-d4f6d718a717",
@@ -134,7 +134,7 @@
       "doorType": "Tech",
       "doorScale": 1,
       "tag": "",
-      "otherRoomId": "c9287f12-f5e7-4e4b-9241-095208ff4326",
+      "otherRoomId": "84d71151-1a34-453a-b121-476a89d1400c",
       "locked": false
     },
     {
@@ -155,7 +155,7 @@
       "doorScale": 1.5,
       "tag": "",
       "locked": false,
-      "otherRoomId": null
+      "otherRoomId": "8a03e935-f111-4eab-b69f-bdae3fbeef32"
     },
     {
       "id": "c9287f12-f5e7-4e4b-9241-095208ff4326",
@@ -341,8 +341,8 @@
       "doorType": "Tech",
       "doorScale": 1.5,
       "tag": "",
-      "locked": false,
-      "otherRoomId": "3ab730c8-456f-439e-a78f-8ba0f1bcc7c5"
+      "otherRoomId": "3ab730c8-456f-439e-a78f-8ba0f1bcc7c5",
+      "locked": false
     },
     {
       "id": "84d71151-1a34-453a-b121-476a89d1400c",
@@ -649,7 +649,7 @@
       "doorType": "Tech",
       "doorScale": 1,
       "tag": "",
-      "otherRoomId": "c9287f12-f5e7-4e4b-9241-095208ff4326",
+      "otherRoomId": null,
       "locked": true
     },
     {

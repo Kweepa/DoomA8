@@ -111,6 +111,58 @@ def aabb_volume(box: dict) -> int:
     return int(box["sx"]) * int(box["sy"]) * int(box["sz"])
 
 
+# Atari GTIA hue names (NTSC); index = hue nibble of the colour byte.
+A8_HUE_NAMES = [
+    "grey", "gold", "orange", "red-orange", "pink", "purple", "purple-blue", "blue",
+    "blue", "light blue", "turquoise", "green-blue", "green", "yellow-green", "orange-green", "light orange",
+]
+
+# Level key (E1M4) for error text; set by cook_one.
+_MAP_KEY = ""
+
+
+def bg_colour_name(room: dict) -> str:
+    """Approximate colour word + paper byte, e.g. 'brown $24'. Matches the inspector's Background."""
+    b = norm_bg(room["a8Bg"]) if "a8Bg" in room else ROOM_BG_DEFAULT
+    hue, lum = b >> 4, b & 0x0E
+    shade = "dark" if lum <= 0x04 else "mid" if lum <= 0x06 else "light"
+    word = "brown" if hue == 2 and shade == "dark" else f"{shade} {A8_HUE_NAMES[hue]}"
+    return f"{word} ${b:02X}"
+
+
+def room_desc(room: dict) -> str:
+    """Room name (or its position when unnamed) and colour, for error text."""
+    name = str(room.get("name") or "").strip() or "(unnamed)"
+    return f"{name!r} ({bg_colour_name(room)})"
+
+
+def nearest_room(rooms: list[dict], obj: dict) -> tuple[dict, float] | None:
+    """Room whose bounding box is closest to obj, with the gap in units."""
+    best: tuple[dict, float] | None = None
+    for r in rooms:
+        d2 = 0
+        for ax in "xyz":
+            lo_a, hi_a = obj[ax], obj[ax] + obj["s" + ax]
+            lo_b, hi_b = r[ax], r[ax] + r["s" + ax]
+            gap = max(0, lo_b - hi_a, lo_a - hi_b)
+            d2 += gap * gap
+        if best is None or d2 < best[1]:
+            best = (r, d2)
+    return (best[0], best[1] ** 0.5) if best else None
+
+
+def no_room_hint(rooms: list[dict], obj: dict) -> str:
+    hit = nearest_room(rooms, obj)
+    if not hit:
+        return "no rooms in map"
+    room, gap = hit
+    return f"nearest room {room_desc(room)}, {gap:g} units away"
+
+
+def fail(msg: str):
+    raise SystemExit(f"{_MAP_KEY + ': ' if _MAP_KEY else ''}{msg}")
+
+
 def closest_elevator(trigger: dict, elevs: list[dict]) -> int | None:
     """Index of the nearest elevator by xz footprint center. Ties keep the earlier car."""
     if not elevs:
@@ -134,7 +186,7 @@ def room_index(rooms: list[dict], obj: dict, kind: str) -> int:
     id_to_i = {r.get("id"): i for i, r in enumerate(rooms)}
     if rid in id_to_i:
         return id_to_i[rid]
-    raise SystemExit(f"{kind} at {obj.get('x')},{obj.get('y')},{obj.get('z')} has no room")
+    fail(f"{kind} at {obj.get('x')},{obj.get('y')},{obj.get('z')} has no room ({no_room_hint(rooms, obj)})")
 
 
 def unique_u8(vals: list[int], cap: int, what: str, name: str) -> tuple[list[int], list[int]]:
@@ -144,7 +196,7 @@ def unique_u8(vals: list[int], cap: int, what: str, name: str) -> tuple[list[int
         v = v & 0xFF
         if v not in seen:
             if len(seen) >= cap:
-                raise SystemExit(f"room {name!r} has >{cap} unique {what}")
+                fail(f"room {name} has >{cap} unique {what}")
             seen.append(v)
         idx.append(seen.index(v))
     return seen, idx
@@ -171,8 +223,13 @@ def door_rooms(rooms: list[dict], d: dict) -> tuple[int, int]:
     id_to_i = {r.get("id"): i for i, r in enumerate(rooms)}
     ra = id_to_i.get(d.get("roomId"), 255)
     rb = id_to_i.get(d.get("otherRoomId"), 255)
+    if ra == 255 and rb != 255:
+        ra, rb = rb, 255  # stale JSON: only the second link survived
     if ra == 255:
-        raise SystemExit(f"doorway at {d.get('x')},{d.get('y')},{d.get('z')} has no owner room")
+        fail(
+            f"doorway at {d.get('x')},{d.get('y')},{d.get('z')} has no owner room: "
+            f"it touches no room wall ({no_room_hint(rooms, d)})"
+        )
     return ra, rb
 
 
@@ -382,6 +439,8 @@ def ascii_screen(s: str, maxlen: int = 40) -> list[int]:
 
 
 def cook_one(level: dict, map_key: str) -> bytes:
+    global _MAP_KEY
+    _MAP_KEY = map_key.upper()
     objs = level["objects"]
 
     rooms = [o for o in objs if o["kind"] == "room"]
@@ -607,7 +666,7 @@ def cook_one(level: dict, map_key: str) -> bytes:
         geom = room_geometry(r)
         cols = geom["colliders"]
         if len(cols) > 3:
-            raise SystemExit(f"room {r.get('name') or '?'} has {len(cols)} floor areas (max 3)")
+            fail(f"room {room_desc(r)} has {len(cols)} floor areas (max 3)")
         while len(cols) < 3:
             cols.append({"x": 0, "y": 0, "z": 0, "sx": 0, "sy": 0, "sz": 0})
         for c in cols:
@@ -639,11 +698,11 @@ def cook_one(level: dict, map_key: str) -> bytes:
             continue
         verts = geom["verts"]
         edges = geom["edges"]
-        rname = r.get("name") or "?"
+        rname = room_desc(r)
         if len(verts) > 16:
-            raise SystemExit(f"room {rname!r} has {len(verts)} verts (max 16)")
+            fail(f"room {rname} has {len(verts)} verts (max 16)")
         if len(edges) > 32:
-            raise SystemExit(f"room {rname!r} has {len(edges)} edges (max 32)")
+            fail(f"room {rname} has {len(edges)} edges (max 32)")
         ux, xid = unique_u8([int(v["x"]) for v in verts], 4, "X", rname)
         uz, zid = unique_u8([int(v["z"]) for v in verts], 4, "Z", rname)
         pairs: list[tuple[int, int]] = []
@@ -652,7 +711,7 @@ def cook_one(level: dict, map_key: str) -> bytes:
             p = (xi, zi)
             if p not in pairs:
                 if len(pairs) >= 16:
-                    raise SystemExit(f"room {rname!r} has >16 unique XZ columns")
+                    fail(f"room {rname} has >16 unique XZ columns")
                 pairs.append(p)
             col.append(pairs.index(p))
         room_nv.append(len(verts))

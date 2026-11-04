@@ -2276,6 +2276,57 @@ export function mapDisplayName(map, key) {
 /** Soft cap: 8-bit object indices / editor budget. */
 export const MAX_MAP_OBJECTS = 255;
 export const ROOM_MAX = 24; // keep in sync with tools/genmap.py
+
+/** One name per possible room (ROOM_MAX). Unnamed rooms get the first unused one on save. */
+export const ROOM_NAME_POOL = [
+  "Acid Pit",
+  "Bone Yard",
+  "Brimstone Hall",
+  "Cacodemon Den",
+  "Cinder Vault",
+  "Dead End",
+  "Gore Nest",
+  "Grim Annex",
+  "Hell Closet",
+  "Imp Parlor",
+  "Lava Lounge",
+  "Meat Locker",
+  "Mold Cellar",
+  "Ooze Chamber",
+  "Pain Pantry",
+  "Rust Gallery",
+  "Skull Court",
+  "Slime Gutter",
+  "Spore Attic",
+  "Stinky Vent",
+  "Toxic Nook",
+  "Void Closet",
+  "Wretched Foyer",
+  "Zombie Walk",
+];
+
+/** Name every blank room from ROOM_NAME_POOL (unique per level). Returns count named. */
+export function assignRoomNames(doc) {
+  let n = 0;
+  for (const name of LEVEL_NAMES) {
+    const objs = doc.maps?.[name]?.objects;
+    if (!Array.isArray(objs)) continue;
+    const rooms = objs.filter((o) => o.kind === "room");
+    const used = new Set(rooms.map((r) => clampName(r.name).toLowerCase()).filter(Boolean));
+    for (const room of rooms) {
+      if (clampName(room.name)) continue;
+      let pick = ROOM_NAME_POOL.find((p) => !used.has(p.toLowerCase()));
+      for (let i = 1; !pick; i++) {
+        const cand = `Room ${i}`;
+        if (!used.has(cand.toLowerCase())) pick = cand;
+      }
+      room.name = pick;
+      used.add(pick.toLowerCase());
+      n++;
+    }
+  }
+  return n;
+}
 export const ROOM_MAX_TYPES = 2;
 export const ENEMY_MAX = 24; // keep in sync with tools/genmap.py / src/mem.asm
 export const MESH_EDGE_MAX = 255; // packed mesh-edge table is one byte; box rooms store 0
@@ -3307,6 +3358,7 @@ export function assignNearestElevatorTags(objects) {
 export function mapFileRecords(doc) {
   let tagsFilled = false;
   relinkAllDoors(doc);
+  const namesFilled = assignRoomNames(doc);
   const records = LEVEL_NAMES.map((name) => {
     const map = doc.maps?.[name] || {};
     const objects = Array.isArray(map.objects) ? map.objects : [];
@@ -3320,6 +3372,7 @@ export function mapFileRecords(doc) {
     };
   });
   records.tagsFilled = tagsFilled;
+  records.namesFilled = namesFilled;
   return records;
 }
 
