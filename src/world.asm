@@ -2652,6 +2652,8 @@ update_triggers
 	sta hurt_ms_l
 	lda #>HURT_MS
 	sta hurt_ms_h
+	lda pu_kind			; radsuit: floor hurt does nothing
+	bne .ut_hn
 	jsr hurt_amount
 	jsr take_damage
 .ut_hn
@@ -2758,8 +2760,12 @@ trig_enter
 	sta hurt_ms_l
 	lda #>HURT_MS
 	sta hurt_ms_h
+	lda pu_kind			; radsuit: floor hurt does nothing
+	bne .teh_rts
 	jsr hurt_amount
 	jmp take_damage
+.teh_rts
+	rts
 ; Group id does not say how many cars share it. Count starts; two or more
 ; is a stair, so latch gate id 15. Cook never assigns 15, so nothing re-arms it.
 ; One car stays a toggle. X is the trigger index on entry.

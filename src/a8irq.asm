@@ -5,6 +5,7 @@
 
 ; Border only (COLBK). Hue 4, lum 8. Lum E clips to white. Room paper stays col_bg.
 COL_HURT_A8	= $48
+COL_SUIT_A8	= $c4				; dark green border while the radsuit runs
 
 pot_prev	!byte $e0
 stick_bits	!byte 0
@@ -103,6 +104,9 @@ init_irq
 	lda #COL_HURT_A8
 	jsr a8_to_pal
 	sta hurt_col+1
+	lda #COL_SUIT_A8
+	jsr a8_to_pal
+	sta suit_col+1
 	lda #$c0				; VBI + DLI
 	sta $d40e
 	rts
@@ -337,6 +341,12 @@ hurt_col
 	lda #COL_HURT_A8			; PAL init rewrites the hue
 	bne .bk
 .nb
+	lda pu_kind
+	beq .nb0
+suit_col
+	lda #COL_SUIT_A8			; PAL init rewrites the hue
+	bne .bk
+.nb0
 	lda #0
 .bk
 	sta $d01a				; COLBK: black, or bright red while hurt
