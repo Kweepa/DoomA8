@@ -34,6 +34,7 @@
   * **Hurt player** — 10% health on enter, then every 2 seconds while inside (no tag).
   * **Activate elevator** — destination **tag** targets an elevator; toggles to the other stop on entry if that elevator is idle.
   * **Summon elevator** — destination **tag** targets an elevator; on entry, if idle, sends it to the stop nearer the player’s feet (no-op if already there or moving).
+  * **Spawn tagged enemies (once)** — **tag** matches enemies with the same **Tag** (enemy inspector). Tagged enemies start hidden/inactive; entry wakes them and the trigger latches spent (same latch as stair elevators; an **Armed by** switch re-arms it).
 * Optional **Armed by** tag: if set, the volume does nothing until a switch with that tag is used. One switch can arm every trigger that shares the tag. Destination **tag** (elevator / unlock) is independent.
 
 ## Patrol

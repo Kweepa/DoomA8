@@ -15,7 +15,8 @@ START_LEVEL	= 1
 TRIG_MSG	= 0
 TRIG_END	= 1
 TRIG_HURT	= 2
-; 3 unused (was teleport). 8 unused (was electrode). Do not renumber.
+TRIG_SPAWN	= 3
+; 8 unused (was electrode). Do not renumber.
 TRIG_ELEV	= 4
 TRIG_SUMMON	= 5
 TRIG_UNLOCK	= 6

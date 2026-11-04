@@ -85,9 +85,8 @@ import {
   WORLD_MIN,
   WORLD_MAX,
   assignDoorRooms,
-  tryConnectDoor,
+  relinkDoor,
   doorDoublyConnected,
-  snapDoorBetweenRooms,
   snapDoorToFace,
   snapSwitchToFace,
   snapSwitchToRoom,
@@ -1849,30 +1848,20 @@ function selectObjectIds(ids, additive) {
   refreshPanels();
 }
 
+/** Recompute room links of the given doors from touching geometry (never moves them). */
 function connectUnlinkedDoors(ids) {
   const map = activeMap(doc);
-  const doors = [];
+  const stale = [];
   for (const id of ids) {
     const obj = map.objects.find((o) => o.id === id);
-    if (obj?.kind === "doorway" && !doorDoublyConnected(doc, obj)) doors.push(obj);
+    if (obj?.kind !== "doorway") continue;
+    if (relinkDoor(doc, { ...obj })) stale.push(obj);
   }
-  if (!doors.length) return false;
+  if (!stale.length) return false;
   pushUndo();
-  let n = 0;
-  for (const door of doors) {
-    if (tryConnectDoor(doc, door)) {
-      clampObject(door);
-      n++;
-    }
-  }
-  if (!n) {
-    undoStack.pop();
-    updateUndoButtons();
-    if (doors.length === 1) setStatus("Doorway not connected to two rooms", true);
-    return false;
-  }
+  for (const door of stale) relinkDoor(doc, door);
   markDirty();
-  setStatus(n === 1 ? "Connected doorway" : `Connected ${n} doorways`);
+  setStatus(stale.length === 1 ? "Relinked doorway" : `Relinked ${stale.length} doorways`);
   return true;
 }
 
@@ -2558,6 +2547,20 @@ function renderLayoutObjectFields(root, objs) {
     root.appendChild(rotateRow(() => apply((obj) => (obj.rot = cycleEnemyRot(obj.rot ?? 0)))));
   }
 
+  if (kind === "enemy") {
+    const enTag = unanimous(objs, (o) => o.tag || "");
+    root.appendChild(
+      field(
+        "Tag",
+        textInputMixed(enTag, {
+          maxLength: MAX_TAG_LEN,
+          placeholder: "starts hidden until a Spawn trigger fires",
+          onChange: (v) => apply((obj) => (obj.tag = clampTag(v))),
+        })
+      )
+    );
+  }
+
   if (kind === "trigger") {
     const purpose = unanimous(objs, (o) => clampTriggerPurpose(o.purpose));
     root.appendChild(
@@ -2598,7 +2601,9 @@ function renderLayoutObjectFields(root, objs) {
                   ? "destination tag, or blank for nearest"
                   : purpose === "unhide"
                     ? "hidden door tag"
-                    : "destination tag",
+                    : purpose === "spawn"
+                      ? "enemy tag to spawn"
+                      : "destination tag",
             onChange: (v) => apply((obj) => (obj.tag = clampTag(v))),
           })
         )
@@ -2718,33 +2723,22 @@ function renderLayoutObjectFields(root, objs) {
 
   if (kind !== "room") {
     const roomCur = unanimous(objs, (o) => o.roomId || "");
-    root.appendChild(
-      field(
-        "Room",
-        selectMixed(roomCur, roomItems(), (v) =>
-          apply((obj) => {
-            obj.roomId = v || null;
-            if (obj.kind === "doorway") assignDoorRooms(doc, obj, roomById(doc, obj.roomId));
-            if (obj.kind === "switch") snapSwitchToRoom(obj, roomById(doc, obj.roomId));
-          })
-        )
-      )
+    const roomSel = selectMixed(roomCur, roomItems(), (v) =>
+      apply((obj) => {
+        obj.roomId = v || null;
+        if (obj.kind === "switch") snapSwitchToRoom(obj, roomById(doc, obj.roomId));
+      })
     );
+    // Door links are derived from touching geometry; display only.
+    if (kind === "doorway") roomSel.disabled = true;
+    root.appendChild(field("Room", roomSel));
   }
 
   if (kind === "doorway") {
     const otherCur = unanimous(objs, (o) => o.otherRoomId || "");
-    root.appendChild(
-      field(
-        "Other room",
-        selectMixed(otherCur, roomItems(), (v) =>
-          apply((obj) => {
-            obj.otherRoomId = v || null;
-            snapDoorBetweenRooms(obj, roomById(doc, obj.roomId), roomById(doc, obj.otherRoomId));
-          })
-        )
-      )
-    );
+    const otherSel = selectMixed(otherCur, roomItems(), () => {});
+    otherSel.disabled = true;
+    root.appendChild(field("Other room", otherSel));
     const lockCur = unanimous(objs, (o) => clampDoorLock(o.lockKey));
     root.appendChild(
       field(

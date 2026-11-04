@@ -1297,6 +1297,59 @@ export function doorRoomScores(door, rooms) {
   return scored;
 }
 
+/** Thin axis of a door box: from `face` (±x / ±z), else the shorter horizontal side. */
+function doorThinAxis(door) {
+  const face = String(door?.face || "");
+  if (face.endsWith("x")) return "x";
+  if (face.endsWith("z")) return "z";
+  return (door.sx | 0) <= (door.sz | 0) ? "x" : "z";
+}
+
+function overlapLen(a0, a1, b0, b1) {
+  return Math.min(a1, b1) - Math.max(a0, b0);
+}
+
+/**
+ * Rooms whose hull actually touches the door, per side of its thin axis.
+ * low:  room's max face (sign +1) lies exactly on the door's low plane.
+ * high: room's min face (sign -1) lies exactly on the door's high plane.
+ * The face must overlap the door with positive area. No proximity slack.
+ * Each list is [{ room, area }], largest contact first.
+ */
+export function doorTouchingRooms(door, rooms) {
+  const out = { low: [], high: [] };
+  if (!door || !rooms?.length) return out;
+  const axis = doorThinAxis(door);
+  const latAxis = axis === "x" ? "z" : "x";
+  const lat0 = boxLo(door, latAxis);
+  const lat1 = boxHi(door, latAxis);
+  const y0 = boxLo(door, "y");
+  const y1 = boxHi(door, "y");
+  const lowPlane = boxLo(door, axis);
+  const highPlane = boxHi(door, axis);
+  for (const room of rooms) {
+    let lowArea = 0;
+    let highArea = 0;
+    for (const f of roomGeometry(room).hullFaces || []) {
+      if (f.axis !== axis) continue;
+      const fl0 = axis === "x" ? f.b0 : f.a0;
+      const fl1 = axis === "x" ? f.b1 : f.a1;
+      const fy0 = axis === "x" ? f.a0 : f.b0;
+      const fy1 = axis === "x" ? f.a1 : f.b1;
+      const lat = overlapLen(lat0, lat1, fl0, fl1);
+      const vert = overlapLen(y0, y1, fy0, fy1);
+      if (lat <= 0 || vert <= 0) continue;
+      if (f.sign > 0 && f.plane === lowPlane) lowArea += lat * vert;
+      if (f.sign < 0 && f.plane === highPlane) highArea += lat * vert;
+    }
+    if (lowArea > 0) out.low.push({ room, area: lowArea });
+    if (highArea > 0) out.high.push({ room, area: highArea });
+  }
+  out.low.sort((a, b) => b.area - a.area);
+  out.high.sort((a, b) => b.area - a.area);
+  return out;
+}
+
 /** Face of the door AABB closer to the given room (in-game stroke plane). */
 export function doorNearFaceId(door, room) {
   if (!door) return "+z";

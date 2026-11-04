@@ -136,7 +136,7 @@ sw_kind	= $04DA
 sw_tag	= $04DC
 sw_room	= $04DE
 sw_face	= $04E0
-; (was sw_id)
+en_tag	= $04E2		; cooked enemy tag id; 0 = untagged. Hole was sw_id.
 en_x	= $04E4
 en_y	= $04E6
 en_z	= $04E8

@@ -123,6 +123,11 @@ init_enemies
 	+ldy_mx en_type
 	lda enemy_hp_init,y
 	sta en_hp,x
+	+lda_mx en_tag			; tagged = hidden until a spawn trigger fires
+	beq .ie_nx
+	lda #EN_GONE
+	sta en_state,x
+.ie_nx
 	inx
 	beq .ie_rts
 	jmp .ie_lp
@@ -2744,6 +2749,8 @@ trig_enter
 	beq .te_unlock
 	cmp #TRIG_UNHIDE
 	beq .te_unhide
+	cmp #TRIG_SPAWN
+	beq .te_spawn
 	cmp #TRIG_END
 	bne .te_rts
 	jmp next_level
@@ -2810,3 +2817,30 @@ trig_enter
 .te_unhide
 	+lda_mx tr_arg
 	jmp door_unhide_tag
+; One-shot: latch gate 15 (as .te_elev), wake every EN_GONE enemy with this tag,
+; then force a stream recheck so their pose banks load.
+.te_spawn
+	+lda_mx tr_arg
+	sta spawn_match
+	+lda_mx tr_purpose
+	ora #$f0
+	+sta_mx tr_purpose
+	ldx #0
+.tsp_lp
+	cpx map_nenemies
+	bcs .tsp_done
+	+lda_mx en_tag
+	cmp spawn_match
+	bne .tsp_nx
+	lda en_state,x
+	cmp #EN_GONE
+	bne .tsp_nx
+	lda #EN_IDLE
+	sta en_state,x
+.tsp_nx
+	inx
+	bne .tsp_lp
+.tsp_done
+	lda #$ff
+	sta stream_room
+	rts

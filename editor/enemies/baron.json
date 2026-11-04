@@ -2734,7 +2734,9 @@
         "G",
         "G"
       ],
-      "attackFrame": 1
+      "sound": "melee",
+      "soundFrame": 2,
+      "attackFrame": 3
     },
     {
       "name": "pain",
@@ -2783,7 +2785,7 @@
   "customSkeleton": true,
   "weaponVert": 10,
   "hp": 255,
-  "painChance": 32,
+  "painChance": 0,
   "blockR": 2,
   "exportClips": [
     "stand",

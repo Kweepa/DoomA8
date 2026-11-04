@@ -483,8 +483,9 @@ HURT_MS		= 1000			; hurt trigger period (both sizes)
 HURT_SM_HP	= 2			; small hurt, once per second
 HURT_LG_HP	= 10			; large hurt, once per second
 
-; $CBB0 was elev_y (now $CFE2). $CBB1–$CBB3 still unused.
+; $CBB0 was elev_y (now $CFE2). $CBB2–$CBB3 still unused.
 ledge_i		= $CBB0 + A8_OFF			; ledge_unstick neighbor 0..3
+spawn_match	= $CBB1 + A8_OFF			; enemy tag id while .te_spawn scans
 elev_noise_n	= $CBB4 + A8_OFF			; refcount: SID V3 rumble while elevs move
 den_arm		= $CBB5 + A8_OFF			; 1 = DEN held off, 2 = view IRQ may set DEN
 pub_ff		= $CBB6 + A8_OFF			; frame_flag when the draw buffer was published

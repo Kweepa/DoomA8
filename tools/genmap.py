@@ -156,14 +156,8 @@ def assign_missing_parents(objs: list[dict], rooms: list[dict]) -> None:
         if obj.get("kind") == "room":
             continue
         if obj.get("kind") == "doorway":
-            hits = [r for r in rooms if aabb_overlap(obj, r)]
-            hits.sort(key=lambda r: aabb_volume(r))
-            if not obj.get("roomId") and hits:
-                obj["roomId"] = hits[0].get("id")
-            if not obj.get("otherRoomId"):
-                other = next((r for r in hits if r.get("id") != obj.get("roomId")), None)
-                if other:
-                    obj["otherRoomId"] = other.get("id")
+            # Door links are derived from touching hull geometry by the editor
+            # (relinkAllDoors on save). Never re-infer them by AABB overlap here.
             continue
         if obj.get("roomId"):
             continue
@@ -474,7 +468,8 @@ def cook_one(level: dict, map_key: str) -> bytes:
     TRIG_MSG = 0
     TRIG_END = 1
     TRIG_HURT = 2
-    # 3 unused (was teleport). 8 unused (was electrode). Do not renumber.
+    TRIG_SPAWN = 3  # was teleport; wakes tagged enemies (EN_GONE -> EN_IDLE), one-shot
+    # 8 unused (was electrode). Do not renumber.
     TRIG_ELEV = 4
     TRIG_SUMMON = 5
     TRIG_UNLOCK = 6
@@ -489,6 +484,7 @@ def cook_one(level: dict, map_key: str) -> bytes:
         "summon": TRIG_SUMMON,
         "unlock": TRIG_UNLOCK,
         "unhide": TRIG_UNHIDE,
+        "spawn": TRIG_SPAWN,
     }
     SW_DEST_DOOR = 0
     SW_DEST_ELEV = 1
@@ -902,6 +898,12 @@ def cook_one(level: dict, map_key: str) -> bytes:
     en_x, en_y, en_z = [], [], []
     en_type, en_rot, en_room = [], [], []
     en_id = []
+    en_tag = []
+    en_tag_ids: dict[str, int] = {}  # enemy tag -> 1..N (0 = untagged)
+    for e in enemies:
+        etag = (e.get("tag") or "").strip()
+        if etag and etag not in en_tag_ids:
+            en_tag_ids[etag] = len(en_tag_ids) + 1
     for e in enemies:
         ri = room_index(rooms, e, "enemy")
         name = e.get("enemy") or "Possessed"
@@ -914,6 +916,7 @@ def cook_one(level: dict, map_key: str) -> bytes:
         en_type.append(ENEMY_TYPE[name])
         en_rot.append(int(e.get("rot") or 0) & 7)
         en_room.append(ri)
+        en_tag.append(en_tag_ids.get((e.get("tag") or "").strip(), 0))
         en_id.append(map_id[id(e)])
 
     # Triggers
@@ -1016,6 +1019,13 @@ def cook_one(level: dict, map_key: str) -> bytes:
                     f"{map_key} unhide trigger tag {tag!r} is also an unlock trigger"
                 )
             arg = door_tag_ids[tag]
+        elif purpose == TRIG_SPAWN:
+            tag = (t.get("tag") or "").strip()
+            if tag not in en_tag_ids:
+                raise SystemExit(
+                    f"{map_key} spawn trigger tag {tag!r} matches no tagged enemy"
+                )
+            arg = en_tag_ids[tag]
         tr_x.append(t["x"])
         tr_y.append(t["y"])
         tr_z.append(t["z"])
@@ -1252,6 +1262,7 @@ def cook_one(level: dict, map_key: str) -> bytes:
     add(en_type)
     add(en_rot)
     add(en_room)
+    add(en_tag)
     add(tr_x)
     add(tr_y)
     add(tr_z)
@@ -1294,7 +1305,8 @@ MAP_NLEVELS	= 8
 TRIG_MSG	= 0
 TRIG_END	= 1
 TRIG_HURT	= 2
-; 3 unused (was teleport). 8 unused (was electrode). Do not renumber.
+TRIG_SPAWN	= 3
+; 8 unused (was electrode). Do not renumber.
 TRIG_ELEV	= 4
 TRIG_SUMMON	= 5
 TRIG_UNLOCK	= 6

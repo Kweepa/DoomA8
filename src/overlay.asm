@@ -256,6 +256,7 @@ bind_tab
 	+bind_add en_type, map_nenemies
 	+bind_add en_rot, map_nenemies
 	+bind_add en_room, map_nenemies
+	+bind_add en_tag, map_nenemies
 	+bind_add tr_x, map_ntrigs
 	+bind_add tr_y, map_ntrigs
 	+bind_add tr_z, map_ntrigs

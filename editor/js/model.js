@@ -20,6 +20,7 @@ import {
   alignSwitchToContact,
   rayCrateSwitchFace,
   doorRoomScores,
+  doorTouchingRooms,
   doorNearFaceId,
   nudgeDoorOutside,
   rotateRoom,
@@ -363,7 +364,7 @@ export function usesLinkTag(kind) {
 }
 
 /** Trigger purposes. Tag is used for elevator / summon / unlock / unhide. */
-export const TRIGGER_PURPOSES = ["message", "end_level", "hurt", "hurt_small", "elevator", "summon", "unlock", "unhide"];
+export const TRIGGER_PURPOSES = ["message", "end_level", "hurt", "hurt_small", "elevator", "summon", "unlock", "unhide", "spawn"];
 export const TRIGGER_PURPOSE_LABELS = {
   message: "Display message",
   end_level: "End of level",
@@ -373,6 +374,7 @@ export const TRIGGER_PURPOSE_LABELS = {
   summon: "Summon elevator",
   unlock: "Unlock door",
   unhide: "Unhide door for 30s",
+  spawn: "Spawn tagged enemies (once)",
 };
 
 export function clampTriggerPurpose(s) {
@@ -381,7 +383,7 @@ export function clampTriggerPurpose(s) {
 
 export function triggerUsesTag(purpose) {
   const p = clampTriggerPurpose(purpose);
-  return p === "elevator" || p === "summon" || p === "unlock" || p === "unhide";
+  return p === "elevator" || p === "summon" || p === "unlock" || p === "unhide" || p === "spawn";
 }
 
 export function doorUsesTag(lockKey) {
@@ -1955,6 +1957,11 @@ export function clampObject(obj) {
   if (obj.kind === "enemy" || obj.kind === "spawn") {
     obj.rot = clampEnemyRot(obj.rot ?? 0);
   }
+  if (obj.kind === "enemy") {
+    const et = clampTag(obj.tag);
+    if (et) obj.tag = et;
+    else delete obj.tag;
+  }
   if (obj.kind === "trigger") {
     obj.purpose = clampTriggerPurpose(obj.purpose);
     obj.text = clampTriggerText(obj.text);
@@ -2043,6 +2050,8 @@ export function createObject(kind, x, y, z, extra = {}) {
   if (kind === "enemy") {
     const name = extra.enemy || "Possessed";
     obj.enemy = ENEMY_TYPES.some((t) => t.name === name) ? name : "Possessed";
+    const et = clampTag(extra.tag);
+    if (et) obj.tag = et;
   }
   if (kind === "trigger") {
     obj.purpose = clampTriggerPurpose(extra.purpose);
@@ -2620,7 +2629,7 @@ export const C64_OBJECT_BYTES = {
   platform: 8,
   elevator: 11,
   switch: 10,
-  enemy: 8,
+  enemy: 9,
   trigger: 10,
   spawn: 0,
   pickup: 6,
@@ -2875,10 +2884,9 @@ export function objectTree(doc) {
   return { nodes, orphans };
 }
 
-/** Hull-face scores below this are on-wall; +50 is a lateral miss. */
+/** Hull-face scores below this are on-wall; +50 is a lateral miss. Orientation only; links use doorTouchingRooms. */
 const DOOR_PAIR_MAX = 8;
 const DOOR_PAIR_SLACK = 4;
-const DOOR_PAIR_LOOSE = 16;
 
 /** True if the door lists two different rooms that still exist. */
 export function doorDoublyConnected(doc, door) {
@@ -2906,56 +2914,69 @@ export function inferDoorRoomPair(doc, door, loose = false) {
   return { room: best.room, other: otherHit?.hit.room || null };
 }
 
-function setDoorRoomPair(door, pair, owner) {
-  const a = pair.room;
-  const b = pair.other;
-  const ownerId = owner?.id || null;
-  if (ownerId && a && ownerId === a.id) {
-    door.roomId = a.id;
-    door.otherRoomId = b?.id || null;
-  } else if (ownerId && b && ownerId === b.id) {
-    door.roomId = b.id;
-    door.otherRoomId = a?.id || null;
-  } else if (a) {
-    door.roomId = a.id;
-    door.otherRoomId = b?.id || null;
-  } else if (ownerId) {
-    door.roomId = ownerId;
-    door.otherRoomId = door.otherRoomId === ownerId ? null : door.otherRoomId || null;
-  } else {
-    door.roomId = null;
-    door.otherRoomId = null;
-  }
-  if (door.otherRoomId === door.roomId) door.otherRoomId = null;
+/** Prefer a room already linked to the door among touching candidates, else the largest contact. */
+function pickTouching(list, door) {
+  if (!list.length) return null;
+  const keep = list.find((h) => h.room.id === door.roomId || h.room.id === door.otherRoomId);
+  return (keep || list[0]).room;
 }
 
+/**
+ * Set roomId / otherRoomId from geometry only: a room counts when its hull
+ * touches the door's low or high plane. Untouched sides become null.
+ * Keeps the current owner when it still touches. Does not move or resize the
+ * door. Returns true if a link changed.
+ */
+export function relinkDoorToRooms(rooms, door) {
+  if (!door || door.kind !== "doorway") return false;
+  const { low, high } = doorTouchingRooms(door, rooms);
+  const a = pickTouching(low, door);
+  const b = pickTouching(high, door);
+  let owner = a || b;
+  let other = a && b && a.id !== b.id ? b : null;
+  if (other && door.roomId === b.id) {
+    owner = b;
+    other = a;
+  }
+  const roomId = owner?.id || null;
+  const otherRoomId = other?.id || null;
+  const changed = (door.roomId || null) !== roomId || (door.otherRoomId || null) !== otherRoomId;
+  door.roomId = roomId;
+  door.otherRoomId = otherRoomId;
+  return changed;
+}
+
+export function relinkDoor(doc, door) {
+  return relinkDoorToRooms(roomsOf(doc), door);
+}
+
+/** Relink every doorway on every level. Returns the number of doors changed. */
+export function relinkAllDoors(doc) {
+  let n = 0;
+  for (const name of LEVEL_NAMES) {
+    const objs = doc.maps?.[name]?.objects;
+    if (!Array.isArray(objs)) continue;
+    const rooms = objs.filter((o) => o.kind === "room");
+    for (const obj of objs) {
+      if (relinkDoorToRooms(rooms, obj)) n++;
+    }
+  }
+  return n;
+}
+
+/**
+ * After a door is placed, moved or rescaled: orient/snap it against the nearest
+ * walls (owner as fallback), then take the links from what it actually touches.
+ */
 export function assignDoorRooms(doc, door, owner, snap = true) {
   if (!door || door.kind !== "doorway") return door;
-  setDoorRoomPair(door, inferDoorRoomPair(doc, door), owner);
-  const roomA = roomById(doc, door.roomId);
-  const roomB = roomById(doc, door.otherRoomId);
+  const pair = inferDoorRoomPair(doc, door);
+  const roomA = pair.room || owner || roomById(doc, door.roomId);
+  const roomB = pair.other || null;
   if (snap) snapDoorBetweenRooms(door, roomA, roomB);
   else orientDoorToRooms(door, roomA, roomB);
+  relinkDoor(doc, door);
   return door;
-}
-
-/** Fill both room links if a second room can be inferred. Returns true if newly paired. */
-export function tryConnectDoor(doc, door) {
-  if (!door || door.kind !== "doorway" || doorDoublyConnected(doc, door)) return false;
-  const owner = roomById(doc, door.roomId);
-  let pair = inferDoorRoomPair(doc, door, true);
-  if (!pair.other) {
-    const hits = roomsOf(doc).filter((r) => aabbOverlap(door, r));
-    hits.sort((a, b) => aabbVolume(a) - aabbVolume(b));
-    const room = owner || hits[0] || pair.room;
-    const other = hits.find((r) => r.id !== room?.id) || null;
-    pair = { room: room || pair.room, other };
-  }
-  if (!pair.room || !pair.other) return false;
-  setDoorRoomPair(door, pair, owner);
-  if (!doorDoublyConnected(doc, door)) return false;
-  snapDoorBetweenRooms(door, roomById(doc, door.roomId), roomById(doc, door.otherRoomId));
-  return true;
 }
 
 export function neighbourRooms(doc, room) {
@@ -3285,6 +3306,7 @@ export function assignNearestElevatorTags(objects) {
 
 export function mapFileRecords(doc) {
   let tagsFilled = false;
+  relinkAllDoors(doc);
   const records = LEVEL_NAMES.map((name) => {
     const map = doc.maps?.[name] || {};
     const objects = Array.isArray(map.objects) ? map.objects : [];
@@ -3477,6 +3499,8 @@ function parseObjects(list) {
         const name = o.enemy || "";
         if (!ENEMY_TYPES.some((t) => t.name === name)) continue;
         obj.enemy = name;
+        const et = clampTag(o.tag);
+        if (et) obj.tag = et;
       }
       if (o.rot != null) obj.rot = o.rot;
     }
@@ -3770,13 +3794,7 @@ function migrateRoomParents(doc) {
     const rooms = map.objects.filter((o) => o.kind === "room");
     for (const obj of map.objects) {
       if (obj.kind === "room") continue;
-      if (obj.kind === "doorway") {
-        const hits = rooms.filter((r) => aabbOverlap(obj, r));
-        hits.sort((a, b) => aabbVolume(a) - aabbVolume(b));
-        if (!obj.roomId) obj.roomId = hits[0]?.id || null;
-        if (!obj.otherRoomId) obj.otherRoomId = hits[1]?.id || hits.find((r) => r.id !== obj.roomId)?.id || null;
-        continue;
-      }
+      if (obj.kind === "doorway") continue; // links come from relinkAllDoors (geometry)
       if (obj.roomId) continue;
       const hits = rooms.filter((r) => aabbOverlap(obj, r));
       if (!hits.length) {
@@ -3856,7 +3874,9 @@ export function normalizeDocument(raw) {
   }
   if (!doc.enemies.length) doc.enemies = createAllCreatures();
   if (fromVersion < 7) migrateRoomParents(doc);
+  if (fromVersion < 7) relinkAllDoors(doc);
   nudgeDoorsOutside(doc);
+  relinkAllDoors(doc);
   doc.version = DOC_VERSION;
   doc.weapons = parseWeapons(raw.weapons);
   doc.items = parseItemMeshes(migrateItemMeshes(raw.items, fromVersion));
