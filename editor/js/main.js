@@ -2503,7 +2503,8 @@ function renderLayoutObjectFields(root, objs) {
     root.appendChild(field("Shape", shapeRow));
 
     const allNonBox = objs.every((o) => clampRoomShape(o.shape) !== "box");
-    const rotAxes = allNonBox ? ["x", "y", "z"] : ["y"];
+    const anyPit = objs.some((o) => clampRoomShape(o.shape) === "Pit");
+    const rotAxes = allNonBox && !anyPit ? ["x", "y", "z"] : ["y"];
     const rotRow = document.createElement("div");
     rotRow.className = "btn-row rot-axes";
     for (const axis of rotAxes) {

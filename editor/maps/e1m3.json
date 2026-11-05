@@ -106,35 +106,24 @@
       "dir": 1,
       "name": "Bridge",
       "a8Bg": 214,
-      "shape": "T",
-      "rx": 1,
+      "shape": "Pit",
+      "rx": 0,
       "ry": 2,
-      "rz": 2,
+      "rz": 0,
       "cuts": [
         {
-          "su": 6,
-          "sv": 10
+          "su": 5,
+          "sv": 0
         },
         {
           "su": 6,
-          "sv": 10
+          "sv": 6
+        },
+        {
+          "su": 10,
+          "sv": 0
         }
       ]
-    },
-    {
-      "id": "c2a9a5e1-1e8f-495b-acd4-23813cca50fe",
-      "kind": "platform",
-      "x": 115,
-      "y": 56,
-      "z": 47,
-      "sx": 26,
-      "sy": 1,
-      "sz": 5,
-      "face": "+z",
-      "axis": "z",
-      "dir": 1,
-      "roomId": "285a82f5-d5b2-4ec0-b963-efc92afae1d4",
-      "collide": true
     },
     {
       "id": "527db28d-d598-4b96-90c3-02a68c575b78",
@@ -872,42 +861,31 @@
     {
       "id": "0174eb52-959a-4780-9672-b5ad81cacfaf",
       "kind": "room",
-      "x": 152,
+      "x": 151,
       "y": 57,
-      "z": 146,
-      "sx": 15,
+      "z": 147,
+      "sx": 16,
       "sy": 12,
-      "sz": 20,
+      "sz": 19,
       "face": "+z",
       "axis": "z",
       "dir": 1,
       "name": "Brimstone Hall",
       "a8Bg": 4,
-      "shape": "box",
+      "shape": "C",
       "rx": 0,
-      "ry": 0,
+      "ry": 3,
       "rz": 0,
-      "cuts": []
-    },
-    {
-      "id": "23612252-5d62-4fce-923d-86581aeea195",
-      "kind": "doorway",
-      "x": 162,
-      "y": 57,
-      "z": 166,
-      "sx": 4,
-      "sy": 5,
-      "sz": 1,
-      "face": "+z",
-      "axis": "z",
-      "dir": 1,
-      "roomId": "0174eb52-959a-4780-9672-b5ad81cacfaf",
-      "lockKey": "unlocked",
-      "doorType": "Tech",
-      "doorScale": 1,
-      "tag": "",
-      "otherRoomId": "4f411f0f-a424-45ea-a499-dc40c5fbc000",
-      "locked": false
+      "cuts": [
+        {
+          "su": 5,
+          "sv": 6
+        },
+        {
+          "su": 5,
+          "sv": 6
+        }
+      ]
     },
     {
       "id": "a4a04caa-5d56-4704-953a-1db28e456a7f",
@@ -929,7 +907,7 @@
       "kind": "crate",
       "x": 157,
       "y": 57,
-      "z": 146,
+      "z": 147,
       "sx": 4,
       "sy": 2,
       "sz": 4,
@@ -941,41 +919,41 @@
     {
       "id": "cd330506-b51e-4396-b7ea-b5f7031a12fc",
       "kind": "enemy",
-      "x": 153,
+      "x": 154,
       "y": 57,
-      "z": 161,
+      "z": 162,
       "sx": 2,
       "sy": 4,
       "sz": 2,
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "rot": 4,
+      "rot": 2,
       "enemy": "Imp",
       "roomId": "0174eb52-959a-4780-9672-b5ad81cacfaf"
     },
     {
       "id": "43225d27-cc77-459f-8c6f-674ac725ed2d",
       "kind": "enemy",
-      "x": 156,
+      "x": 151,
       "y": 57,
-      "z": 163,
+      "z": 162,
       "sx": 2,
       "sy": 4,
       "sz": 2,
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "rot": 4,
+      "rot": 2,
       "enemy": "Imp",
       "roomId": "0174eb52-959a-4780-9672-b5ad81cacfaf"
     },
     {
       "id": "ec3663ec-66ce-4c8a-8ccf-ef219069f85a",
       "kind": "pickup",
-      "x": 162,
+      "x": 163,
       "y": 57,
-      "z": 147,
+      "z": 148,
       "sx": 0.9270509831248422,
       "sy": 1.5,
       "sz": 0.8028497019894523,
@@ -988,9 +966,9 @@
     {
       "id": "056bf824-3a0f-4419-bd08-8fecb9b97cd6",
       "kind": "pickup",
-      "x": 154,
+      "x": 152,
       "y": 57,
-      "z": 147,
+      "z": 148,
       "sx": 0.9270509831248422,
       "sy": 1.5,
       "sz": 0.8028497019894523,
@@ -1430,10 +1408,10 @@
       "kind": "elevator",
       "x": 125,
       "y": 47,
-      "z": 47,
+      "z": 53,
       "sx": 6,
       "sy": 1,
-      "sz": 28,
+      "sz": 22,
       "face": "+z",
       "axis": "z",
       "dir": 1,
@@ -1504,30 +1482,34 @@
       "dir": 1,
       "name": "Gore Nest",
       "a8Bg": 230,
-      "shape": "T",
+      "shape": "Pit",
       "rx": 0,
       "ry": 1,
-      "rz": 1,
+      "rz": 0,
       "cuts": [
         {
           "su": 8,
-          "sv": 1
+          "sv": 5
         },
         {
           "su": 9,
-          "sv": 1
+          "sv": 6
+        },
+        {
+          "su": 1,
+          "sv": 0
         }
       ]
     },
     {
       "id": "3e6b5cb4-266c-41d5-ba51-e27a9443b2d9",
       "kind": "trigger",
-      "x": 141,
+      "x": 147,
       "y": 56,
       "z": 84,
-      "sx": 27,
+      "sx": 15,
       "sy": 4,
-      "sz": 8,
+      "sz": 10,
       "face": "+z",
       "axis": "z",
       "dir": 1,
@@ -2452,6 +2434,26 @@
       "dir": 1,
       "roomId": "4f411f0f-a424-45ea-a499-dc40c5fbc000",
       "pickup": "small health"
+    },
+    {
+      "id": "740fad0b-bc90-4b21-8f90-10d06279b902",
+      "kind": "doorway",
+      "x": 162,
+      "y": 57,
+      "z": 166,
+      "sx": 4,
+      "sy": 5,
+      "sz": 1,
+      "face": "-z",
+      "axis": "z",
+      "dir": 1,
+      "roomId": "0174eb52-959a-4780-9672-b5ad81cacfaf",
+      "lockKey": "unlocked",
+      "doorType": "Tech",
+      "doorScale": 1,
+      "tag": "",
+      "otherRoomId": "4f411f0f-a424-45ea-a499-dc40c5fbc000",
+      "locked": false
     }
   ]
 }

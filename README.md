@@ -10,7 +10,7 @@ The HUD is the text window: title, map name, bullets / shells / rockets, health,
 
 ## World
 
-The map is **rooms as axis-aligned hulls**, not a global mesh. Floor plans can be a box or a tetromino (**T / L / S**, including a proper S dogleg) or a squared-off **C**. Collision is 8-bit tests against the room’s collider boxes. Closed doors are blocking planes; open doors are walk-throughs that switch the active room. Red, yellow, and blue keycards unlock matching doors. Only the current room is drawn — doorways do not punch a view into the next one.
+The map is **rooms as axis-aligned hulls**, not a global mesh. Floor plans can be a box or a tetromino (**T / L / S**, including a proper S dogleg) a squared-off **C**, a three-row **Stair**, or a **Pit** (sunken area inside the floor plan). Collision is 8-bit tests against the room’s collider boxes. Closed doors are blocking planes; open doors are walk-throughs that switch the active room. Red, yellow, and blue keycards unlock matching doors. Only the current room is drawn — doorways do not punch a view into the next one.
 
 Ramps use the AABB for **rise/run** (`height = slope_y + (local * sy) / run` in 8.8) so the eye rides the slope. Elevators, switches, and crates share the same box tests. Step off a ledge and you fall; a hard landing costs health.
 

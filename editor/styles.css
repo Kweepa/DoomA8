@@ -975,7 +975,7 @@ button:disabled {
 
 .btn-row.rot-axes,
 .btn-row.shape-picker {
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   margin-top: 0;
 }
 

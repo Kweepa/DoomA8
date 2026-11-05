@@ -983,7 +983,7 @@ button:disabled {
 
 .btn-row.rot-axes,
 .btn-row.shape-picker {
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   margin-top: 0;
 }
 
@@ -1575,7 +1575,7 @@ button:disabled {
 // ---- js/roomGeom.js ----
 /** Tetromino room geometry: canonical UV footprint, 90° axis rots, hull + colliders. */
 
-const ROOM_SHAPES = ["box", "T", "L", "S", "C"];
+const ROOM_SHAPES = ["box", "T", "L", "S", "C", "Stair", "Pit"];
 
 function clampQuarter(n) {
   const r = n | 0;
@@ -1685,8 +1685,10 @@ function uvwBoxToWorld(room, box, basis) {
   const xs = [];
   const ys = [];
   const zs = [];
+  const w0 = box.w0 ?? 0;
+  const w1 = w0 + (box.sw ?? basis.wSize);
   for (const u of [box.u, box.u + box.su]) {
-    for (const w of [0, basis.wSize]) {
+    for (const w of [w0, w1]) {
       for (const v of [box.v, box.v + box.sv]) {
         const p = localToWorld(room, u, w, v, basis);
         xs.push(p.x);
@@ -1710,7 +1712,8 @@ function uvwBoxToWorld(room, box, basis) {
 
 function cutCount(shape) {
   if (shape === "L") return 1;
-  if (shape === "T" || shape === "S" || shape === "C") return 2;
+  if (shape === "T" || shape === "S" || shape === "C" || shape === "Stair") return 2;
+  if (shape === "Pit") return 3;
   return 0;
 }
 
@@ -1729,9 +1732,33 @@ function stripLegacySplits(room) {
   delete room.mid;
 }
 
-function defaultCuts(shape, uSize, vSize) {
+function defaultCuts(shape, uSize, vSize, wSize) {
   const u = Math.max(1, uSize | 0);
   const v = Math.max(1, vSize | 0);
+  if (shape === "Stair") {
+    // cuts[0] = top row {su: void depth a, sv: row thickness}; cuts[1] = middle row {su: b < a, sv}.
+    const a = Math.max(2, Math.min(u - 1, Math.floor((2 * u + 1) / 3)));
+    const b = Math.max(1, Math.min(a - 1, Math.floor((u + 1) / 3)));
+    const h = Math.max(1, Math.min((v - 1) >> 1, Math.floor(v / 3)));
+    return [
+      { su: a, sv: h },
+      { su: b, sv: h },
+    ];
+  }
+  if (shape === "Pit") {
+    // cuts[0] = margins from the u=0 / v=0 sides, cuts[1] = margins from the far sides,
+    // cuts[2] = {su: depth, sv: 0 (unused)}.
+    const pw = Math.min(u, Math.max(3, u >> 1));
+    const pl = Math.min(v, Math.max(3, v >> 1));
+    const mu0 = Math.max(0, (u - pw) >> 1);
+    const mv0 = Math.max(0, (v - pl) >> 1);
+    const depth = Math.max(1, Math.min(2, (wSize == null ? 3 : wSize | 0) - 1));
+    return [
+      { su: mu0, sv: mv0 },
+      { su: Math.max(0, u - pw - mu0), sv: Math.max(0, v - pl - mv0) },
+      { su: depth, sv: 0 },
+    ];
+  }
   if (shape === "L") {
     return [
       {
@@ -1808,7 +1835,7 @@ function cutsFromLegacy(room, shape, uSize, vSize) {
     }
     return fallback;
   }
-  if (shape === "C") return fallback;
+  if (shape === "C" || shape === "Stair" || shape === "Pit") return fallback;
   return [];
 }
 
@@ -1849,6 +1876,15 @@ function cutoutUvBoxes(shape, cuts, uSize, vSize) {
     else if (b.su < a.su) boxes.push({ u: t + b.su, v: vSize - b.sv, su: a.su - b.su, sv: b.sv });
     return boxes.filter(keep);
   }
+  if (shape === "Stair") {
+    const a = cuts[0];
+    const b = cuts[1];
+    if (!a || !b) return [];
+    return [
+      { u: uSize - a.su, v: vSize - a.sv, su: a.su, sv: a.sv },
+      { u: uSize - b.su, v: vSize - a.sv - b.sv, su: b.su, sv: b.sv },
+    ].filter(keep);
+  }
   return [];
 }
 
@@ -1869,7 +1905,14 @@ function maxCutDim(shape, cuts, index, dim, uSize, vSize) {
   if (shape === "C") {
     if (dim === "su") return Math.max(1, hi);
     const other = cuts[1 - index];
-    return Math.max(1, hi - (other ? other.sv : 0));
+    return Math.max(1, hi - Math.max(1, other ? other.sv : 1));
+  }
+  if (shape === "Stair") {
+    // The two voids touch in v, so the generic separation test doesn't apply.
+    const other = cuts[1 - index];
+    if (dim === "sv") return Math.max(1, hi - Math.max(1, other ? other.sv : 1));
+    if (index === 0) return Math.max(1, hi); // a ≤ U-1 (a ≥ b+1 is enforced in clampRoomSplits)
+    return Math.max(1, (other ? other.su : uSize) - 1); // b ≤ a-1
   }
   if (cuts.length < 2) return Math.max(1, hi);
   const trial = cloneCuts(cuts);
@@ -1896,8 +1939,14 @@ function clampRoomSplits(room, opts) {
   room.rx = clampQuarter(room.rx);
   room.ry = clampQuarter(room.ry);
   room.rz = clampQuarter(room.rz);
+  // A pit only makes sense with vertical extrusion (w = +y); yaw is still free.
+  if (shape === "Pit") {
+    room.rx = 0;
+    room.rz = 0;
+  }
   const basis = roomBasis(room);
   let { uSize, vSize } = basis;
+  let wSize = basis.wSize;
   const n = cutCount(shape);
   if (shape === "L") {
     if (uSize < 2) {
@@ -1926,6 +1975,19 @@ function clampRoomSplits(room, opts) {
       bumpAxis(room, basis.v, 3);
       vSize = 3;
     }
+  } else if (shape === "Stair" || shape === "Pit") {
+    if (uSize < 3) {
+      bumpAxis(room, basis.u, 3);
+      uSize = 3;
+    }
+    if (vSize < 3) {
+      bumpAxis(room, basis.v, 3);
+      vSize = 3;
+    }
+    if (shape === "Pit" && wSize < 2) {
+      bumpAxis(room, basis.w, 2);
+      wSize = 2;
+    }
   }
   if (n === 0) {
     room.cuts = [];
@@ -1935,6 +1997,17 @@ function clampRoomSplits(room, opts) {
   const prefer = opts?.preferCut ?? 0;
   const preferDim = opts?.preferDim;
   const cuts = resolveCuts(room, shape, uSize, vSize);
+  if (shape === "Pit") {
+    // Margins may be 0; the pit stays at least 3x3 and 1..W-1 deep. The edited side wins.
+    const keepFirst = prefer !== 1;
+    [cuts[0].su, cuts[1].su] = fitMargins(cuts[0].su, cuts[1].su, uSize - 3, keepFirst);
+    [cuts[0].sv, cuts[1].sv] = fitMargins(cuts[0].sv, cuts[1].sv, vSize - 3, keepFirst);
+    cuts[2].su = clampInt(cuts[2].su, 1, wSize - 1, Math.min(2, wSize - 1));
+    cuts[2].sv = 0;
+    room.cuts = cuts;
+    stripLegacySplits(room);
+    return room;
+  }
   const dims = preferDim === "sv" ? ["sv", "su"] : ["su", "sv"];
   const order = [prefer, ...cuts.map((_, i) => i).filter((i) => i !== prefer)];
   for (const i of order) {
@@ -1942,11 +2015,34 @@ function clampRoomSplits(room, opts) {
       const hi = dim === "su" ? uSize - 1 : vSize - 1;
       cuts[i][dim] = clampInt(cuts[i][dim], 1, hi, 1);
       cuts[i][dim] = Math.min(cuts[i][dim], maxCutDim(shape, cuts, i, dim, uSize, vSize));
+      if (shape === "Stair" && dim === "su" && i === 0) {
+        // Top-row void must be deeper than the middle one (a > b).
+        cuts[0].su = Math.min(uSize - 1, Math.max(cuts[0].su, cuts[1].su + 1));
+      }
     }
   }
   room.cuts = cuts;
   stripLegacySplits(room);
   return room;
+}
+
+/** Two pit margins (>= 0) that must leave `limit` or more for the pit. Over budget: shrink the other one first. */
+function fitMargins(a, b, limit, keepFirst) {
+  let x = Math.max(0, a | 0);
+  let y = Math.max(0, b | 0);
+  let over = x + y - Math.max(0, limit);
+  if (over > 0) {
+    if (keepFirst) {
+      const t = Math.min(y, over);
+      y -= t;
+      x -= over - t;
+    } else {
+      const t = Math.min(x, over);
+      x -= t;
+      y -= over - t;
+    }
+  }
+  return [Math.max(0, x), Math.max(0, y)];
 }
 
 function clampInt(n, lo, hi, fallback) {
@@ -1966,7 +2062,7 @@ function applyRoomShape(room, shape) {
   room.shape = clampRoomShape(shape);
   stripLegacySplits(room);
   const b = roomBasis(room);
-  room.cuts = defaultCuts(room.shape, b.uSize, b.vSize);
+  room.cuts = defaultCuts(room.shape, b.uSize, b.vSize, b.wSize);
   return clampRoomSplits(room);
 }
 
@@ -2024,6 +2120,20 @@ function preserveRoomSplits(room, orig) {
       c.su >= oldMax ? newU - newT : Math.max(1, Math.min(newU - newT, mapU(oldT + c.su) - newT));
     cuts.push({ su: len(a), sv: mapV(a.sv) });
     cuts.push({ su: len(b), sv: newV - mapV(oldV - b.sv) });
+  } else if (shape === "Stair") {
+    const a = origCuts[0] || { su: 2, sv: 1 };
+    const b = origCuts[1] || { su: 1, sv: 1 };
+    const topV = mapV(oldV - a.sv);
+    cuts.push({ su: newU - mapU(oldU - a.su), sv: newV - topV });
+    cuts.push({ su: newU - mapU(oldU - b.su), sv: topV - mapV(oldV - a.sv - b.sv) });
+  } else if (shape === "Pit") {
+    // Pit walls keep their world positions; depth is unchanged.
+    const a = origCuts[0] || { su: 0, sv: 0 };
+    const b = origCuts[1] || { su: 0, sv: 0 };
+    const d = origCuts[2] || { su: 1, sv: 0 };
+    cuts.push({ su: mapU(a.su), sv: mapV(a.sv) });
+    cuts.push({ su: newU - mapU(oldU - b.su), sv: newV - mapV(oldV - b.sv) });
+    cuts.push({ su: d.su, sv: 0 });
   }
   room.cuts = cuts;
   stripLegacySplits(room);
@@ -2110,6 +2220,26 @@ function cutPlaneLocals(shape, cuts, uSize, vSize) {
       planes.push({ key: "cut1v", axis: "v", t: vSize - (b.sv | 0) });
       if ((a.su | 0) < maxL) planes.push({ key: "arm0", axis: "u", t: t + (a.su | 0) });
       if ((b.su | 0) < maxL) planes.push({ key: "arm1", axis: "u", t: t + (b.su | 0) });
+    }
+  } else if (shape === "Stair") {
+    const a = cuts[0];
+    const b = cuts[1];
+    if (a) {
+      planes.push({ key: "cut0u", axis: "u", t: uSize - (a.su | 0) });
+      planes.push({ key: "cut0v", axis: "v", t: vSize - (a.sv | 0) });
+    }
+    if (a && b) {
+      planes.push({ key: "cut1u", axis: "u", t: uSize - (b.su | 0) });
+      planes.push({ key: "cut1v", axis: "v", t: vSize - (a.sv | 0) - (b.sv | 0) });
+    }
+  } else if (shape === "Pit") {
+    const a = cuts[0];
+    const b = cuts[1];
+    if (a && b) {
+      planes.push({ key: "cut0u", axis: "u", t: a.su | 0 });
+      planes.push({ key: "cut1u", axis: "u", t: uSize - (b.su | 0) });
+      planes.push({ key: "cut0v", axis: "v", t: a.sv | 0 });
+      planes.push({ key: "cut1v", axis: "v", t: vSize - (b.sv | 0) });
     }
   }
   return planes;
@@ -2252,6 +2382,13 @@ function applyRoomControlDelta(room, orig, keys, dx, dy, dz) {
       c.su >= maxL ? newU - newT : Math.max(1, Math.min(newU - newT, tOf(`arm${i}`) - newT));
     newCuts.push({ su: len(cuts[0], 0), sv: tOf("cut0v") });
     newCuts.push({ su: len(cuts[1], 1), sv: newBasis.vSize - tOf("cut1v") });
+  } else if (shape === "Stair") {
+    newCuts.push({ su: newBasis.uSize - tOf("cut0u"), sv: newBasis.vSize - tOf("cut0v") });
+    newCuts.push({ su: newBasis.uSize - tOf("cut1u"), sv: tOf("cut0v") - tOf("cut1v") });
+  } else if (shape === "Pit") {
+    newCuts.push({ su: tOf("cut0u"), sv: tOf("cut0v") });
+    newCuts.push({ su: newBasis.uSize - tOf("cut1u"), sv: newBasis.vSize - tOf("cut1v") });
+    newCuts.push({ su: cuts[2] ? cuts[2].su : 1, sv: 0 });
   }
   room.cuts = newCuts;
   stripLegacySplits(room);
@@ -2277,7 +2414,7 @@ function applyAabbControlDelta(obj, orig, keys, dx, dy, dz) {
 }
 
 function keepUv(box) {
-  return box.su > 0 && box.sv > 0;
+  return box.su > 0 && box.sv > 0 && (box.sw === undefined || box.sw > 0);
 }
 
 function localFootprint(room, basis) {
@@ -2344,6 +2481,26 @@ function localFootprint(room, basis) {
       { u: 0, v: 0, su: t, sv: vSize },
       { u: t, v: 0, su: a.su, sv: a.sv },
       { u: t, v: vSize - b.sv, su: b.su, sv: b.sv },
+    ].filter(keepUv);
+  }
+  if (shape === "Stair") {
+    const a = cuts[0] || { su: 2, sv: 1 };
+    const b = cuts[1] || { su: 1, sv: 1 };
+    const h0 = vSize - a.sv - b.sv;
+    return [
+      { u: 0, v: 0, su: uSize, sv: h0 },
+      { u: 0, v: h0, su: uSize - b.su, sv: b.sv },
+      { u: 0, v: h0 + b.sv, su: uSize - a.su, sv: a.sv },
+    ].filter(keepUv);
+  }
+  if (shape === "Pit") {
+    // Stacked layout: lid over the whole footprint at the rim height, pit slab below it.
+    const a = cuts[0] || { su: 0, sv: 0 };
+    const b = cuts[1] || { su: 0, sv: 0 };
+    const d = Math.max(1, Math.min(basis.wSize - 1, (cuts[2] || { su: 1 }).su));
+    return [
+      { u: 0, v: 0, su: uSize, sv: vSize, w0: d, sw: basis.wSize - d },
+      { u: a.su, v: a.sv, su: uSize - a.su - b.su, sv: vSize - a.sv - b.sv, w0: 0, sw: d },
     ].filter(keepUv);
   }
   return [{ u: 0, v: 0, su: uSize, sv: vSize }];
@@ -2724,6 +2881,29 @@ function innerHandles(room, basis) {
       push(t + a.su, w2, a.sv / 2, "arm0", basis.u, 1);
       push(t + b.su, w2, vSize - b.sv / 2, "arm1", basis.u, 1);
     }
+  } else if (shape === "Stair") {
+    const a = cuts[0];
+    const b = cuts[1];
+    if (a) addCut(0, uSize - a.su, vSize - a.sv, -1, -1);
+    if (a && b) addCut(1, uSize - b.su, vSize - a.sv - b.sv, -1, -1);
+  } else if (shape === "Pit") {
+    const a = cuts[0];
+    const b = cuts[1];
+    const dd = cuts[2];
+    if (a && b && dd) {
+      const wm = dd.su / 2;
+      const pu0 = a.su;
+      const pu1 = uSize - b.su;
+      const pv0 = a.sv;
+      const pv1 = vSize - b.sv;
+      const uMid = (pu0 + pu1) / 2;
+      const vMid = (pv0 + pv1) / 2;
+      push(pu0, wm, vMid, "cut0u", basis.u, 1);
+      push(pu1, wm, vMid, "cut1u", basis.u, -1);
+      push(uMid, wm, pv0, "cut0v", basis.v, 1);
+      push(uMid, wm, pv1, "cut1v", basis.v, -1);
+      push(uMid, dd.su, vMid, "cut2u", basis.w, 1);
+    }
   }
   return handles;
 }
@@ -2853,7 +3033,8 @@ function roomFloorY(room, x, z) {
   let hit = false;
   for (const c of geom.colliders) {
     if (x >= c.x && x <= c.x + c.sx && z >= c.z && z <= c.z + c.sz) {
-      if (!hit || c.y > y) y = c.y;
+      // Lowest containing floor, same as the engine's uf_rc_floor.
+      if (!hit || c.y < y) y = c.y;
       hit = true;
     }
   }
@@ -17358,7 +17539,8 @@ function renderLayoutObjectFields(root, objs) {
     root.appendChild(field("Shape", shapeRow));
 
     const allNonBox = objs.every((o) => clampRoomShape(o.shape) !== "box");
-    const rotAxes = allNonBox ? ["x", "y", "z"] : ["y"];
+    const anyPit = objs.some((o) => clampRoomShape(o.shape) === "Pit");
+    const rotAxes = allNonBox && !anyPit ? ["x", "y", "z"] : ["y"];
     const rotRow = document.createElement("div");
     rotRow.className = "btn-row rot-axes";
     for (const axis of rotAxes) {
