@@ -1,6 +1,6 @@
 /** Tetromino room geometry: canonical UV footprint, 90° axis rots, hull + colliders. */
 
-export const ROOM_SHAPES = ["box", "T", "L", "S"];
+export const ROOM_SHAPES = ["box", "T", "L", "S", "C"];
 
 export function clampQuarter(n) {
   const r = n | 0;
@@ -135,7 +135,7 @@ function uvwBoxToWorld(room, box, basis) {
 
 function cutCount(shape) {
   if (shape === "L") return 1;
-  if (shape === "T" || shape === "S") return 2;
+  if (shape === "T" || shape === "S" || shape === "C") return 2;
   return 0;
 }
 
@@ -184,6 +184,16 @@ export function defaultCuts(shape, uSize, vSize) {
       { su: shift, sv: mid },
     ];
   }
+  if (shape === "C") {
+    // su = arm length (from the back bar's inner face), sv = arm thickness.
+    // Back bar thickness is u - max(su); the longer arm reaches the +u face.
+    const d = Math.max(1, Math.min(u - 1, u >> 1));
+    const arm = Math.max(1, Math.min((v - 1) >> 1, v >> 2));
+    return [
+      { su: d, sv: arm },
+      { su: d, sv: arm },
+    ];
+  }
   return [];
 }
 
@@ -223,6 +233,7 @@ function cutsFromLegacy(room, shape, uSize, vSize) {
     }
     return fallback;
   }
+  if (shape === "C") return fallback;
   return [];
 }
 
@@ -253,6 +264,16 @@ function cutoutUvBoxes(shape, cuts, uSize, vSize) {
       { u: 0, v: 0, su: b.su, sv: b.sv },
     ].filter(keep);
   }
+  if (shape === "C") {
+    const a = cuts[0];
+    const b = cuts[1];
+    if (!a || !b) return [];
+    const t = uSize - Math.max(a.su, b.su);
+    const boxes = [{ u: t, v: a.sv, su: uSize - t, sv: vSize - a.sv - b.sv }];
+    if (a.su < b.su) boxes.push({ u: t + a.su, v: 0, su: b.su - a.su, sv: a.sv });
+    else if (b.su < a.su) boxes.push({ u: t + b.su, v: vSize - b.sv, su: a.su - b.su, sv: b.sv });
+    return boxes.filter(keep);
+  }
   return [];
 }
 
@@ -270,6 +291,11 @@ function uvSeparated(a, b) {
 
 function maxCutDim(shape, cuts, index, dim, uSize, vSize) {
   const hi = dim === "su" ? uSize - 1 : vSize - 1;
+  if (shape === "C") {
+    if (dim === "su") return Math.max(1, hi);
+    const other = cuts[1 - index];
+    return Math.max(1, hi - (other ? other.sv : 0));
+  }
   if (cuts.length < 2) return Math.max(1, hi);
   const trial = cloneCuts(cuts);
   for (let s = hi; s >= 1; s--) {
@@ -315,6 +341,15 @@ export function clampRoomSplits(room, opts) {
     if (vSize < 2) {
       bumpAxis(room, basis.v, 2);
       vSize = 2;
+    }
+  } else if (shape === "C") {
+    if (uSize < 2) {
+      bumpAxis(room, basis.u, 2);
+      uSize = 2;
+    }
+    if (vSize < 3) {
+      bumpAxis(room, basis.v, 3);
+      vSize = 3;
     }
   }
   if (n === 0) {
@@ -403,6 +438,17 @@ export function preserveRoomSplits(room, orig) {
       sv: newV - mapV(oldV - a.sv),
     });
     cuts.push({ su: mapU(b.su), sv: mapV(b.sv) });
+  } else if (shape === "C") {
+    const a = origCuts[0] || { su: 1, sv: 1 };
+    const b = origCuts[1] || { su: 1, sv: 1 };
+    const oldMax = Math.max(a.su, b.su);
+    const oldT = oldU - oldMax;
+    const newT = Math.max(1, Math.min(newU - 1, mapU(oldT)));
+    // A longest arm keeps reaching the +u face; a shorter arm keeps its end in world space.
+    const len = (c) =>
+      c.su >= oldMax ? newU - newT : Math.max(1, Math.min(newU - newT, mapU(oldT + c.su) - newT));
+    cuts.push({ su: len(a), sv: mapV(a.sv) });
+    cuts.push({ su: len(b), sv: newV - mapV(oldV - b.sv) });
   }
   room.cuts = cuts;
   stripLegacySplits(room);
@@ -410,12 +456,35 @@ export function preserveRoomSplits(room, orig) {
 }
 
 export function applyRoomSplitDelta(room, orig, key, delta) {
+  const shape = clampRoomShape(orig.shape);
+  const basis = roomBasis(orig);
+  const armKey = /^arm(\d)$/.exec(key);
+  if (shape === "C" && (armKey || key === "cut0u")) {
+    const cs = resolveCuts(orig, shape, basis.uSize, basis.vSize);
+    const d = delta | 0;
+    const maxL = Math.max(cs[0].su, cs[1].su);
+    const minL = Math.min(cs[0].su, cs[1].su);
+    if (armKey) {
+      // One arm's end face. The back bar stays put (t = U - max length), so a shorter arm
+      // moves within 1..max, and the unique longest arm can't move (use cut0u for that).
+      const i = armKey[1] | 0;
+      if (i > 1) return clampRoomSplits(room);
+      const lo = cs[i].su > cs[1 - i].su ? maxL : 1;
+      cs[i].su = Math.max(lo, Math.min(maxL, cs[i].su + d));
+    } else {
+      // Back bar inner face: arm ends stay put, so both lengths shift together.
+      const dd = Math.max(1 - minL, Math.min(basis.uSize - 1 - maxL, d));
+      cs[0].su += dd;
+      cs[1].su += dd;
+    }
+    room.cuts = cs;
+    room.shape = shape;
+    return clampRoomSplits(room);
+  }
   const m = /^cut(\d)([uv])$/.exec(key);
   if (!m) return clampRoomSplits(room);
   const i = m[1] | 0;
   const dim = m[2] === "u" ? "su" : "sv";
-  const shape = clampRoomShape(orig.shape);
-  const basis = roomBasis(orig);
   const cuts = resolveCuts(orig, shape, basis.uSize, basis.vSize);
   if (i >= cuts.length) return clampRoomSplits(room);
   cuts[i][dim] = (cuts[i][dim] | 0) + (delta | 0);
@@ -454,6 +523,19 @@ function cutPlaneLocals(shape, cuts, uSize, vSize) {
       planes.push({ key: "cut1u", axis: "u", t: b.su | 0 });
       planes.push({ key: "cut1v", axis: "v", t: b.sv | 0 });
     }
+  } else if (shape === "C") {
+    // cut0u = back bar inner face. armN = end face of a shorter arm (a longest arm ends on the outer face).
+    const a = cuts[0];
+    const b = cuts[1];
+    if (a && b) {
+      const maxL = Math.max(a.su | 0, b.su | 0);
+      const t = uSize - maxL;
+      planes.push({ key: "cut0u", axis: "u", t });
+      planes.push({ key: "cut0v", axis: "v", t: a.sv | 0 });
+      planes.push({ key: "cut1v", axis: "v", t: vSize - (b.sv | 0) });
+      if ((a.su | 0) < maxL) planes.push({ key: "arm0", axis: "u", t: t + (a.su | 0) });
+      if ((b.su | 0) < maxL) planes.push({ key: "arm1", axis: "u", t: t + (b.su | 0) });
+    }
   }
   return planes;
 }
@@ -479,7 +561,7 @@ function moveSpan(min, max, moveMin, moveMax, d) {
 
 /**
  * Hull corners tagged with the planes they sit on.
- * Outer faces are `x0`/`x1`/`y0`/`y1`/`z0`/`z1`. L/T/S inner corners also get `cutNu`/`cutNv`.
+ * Outer faces are `x0`/`x1`/`y0`/`y1`/`z0`/`z1`. L/T/S/C inner corners also get `cutNu`/`cutNv`.
  */
 export function roomControlPoints(room) {
   const shape = clampRoomShape(room.shape);
@@ -587,6 +669,14 @@ export function applyRoomControlDelta(room, orig, keys, dx, dy, dz) {
   } else if (shape === "S") {
     newCuts.push({ su: newBasis.uSize - tOf("cut0u"), sv: newBasis.vSize - tOf("cut0v") });
     newCuts.push({ su: tOf("cut1u"), sv: tOf("cut1v") });
+  } else if (shape === "C") {
+    const maxL = Math.max(cuts[0].su, cuts[1].su);
+    const newU = newBasis.uSize;
+    const newT = Math.max(1, Math.min(newU - 1, tOf("cut0u")));
+    const len = (c, i) =>
+      c.su >= maxL ? newU - newT : Math.max(1, Math.min(newU - newT, tOf(`arm${i}`) - newT));
+    newCuts.push({ su: len(cuts[0], 0), sv: tOf("cut0v") });
+    newCuts.push({ su: len(cuts[1], 1), sv: newBasis.vSize - tOf("cut1v") });
   }
   room.cuts = newCuts;
   stripLegacySplits(room);
@@ -669,6 +759,16 @@ function localFootprint(room, basis) {
       { u: 0, v: b.sv, su: uSize - a.su, sv: vSize - b.sv },
       { u: b.su, v: topV0, su: uSize - a.su - b.su, sv: b.sv - topV0 },
       { u: b.su, v: 0, su: uSize - b.su, sv: topV0 },
+    ].filter(keepUv);
+  }
+  if (shape === "C") {
+    const a = cuts[0] || { su: 1, sv: 1 };
+    const b = cuts[1] || { su: 1, sv: 1 };
+    const t = uSize - Math.max(a.su, b.su);
+    return [
+      { u: 0, v: 0, su: t, sv: vSize },
+      { u: t, v: 0, su: a.su, sv: a.sv },
+      { u: t, v: vSize - b.sv, su: b.su, sv: b.sv },
     ].filter(keepUv);
   }
   return [{ u: 0, v: 0, su: uSize, sv: vSize }];
@@ -1038,6 +1138,17 @@ function innerHandles(room, basis) {
     const b = cuts[1];
     if (a) addCut(0, uSize - a.su, vSize - a.sv, -1, -1);
     if (b) addCut(1, 0, 0, 1, 1);
+  } else if (shape === "C") {
+    const a = cuts[0];
+    const b = cuts[1];
+    if (a && b) {
+      const t = uSize - Math.max(a.su, b.su);
+      push(t, w2, (a.sv + vSize - b.sv) / 2, "cut0u", basis.u, -1);
+      push(t + a.su / 2, w2, a.sv, "cut0v", basis.v, 1);
+      push(t + b.su / 2, w2, vSize - b.sv, "cut1v", basis.v, -1);
+      push(t + a.su, w2, a.sv / 2, "arm0", basis.u, 1);
+      push(t + b.su, w2, vSize - b.sv / 2, "arm1", basis.u, 1);
+    }
   }
   return handles;
 }

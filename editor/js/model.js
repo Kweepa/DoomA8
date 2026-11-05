@@ -2275,7 +2275,7 @@ export function mapDisplayName(map, key) {
 
 /** Soft cap: 8-bit object indices / editor budget. */
 export const MAX_MAP_OBJECTS = 255;
-export const ROOM_MAX = 24; // keep in sync with tools/genmap.py
+export const ROOM_MAX = 32; // keep in sync with tools/genmap.py
 
 /** One name per possible room (ROOM_MAX). Unnamed rooms get the first unused one on save. */
 export const ROOM_NAME_POOL = [
@@ -2303,6 +2303,14 @@ export const ROOM_NAME_POOL = [
   "Void Closet",
   "Wretched Foyer",
   "Zombie Walk",
+  "Charnel Loft",
+  "Ember Crypt",
+  "Fester Hall",
+  "Gristle Pit",
+  "Maggot Bay",
+  "Rot Chapel",
+  "Sulfur Sump",
+  "Tallow Vault",
 ];
 
 /** Name every blank room from ROOM_NAME_POOL (unique per level). Returns count named. */

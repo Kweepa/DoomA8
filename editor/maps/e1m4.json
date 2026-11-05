@@ -204,8 +204,8 @@
       "doorType": "Tech",
       "doorScale": 1.5,
       "tag": "",
-      "locked": false,
-      "otherRoomId": "7e31831c-f9c3-45a3-a138-bf1032fdc3ad"
+      "otherRoomId": "7e31831c-f9c3-45a3-a138-bf1032fdc3ad",
+      "locked": false
     },
     {
       "id": "7e31831c-f9c3-45a3-a138-bf1032fdc3ad",
@@ -363,8 +363,8 @@
       "doorType": "Tech",
       "doorScale": 1,
       "tag": "",
-      "locked": false,
-      "otherRoomId": "20bfb0a6-254f-49e2-bed5-d49f0ee2414b"
+      "otherRoomId": "20bfb0a6-254f-49e2-bed5-d49f0ee2414b",
+      "locked": false
     },
     {
       "id": "20bfb0a6-254f-49e2-bed5-d49f0ee2414b",
@@ -489,12 +489,12 @@
       "face": "-z",
       "axis": "z",
       "dir": 1,
+      "roomId": "ee56e5aa-2c09-4b48-b096-9742988339cf",
       "lockKey": "unlocked",
       "doorType": "Tech",
       "doorScale": 1.5,
       "tag": "",
       "otherRoomId": "20bfb0a6-254f-49e2-bed5-d49f0ee2414b",
-      "roomId": "ee56e5aa-2c09-4b48-b096-9742988339cf",
       "locked": false
     },
     {
@@ -632,8 +632,8 @@
       "doorType": "Tech",
       "doorScale": 1,
       "tag": "",
-      "locked": false,
-      "otherRoomId": "6859f83d-5457-4f0d-b5a8-02246888d481"
+      "otherRoomId": "6859f83d-5457-4f0d-b5a8-02246888d481",
+      "locked": false
     },
     {
       "id": "96fca4e7-f132-4c66-b902-ee344e023285",
@@ -652,8 +652,8 @@
       "doorType": "Tech",
       "doorScale": 1.5,
       "tag": "",
-      "locked": false,
-      "otherRoomId": "bbb49c0c-ad31-4c30-a425-16eace3447b6"
+      "otherRoomId": "bbb49c0c-ad31-4c30-a425-16eace3447b6",
+      "locked": false
     },
     {
       "id": "57eaee73-c559-40ad-88a2-0c60f93c7b96",
@@ -672,8 +672,8 @@
       "doorType": "Tech",
       "doorScale": 1.5,
       "tag": "",
-      "locked": false,
-      "otherRoomId": "33033f11-09cb-443e-90cd-121e7a40d029"
+      "otherRoomId": "33033f11-09cb-443e-90cd-121e7a40d029",
+      "locked": false
     },
     {
       "id": "7f3ccca6-bc5e-4182-9f17-27ab3c957b84",
@@ -894,8 +894,8 @@
       "doorType": "Tech",
       "doorScale": 1,
       "tag": "",
-      "locked": false,
-      "otherRoomId": "89e3773d-bc7b-4339-be3a-cb7487238344"
+      "otherRoomId": "89e3773d-bc7b-4339-be3a-cb7487238344",
+      "locked": false
     },
     {
       "id": "89e3773d-bc7b-4339-be3a-cb7487238344",
@@ -1070,8 +1070,8 @@
       "doorType": "Tech",
       "doorScale": 1,
       "tag": "",
-      "locked": false,
-      "otherRoomId": "28c6205b-ff20-43cb-a668-d6da77cb5c50"
+      "otherRoomId": "28c6205b-ff20-43cb-a668-d6da77cb5c50",
+      "locked": false
     },
     {
       "id": "1dea66ce-89f4-4972-848e-3c1439671f36",
@@ -2197,8 +2197,8 @@
       "doorType": "Tech",
       "doorScale": 1,
       "tag": "",
-      "locked": false,
-      "otherRoomId": "6f30c671-85b0-43cf-9520-b43cd5ea3b43"
+      "otherRoomId": "6f30c671-85b0-43cf-9520-b43cd5ea3b43",
+      "locked": false
     },
     {
       "id": "6f30c671-85b0-43cf-9520-b43cd5ea3b43",

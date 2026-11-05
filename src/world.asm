@@ -29,6 +29,8 @@ world_init
 	sta hurt_flash_h
 	sta hurt_ms_l
 	sta hurt_ms_h
+	sta pickup_ms_l
+	sta pickup_ms_h
 	sta item_spin
 	sta item_spin_l
 	sta crack_ms_l
@@ -1981,8 +1983,34 @@ set_th_foot_box
 	sta box_sz
 	rts
 
+; After a grab: ignore further pickups for PICKUP_HOLD_MS.
+set_pickup_hold
+	lda #<PICKUP_HOLD_MS
+	sta pickup_ms_l
+	lda #>PICKUP_HOLD_MS
+	sta pickup_ms_h
+	rts
+
 ; Walk-over things: grant if not full / not already owned
 try_thing_pickup
+	lda pickup_ms_l
+	ora pickup_ms_h
+	beq .tth_go
+	sec
+	lda pickup_ms_l
+	sbc dt_ms
+	sta pickup_ms_l
+	lda pickup_ms_h
+	sbc dt_msh
+	sta pickup_ms_h
+	bcs .tth_held			; still > 0 (or exactly 0: next frame is free)
+	lda #0
+	sta pickup_ms_l
+	sta pickup_ms_h
+	beq .tth_go			; expired this frame
+.tth_held
+	rts
+.tth_go
 	ldy room_idx
 	+slice_x room_th_o
 .tth_lp
@@ -2024,9 +2052,11 @@ try_thing_pickup
 	ldx obj_i
 	+lda_mx th_type
 	jsr pickup_sound
+	jsr set_pickup_hold
 	ldx obj_i
 	lda #1
 	sta th_taken,x
+	rts				; one grab per hold; skip the rest of this frame's scan
 .tth_n
 	ldx obj_i
 	inx
@@ -2072,6 +2102,7 @@ try_thing_pickup
 	sta drop_taken,x
 	lda #SOUND_WPNUP
 	jsr play_sound
+	jmp set_pickup_hold		; one grab per hold; ends the scan
 .tdp_n
 	ldx obj_i
 	inx

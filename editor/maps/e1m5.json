@@ -63,8 +63,8 @@
       "doorType": "Tech",
       "doorScale": 1,
       "tag": "",
-      "locked": false,
-      "otherRoomId": "8c7795de-1189-4111-a97a-4dc8e73e570e"
+      "otherRoomId": "8c7795de-1189-4111-a97a-4dc8e73e570e",
+      "locked": false
     },
     {
       "id": "61152cdb-7ece-4903-b701-70a98d0e5e9d",
@@ -178,8 +178,8 @@
       "doorType": "Tech",
       "doorScale": 1,
       "tag": "",
-      "locked": false,
-      "otherRoomId": "48afef2d-41c1-4069-9ad4-87a0a99eabd0"
+      "otherRoomId": "48afef2d-41c1-4069-9ad4-87a0a99eabd0",
+      "locked": false
     },
     {
       "id": "fc89ec02-11d7-4095-bbc9-ca80aaf6c27c",
@@ -198,8 +198,8 @@
       "doorType": "Arch",
       "doorScale": 1,
       "tag": "",
-      "locked": false,
-      "otherRoomId": "95149b8d-6ced-4e99-9928-93d42ae0421d"
+      "otherRoomId": "95149b8d-6ced-4e99-9928-93d42ae0421d",
+      "locked": false
     },
     {
       "id": "b80950cf-cbc0-45ef-b669-d7bb7f44a511",
@@ -344,8 +344,8 @@
       "doorType": "Tech",
       "doorScale": 1,
       "tag": "",
-      "locked": false,
-      "otherRoomId": "98b7247f-8162-445e-a38d-b677e5fc8247"
+      "otherRoomId": "98b7247f-8162-445e-a38d-b677e5fc8247",
+      "locked": false
     },
     {
       "id": "98b7247f-8162-445e-a38d-b677e5fc8247",
@@ -499,8 +499,8 @@
       "doorType": "Tech",
       "doorScale": 1,
       "tag": "",
-      "locked": false,
-      "otherRoomId": "f17826fd-3bea-45c7-9bee-265d02451500"
+      "otherRoomId": "f17826fd-3bea-45c7-9bee-265d02451500",
+      "locked": false
     },
     {
       "id": "f17826fd-3bea-45c7-9bee-265d02451500",
@@ -613,8 +613,8 @@
       "doorType": "Tech",
       "doorScale": 1,
       "tag": "",
-      "locked": false,
-      "otherRoomId": "466c565a-bae4-4462-903f-6294bf9cc7d2"
+      "otherRoomId": "466c565a-bae4-4462-903f-6294bf9cc7d2",
+      "locked": false
     },
     {
       "id": "466c565a-bae4-4462-903f-6294bf9cc7d2",
@@ -668,8 +668,8 @@
       "doorType": "Tech",
       "doorScale": 1,
       "tag": "",
-      "locked": false,
-      "otherRoomId": "95149b8d-6ced-4e99-9928-93d42ae0421d"
+      "otherRoomId": "95149b8d-6ced-4e99-9928-93d42ae0421d",
+      "locked": false
     },
     {
       "id": "95149b8d-6ced-4e99-9928-93d42ae0421d",
@@ -763,8 +763,8 @@
       "doorType": "Tech",
       "doorScale": 1,
       "tag": "",
-      "locked": false,
-      "otherRoomId": "b0bd609c-c09c-458a-bed8-bdcdea00052d"
+      "otherRoomId": "b0bd609c-c09c-458a-bed8-bdcdea00052d",
+      "locked": false
     },
     {
       "id": "803f2fa2-2faf-4bab-865c-cde034ce732c",
@@ -783,8 +783,8 @@
       "doorType": "Tech",
       "doorScale": 1,
       "tag": "",
-      "locked": false,
-      "otherRoomId": "132d5774-6af1-4f23-9012-290dd9d65a13"
+      "otherRoomId": "132d5774-6af1-4f23-9012-290dd9d65a13",
+      "locked": false
     },
     {
       "id": "709770fd-4c4e-4125-bc55-2c2b32cc31ea",
@@ -857,7 +857,7 @@
       "id": "eddff37f-e583-4f57-8385-ac5b52cf7035",
       "kind": "room",
       "x": 138,
-      "y": 74,
+      "y": 75,
       "z": 80,
       "sx": 19,
       "sy": 12,
@@ -880,8 +880,8 @@
       "y": 78,
       "z": 73,
       "sx": 16,
-      "sy": 12,
-      "sz": 29,
+      "sy": 9,
+      "sz": 31,
       "face": "+z",
       "axis": "z",
       "dir": 1,
@@ -900,7 +900,7 @@
       "y": 78,
       "z": 89,
       "sx": 23,
-      "sy": 12,
+      "sy": 9,
       "sz": 15,
       "face": "+z",
       "axis": "z",
@@ -971,7 +971,7 @@
       "axis": "z",
       "dir": 1,
       "name": "Upper Right",
-      "a8Bg": 36,
+      "a8Bg": 148,
       "shape": "box",
       "rx": 0,
       "ry": 0,
@@ -1324,12 +1324,12 @@
       "id": "db467e86-32c2-4445-b7dc-a665bb5fdd4a",
       "kind": "doorway",
       "x": 137,
-      "y": 74,
+      "y": 75,
       "z": 81,
       "sx": 1,
       "sy": 5,
       "sz": 4,
-      "face": "-x",
+      "face": "+x",
       "axis": "z",
       "dir": 1,
       "roomId": "eddff37f-e583-4f57-8385-ac5b52cf7035",
@@ -1364,10 +1364,10 @@
       "id": "14b5167d-f73e-4160-a69c-9850254d867f",
       "kind": "slope",
       "x": 138,
-      "y": 74,
+      "y": 75,
       "z": 80,
       "sx": 19,
-      "sy": 4,
+      "sy": 3,
       "sz": 6,
       "face": "+z",
       "axis": "x",
@@ -1458,7 +1458,7 @@
     {
       "id": "e04b1c2c-c5d9-4d7f-b18d-e43edcb057b6",
       "kind": "pickup",
-      "x": 148,
+      "x": 146,
       "y": 78,
       "z": 94,
       "sx": 0.9270509831248422,
@@ -2446,6 +2446,34 @@
       "dir": 1,
       "roomId": "48afef2d-41c1-4069-9ad4-87a0a99eabd0",
       "pickup": "large health"
+    },
+    {
+      "id": "9d2e0998-6c7d-4b79-8f56-c59904c03b92",
+      "kind": "crate",
+      "x": 189,
+      "y": 78,
+      "z": 89,
+      "sx": 3,
+      "sy": 9,
+      "sz": 3,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "roomId": "f788099c-0c4c-4b49-a755-8ea05b2a723e"
+    },
+    {
+      "id": "ba97293a-fd43-4574-a68e-8154804cb056",
+      "kind": "crate",
+      "x": 158,
+      "y": 84,
+      "z": 88,
+      "sx": 16,
+      "sy": 3,
+      "sz": 3,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "roomId": "0f616af1-35ee-4c68-817c-11c68ba77687"
     }
   ]
 }

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 
-ROOM_SHAPES = ("box", "T", "L", "S")
+ROOM_SHAPES = ("box", "T", "L", "S", "C")
 
 
 def clamp_quarter(n) -> int:
@@ -108,7 +108,7 @@ def _uvw_box_to_world(room: dict, box: dict, basis: dict) -> dict:
 def _cut_count(shape: str) -> int:
     if shape == "L":
         return 1
-    if shape in ("T", "S"):
+    if shape in ("T", "S", "C"):
         return 2
     return 0
 
@@ -129,6 +129,11 @@ def _default_cuts(shape: str, u_size: int, v_size: int) -> list[dict]:
         shift = max(1, min(max_shift, max(1, u >> 2)))
         mid = max(1, min(v - 1, v >> 1))
         return [{"su": shift, "sv": max(1, v - mid)}, {"su": shift, "sv": mid}]
+    if shape == "C":
+        # Both cuts share su (notch depth); sv is each arm's thickness.
+        d = max(1, min(u - 1, u >> 1))
+        arm = max(1, min((v - 1) >> 1, v >> 2))
+        return [{"su": d, "sv": arm}, {"su": d, "sv": arm}]
     return []
 
 
@@ -159,6 +164,8 @@ def _cuts_from_legacy(room: dict, shape: str, u_size: int, v_size: int) -> list[
                 {"su": shift, "sv": max(1, v_size - mid)},
                 {"su": shift, "sv": mid},
             ]
+        return fallback
+    if shape == "C":
         return fallback
     return []
 
@@ -251,6 +258,17 @@ def _local_footprint(room: dict, basis: dict) -> list[dict]:
                 {"u": b["su"], "v": 0, "su": u_size - b["su"], "sv": top_v0},
             ]
         return [box for box in boxes if _keep_uv(box)]
+    if shape == "C":
+        a = cuts[0] if cuts else {"su": 1, "sv": 1}
+        b = cuts[1] if len(cuts) > 1 else {"su": 1, "sv": 1}
+        # su = arm length from the back bar's inner face; the longer arm reaches the +u face.
+        t = u_size - max(a["su"], b["su"])
+        boxes = [
+            {"u": 0, "v": 0, "su": t, "sv": v_size},
+            {"u": t, "v": 0, "su": a["su"], "sv": a["sv"]},
+            {"u": t, "v": v_size - b["sv"], "su": b["su"], "sv": b["sv"]},
+        ]
+        return [box for box in boxes if _keep_uv(box)]
     return [{"u": 0, "v": 0, "su": u_size, "sv": v_size}]
 
 
@@ -294,6 +312,17 @@ def _local_cutouts(room: dict, basis: dict) -> list[dict]:
             )
             if keep(box)
         ]
+    if shape == "C":
+        if len(cuts) < 2:
+            return []
+        a, b = cuts[0], cuts[1]
+        t = u_size - max(a["su"], b["su"])
+        boxes = [{"u": t, "v": a["sv"], "su": u_size - t, "sv": v_size - a["sv"] - b["sv"]}]
+        if a["su"] < b["su"]:
+            boxes.append({"u": t + a["su"], "v": 0, "su": b["su"] - a["su"], "sv": a["sv"]})
+        elif b["su"] < a["su"]:
+            boxes.append({"u": t + b["su"], "v": v_size - b["sv"], "su": a["su"] - b["su"], "sv": b["sv"]})
+        return [box for box in boxes if keep(box)]
     return []
 
 
