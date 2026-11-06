@@ -68,7 +68,7 @@ credits3_text
 	!scr " ",0
 	!scr "Thanks y'all!",0
 	!scr " ",0
-	!scr "DoomA8 v1.01.0, built 5 Nov 2026",0
+	!scr "DoomA8 v1.01.0, built 6 Nov 2026",0
 	!byte 0
 
 credits_lo

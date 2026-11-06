@@ -299,7 +299,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "purpose": "message",
+      "purpose": "hurt_small",
       "text": "",
       "tag": "",
       "roomId": "8a03e935-f111-4eab-b69f-bdae3fbeef32"
@@ -511,21 +511,6 @@
       "pickup": "shells"
     },
     {
-      "id": "c5dbcabd-a2a4-4c98-8845-dec46bc292e8",
-      "kind": "pickup",
-      "x": 105,
-      "y": 60,
-      "z": 13,
-      "sx": 0.9270509831248422,
-      "sy": 1.5,
-      "sz": 0.8028497019894523,
-      "face": "+z",
-      "axis": "z",
-      "dir": 1,
-      "roomId": "534c60db-2c9b-47f4-9432-3e09383a1490",
-      "pickup": "shells"
-    },
-    {
       "id": "0fc6bbdf-a525-42cb-87b3-1c2252970f8c",
       "kind": "pickup",
       "x": 106,
@@ -559,7 +544,7 @@
       "id": "0197519f-8b5a-43ed-ab6c-3b90b166c7b3",
       "kind": "trigger",
       "x": 104,
-      "y": 58,
+      "y": 59,
       "z": 25,
       "sx": 20,
       "sy": 1,
@@ -1552,12 +1537,12 @@
       "axis": "z",
       "dir": 1,
       "roomId": "62639a9a-2b39-437f-823c-32add493a303",
-      "lockKey": "unlocked",
+      "lockKey": "red",
       "doorType": "Tech",
       "doorScale": 1,
       "tag": "",
       "otherRoomId": "a990c5b7-3fbe-465c-b6f1-b39804ffa218",
-      "locked": false
+      "locked": true
     },
     {
       "id": "a5c42e67-4ff1-4f79-802a-5cdb7626d338",
@@ -1572,12 +1557,12 @@
       "axis": "z",
       "dir": 1,
       "roomId": "62639a9a-2b39-437f-823c-32add493a303",
-      "lockKey": "unlocked",
+      "lockKey": "red",
       "doorType": "Tech",
       "doorScale": 1,
       "tag": "",
       "otherRoomId": "a990c5b7-3fbe-465c-b6f1-b39804ffa218",
-      "locked": false
+      "locked": true
     },
     {
       "id": "10e34dc5-bb5a-4008-8ac0-7fa487d787f9",
@@ -2664,7 +2649,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "purpose": "message",
+      "purpose": "hurt_small",
       "text": "",
       "tag": "",
       "roomId": "0ad73e67-52e6-414d-83dc-06c2acec5266"
@@ -2767,9 +2752,9 @@
     {
       "id": "24f6fec8-f104-425f-927d-81a98f17fa19",
       "kind": "enemy",
-      "x": 200,
+      "x": 182,
       "y": 60,
-      "z": 16,
+      "z": 31,
       "sx": 2,
       "sy": 4,
       "sz": 2,
@@ -2997,6 +2982,68 @@
       "rot": 4,
       "enemy": "Imp",
       "roomId": "b279aa84-0005-4645-9d59-79d48ef98f4e"
+    },
+    {
+      "id": "ced5f088-d7d0-492e-a2a7-f0a3c88a3cc4",
+      "kind": "trigger",
+      "x": 37,
+      "y": 47,
+      "z": 15,
+      "sx": 26,
+      "sy": 4,
+      "sz": 28,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "purpose": "hurt_small",
+      "text": "",
+      "tag": "",
+      "roomId": "217495e2-6056-464b-8893-d7360ae3406f"
+    },
+    {
+      "id": "516820e4-c6f9-42de-b0ec-e5121a54adaf",
+      "kind": "pickup",
+      "x": 106,
+      "y": 60,
+      "z": 13,
+      "sx": 0.9270509831248422,
+      "sy": 1.5,
+      "sz": 0.8028497019894523,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "roomId": "534c60db-2c9b-47f4-9432-3e09383a1490",
+      "pickup": "ammo box"
+    },
+    {
+      "id": "e691b16c-aa16-4feb-84b5-c36eec2cd242",
+      "kind": "pickup",
+      "x": 171,
+      "y": 60,
+      "z": 25,
+      "sx": 0.9270509831248422,
+      "sy": 1.5,
+      "sz": 0.8028497019894523,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "roomId": "3ab730c8-456f-439e-a78f-8ba0f1bcc7c5",
+      "pickup": "chaingun"
+    },
+    {
+      "id": "ecf013ff-4aef-4603-9503-b2e117a2713d",
+      "kind": "pickup",
+      "x": 111,
+      "y": 63,
+      "z": 80,
+      "sx": 0.9270509831248422,
+      "sy": 1.5,
+      "sz": 0.8028497019894523,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "roomId": "bb06c96d-d2d2-449c-a9a1-628d4a804d6a",
+      "pickup": "box of rockets"
     }
   ]
 }

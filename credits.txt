@@ -30,4 +30,4 @@ by avery lee.
 
 Thanks y'all!
 
-DoomA8 v1.01.0, built 5 Nov 2026
+DoomA8 v1.01.0, built 6 Nov 2026
