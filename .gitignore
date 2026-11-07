@@ -47,3 +47,4 @@ Thumbs.db
 .idea/
 monitor.log
 *.atstate2
+*.at
