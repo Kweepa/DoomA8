@@ -68,9 +68,11 @@ door_unlocked
 
 ; A = cooked tag id. Unlock every remote door with that tag.
 ; Clears the lock and DOOR_HIDDEN so the mesh draws.
+; Returns C=1 if at least one door was newly unlocked, else C=0. Clobbers Y.
 door_unlock_tag
 	sta sw_match
 	ldx #0
+	ldy #0				; Y = doors unlocked
 .dut
 	cpx	map_ndoors
 	bcs .dut_done
@@ -85,10 +87,12 @@ door_unlock_tag
 	+lda_mx door_type
 	and #($ff - DOOR_HIDDEN)
 	+sta_mx door_type
+	iny
 .dut_n
 	inx
 	bne .dut
 .dut_done
+	cpy #1				; C = (Y >= 1)
 	rts
 
 ; ------------------------------------------------------------------

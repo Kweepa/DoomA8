@@ -1944,13 +1944,17 @@ try_proximity
 
 ; X = switch. Low 7 bits of sw_kind are the dest. SW_SHOOT is ignored.
 ; Switch sound unless the dest is none, end-of-level, or elev_activate refuses (C=1).
+; A door-unlock switch that unlocks a door plays SOUND_DOROPN instead.
 fire_switch
 	+lda_mx sw_kind
 	and #$7f
 	bne .fs_nk
 	+lda_mx sw_tag
 	jsr door_unlock_tag
-	jmp .fs_sfx
+	bcc .fs_sfx			; nothing newly unlocked: plain switch sound
+	lda #SOUND_DOROPN
+	jsr play_sound
+	rts
 .fs_nk
 	cmp #SW_DEST_ELEV
 	beq .fs_elev
