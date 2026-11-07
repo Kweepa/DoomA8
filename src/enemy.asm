@@ -1995,7 +1995,7 @@ gun_hitscan
 	rts
 
 ; A = |sx−CX| limit. Pellets use the body half-width in px alone (no slop):
-; (enemy_block_r + 1) × shot_hw_tab[CAM_ZH], saturating at $ff.
+; enemy_block_r × shot_hw_tab[CAM_ZH], saturating at $ff.
 ; Pistol and chaingun keep scan_hit_x.
 ; X, Y free (sy already in rot1). rot0 and gidx stay.
 pellet_hit_lim
@@ -2006,10 +2006,11 @@ pellet_hit_lim
 	ldx enemy_idx
 	jsr ldy_slot			; Y = slot
 	lda enemy_block_r,y
-	tax
-	inx				; count = blockR + 1 (set_blk_lim's box_sx)
+	tax				; count = blockR
 	ldy CAM_ZH
 	lda #0
+	cpx #0
+	beq .shl_rts			; blockR 0: dex/bne would wrap
 .shl_add
 	clc
 	adc shot_hw_tab,y

@@ -441,8 +441,8 @@ SHOT_PELLET_X	= 2			; |sx − column| for one pellet vs a barrel (enemies use bo
 SHOT_PELLETS	= 7			; pellets per shot
 SHOT_SPREAD_MASK = 63			; rnd8 & this − SHOT_SPREAD_HALF = pellet column
 SHOT_SPREAD_HALF = 32			; spread −32..+31 px
-SHOT_DMG_ROLL	= 8			; roll_upto ceiling per pellet
-SHOT_DMG_BASE	= 2			; + roll 1..8 → 3..10
+SHOT_DMG_ROLL	= 5			; roll_upto ceiling per pellet
+SHOT_DMG_BASE	= 1			; + roll 1..8 → 3..10
 SHOT_Z_MAX	= 32			; view-Z high max range
 SHOT_MID_H	= 3			; mid-body Y above feet (≈ ENEMY_CULL_H/2)
 CHAIN_HIT_X	= 6			; |sx − SCREEN_CX| ≤ this (pixels)
