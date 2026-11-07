@@ -427,9 +427,18 @@ menu_select
 }
 	jmp .ms_st
 .ms_ord
-	lda #<order_text
-	ldy #>order_text
+	ldx #0
+.ms_or
+	txa
+	pha
+	lda order_lo,x
+	ldy order_hi,x
 	jsr show_text_screen
+	pla
+	tax
+	inx
+	cpx #ORDER_PAGES
+	bne .ms_or
 	jmp .ms_ret
 .ms_ctl
 	lda #<control_text
