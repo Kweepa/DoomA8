@@ -2474,6 +2474,21 @@
       "axis": "z",
       "dir": 1,
       "roomId": "0f616af1-35ee-4c68-817c-11c68ba77687"
+    },
+    {
+      "id": "418e3e42-6f1d-48b6-bfae-99428b41d4be",
+      "kind": "slope",
+      "x": 105,
+      "y": 58,
+      "z": 59,
+      "sx": 6,
+      "sy": 4,
+      "sz": 12,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "flags": 0,
+      "roomId": "b0bd609c-c09c-458a-bed8-bdcdea00052d"
     }
   ]
 }
