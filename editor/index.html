@@ -11777,8 +11777,36 @@ function pvPlatTopSegs(obj) {
   ];
 }
 
-function pvDoorOrigin(obj) {
+/** Game switch: up-pointing triangle on the face plane (fill_switch_verts). */
+function pvSwitchSegs(obj) {
   const face = obj.face || "+z";
+  const yMid = obj.y + ((obj.sy | 0) >> 1);
+  const yTop = obj.y + obj.sy;
+  let v0;
+  let v1;
+  let v2;
+  if (face === "+x" || face === "-x") {
+    const x = face === "+x" ? obj.x + obj.sx : obj.x;
+    const zMid = obj.z + ((obj.sz | 0) >> 1);
+    v0 = { x, y: yTop, z: zMid };
+    v1 = { x, y: yMid, z: obj.z };
+    v2 = { x, y: yMid, z: obj.z + obj.sz };
+  } else {
+    const z = face === "-z" ? obj.z : obj.z + obj.sz;
+    const xMid = obj.x + ((obj.sx | 0) >> 1);
+    v0 = { x: xMid, y: yTop, z };
+    v1 = { x: obj.x, y: yMid, z };
+    v2 = { x: obj.x + obj.sx, y: yMid, z };
+  }
+  return [
+    { a: v0, b: v1 },
+    { a: v1, b: v2 },
+    { a: v2, b: v0 },
+  ];
+}
+
+function pvDoorOrigin(obj, faceOverride) {
+  const face = faceOverride || obj.face || "+z";
   const yaw = PV_DOOR_YAW[face] ?? 0;
   if (face === "+x") return { x: obj.x + obj.sx, y: obj.y, z: obj.z + obj.sz / 2, yaw };
   if (face === "-x") return { x: obj.x, y: obj.y, z: obj.z + obj.sz / 2, yaw };
@@ -11787,10 +11815,10 @@ function pvDoorOrigin(obj) {
 }
 
 /** Type mesh on the outward face (local X across, Y up, Z thickness). */
-function pvDoorMeshSegs(obj, mesh) {
+function pvDoorMeshSegs(obj, mesh, face) {
   const m = mesh?.verts?.length ? mesh : null;
   if (!m) return [];
-  const o = pvDoorOrigin(obj);
+  const o = pvDoorOrigin(obj, face);
   const s = clampDoorScale(obj.doorScale);
   const c = Math.cos(o.yaw);
   const sn = Math.sin(o.yaw);
@@ -12052,10 +12080,18 @@ class PreviewView {
     ctx.stroke();
   }
 
-  #drawObject(ctx, doc, obj, cam, color) {
+  #drawObject(ctx, doc, obj, cam, color, room) {
     if (obj.kind === "doorway") {
       const mesh = itemMeshFor(doc, obj.doorType);
-      for (const seg of pvDoorMeshSegs(obj, mesh)) {
+      // Game bakes door_face per room: the slab plane nearest this room's colliders.
+      const face = doorNearFaceId(obj, room);
+      for (const seg of pvDoorMeshSegs(obj, mesh, face)) {
+        this.#stroke(ctx, cam, seg.a, seg.b, color);
+      }
+      return;
+    }
+    if (obj.kind === "switch") {
+      for (const seg of pvSwitchSegs(obj)) {
         this.#stroke(ctx, cam, seg.a, seg.b, color);
       }
       return;
@@ -12188,7 +12224,7 @@ class PreviewView {
         } else if (obj.kind === "room" || obj.kind === "spawn" || isGhostKind(obj.kind)) {
           continue;
         }
-        this.#drawObject(ctx, doc, obj, cam, line);
+        this.#drawObject(ctx, doc, obj, cam, line, room);
       }
       this.#drawPistol(ctx);
     }
