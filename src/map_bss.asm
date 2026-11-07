@@ -44,131 +44,127 @@ room_sy	= $0420
 room_sz	= $0422
 room_bg	= $0424
 slope_flags	= $0426		; was room_line
-; $0428..$042B were room_fx / room_wpn
-; (was room_id, unused)
-rc_x	= $042E
-rc_y	= $0430
-rc_z	= $0432
-rc_sx	= $0434
-rc_sy	= $0436
-rc_sz	= $0438
-rb_x	= $043A
-rb_y	= $043C
-rb_z	= $043E
-rb_sx	= $0440
-rb_sy	= $0442
-rb_sz	= $0444
-room_nv	= $0446
-room_ne	= $0448
-room_vo	= $044A
-room_eo	= $044C
-room_nx	= $044E
-room_nz	= $0450
-room_uo	= $0452
-room_zo	= $0454
-room_door_o	= $0456
-room_ndoor	= $0458
-room_ux	= $045A
-room_uz	= $045C
-room_vy	= $045E
-room_xid	= $0460
-room_zid	= $0462
-room_col	= $0464
-room_e0	= $0466
-room_e1	= $0468
-; $046A was room_evert
-; $046C was room_efaces
-door_x	= $046E
-door_y	= $0470
-door_z	= $0472
-door_sx	= $0474
-door_sy	= $0476
-door_sz	= $0478
-door_face	= $047A
-door_key	= $047C
-door_type	= $047E
-; $0480 was door_id (never read)
-door_other	= $0482
-door_tag	= $0484
-crate_x	= $0486
-crate_y	= $0488
-crate_z	= $048A
-crate_sx	= $048C
-crate_sy	= $048E
-crate_sz	= $0490
-crate_room	= $0492
-crate_flags	= $0494		; nonzero = stroke all 12 edges
-slope_x	= $0496
-slope_y	= $0498
-slope_z	= $049A
-slope_sx	= $049C
-slope_sy	= $049E
-slope_sz	= $04A0
-slope_axis	= $04A2
-slope_dir	= $04A4
-slope_room	= $04A6
-room_slope_o	= $04A8
-plat_x	= $04AA
-plat_y	= $04AC
-plat_z	= $04AE
-plat_sx	= $04B0
-plat_sz	= $04B2
-plat_room	= $04B4
-plat_solid	= $04B6
-room_plat_o	= $04B8
-elev_x	= $04BA
-elev_y0	= $04BC
-elev_z	= $04BE
-elev_sx	= $04C0
-elev_sy	= $04C2
-elev_sz	= $04C4
-elev_home	= $04C6
-elev_dest	= $04C8
-elev_room	= $04CA
-elev_id	= $04CC
-sw_x	= $04CE
-sw_y	= $04D0
-sw_z	= $04D2
-sw_sx	= $04D4
-sw_sy	= $04D6
-sw_sz	= $04D8
-sw_kind	= $04DA
-sw_tag	= $04DC
-sw_room	= $04DE
-sw_face	= $04E0
-en_tag	= $04E2		; cooked enemy tag id; 0 = untagged. Hole was sw_id.
-en_x	= $04E4
-en_y	= $04E6
-en_z	= $04E8
-en_type	= $04EA
-en_rot	= $04EC
-en_room	= $04EE
-elev_grp	= $04F0		; cooked tag group; 0 = none. Hole was en_patrol.
-elev_flags	= $04F2		; bit0 = quarter speed. Hole was en_id.
-tr_x	= $04F4
-tr_y	= $04F6
-tr_z	= $04F8
-tr_sx	= $04FA
-tr_sy	= $04FC
-tr_sz	= $04FE
-tr_room	= $0500
-tr_purpose	= $0502
-tr_arg	= $0504
-room_trig_o	= $0506
-th_x	= $0508
-th_y	= $050A
-th_z	= $050C
-th_type	= $050E
-th_room	= $0510
-room_th_o	= $0512
-map_name	= $0514
-map_text	= $0516
-; $0518 was slope_flags (moved to $0426 so every bind_tab field id is < 128)
+; Dead slots (room_fx / room_wpn / room_id, room_evert, room_efaces, door_id)
+; were closed up; field ids are address-derived, so everything below is dense.
+rc_x	= $0428
+rc_y	= $042A
+rc_z	= $042C
+rc_sx	= $042E
+rc_sy	= $0430
+rc_sz	= $0432
+rb_x	= $0434
+rb_y	= $0436
+rb_z	= $0438
+rb_sx	= $043A
+rb_sy	= $043C
+rb_sz	= $043E
+room_nv	= $0440
+room_ne	= $0442
+room_vo	= $0444
+room_eo	= $0446
+room_nx	= $0448
+room_nz	= $044A
+room_uo	= $044C
+room_zo	= $044E
+room_door_o	= $0450
+room_ndoor	= $0452
+room_ux	= $0454
+room_uz	= $0456
+room_vy	= $0458
+room_xid	= $045A
+room_zid	= $045C
+room_col	= $045E
+room_e0	= $0460
+room_e1	= $0462
+door_x	= $0464
+door_y	= $0466
+door_z	= $0468
+door_sx	= $046A
+door_sy	= $046C
+door_sz	= $046E
+door_face	= $0470
+door_key	= $0472
+door_type	= $0474
+door_other	= $0476
+door_tag	= $0478
+crate_x	= $047A
+crate_y	= $047C
+crate_z	= $047E
+crate_sx	= $0480
+crate_sy	= $0482
+crate_sz	= $0484
+crate_room	= $0486
+crate_flags	= $0488		; nonzero = stroke all 12 edges
+slope_x	= $048A
+slope_y	= $048C
+slope_z	= $048E
+slope_sx	= $0490
+slope_sy	= $0492
+slope_sz	= $0494
+slope_axis	= $0496
+slope_dir	= $0498
+slope_room	= $049A
+room_slope_o	= $049C
+plat_x	= $049E
+plat_y	= $04A0
+plat_z	= $04A2
+plat_sx	= $04A4
+plat_sz	= $04A6
+plat_room	= $04A8
+plat_solid	= $04AA
+room_plat_o	= $04AC
+elev_x	= $04AE
+elev_y0	= $04B0
+elev_z	= $04B2
+elev_sx	= $04B4
+elev_sy	= $04B6
+elev_sz	= $04B8
+elev_home	= $04BA
+elev_dest	= $04BC
+elev_room	= $04BE
+elev_id	= $04C0
+sw_x	= $04C2
+sw_y	= $04C4
+sw_z	= $04C6
+sw_sx	= $04C8
+sw_sy	= $04CA
+sw_sz	= $04CC
+sw_kind	= $04CE
+sw_tag	= $04D0
+sw_room	= $04D2
+sw_face	= $04D4
+en_tag	= $04D6		; cooked enemy tag id; 0 = untagged. Hole was sw_id.
+en_x	= $04D8
+en_y	= $04DA
+en_z	= $04DC
+en_type	= $04DE
+en_rot	= $04E0
+en_room	= $04E2
+elev_grp	= $04E4		; cooked tag group; 0 = none. Hole was en_patrol.
+elev_flags	= $04E6		; bit0 = quarter speed. Hole was en_id.
+tr_x	= $04E8
+tr_y	= $04EA
+tr_z	= $04EC
+tr_sx	= $04EE
+tr_sy	= $04F0
+tr_sz	= $04F2
+tr_room	= $04F4
+tr_purpose	= $04F6
+tr_arg	= $04F8
+room_trig_o	= $04FA
+th_x	= $04FC
+th_y	= $04FE
+th_z	= $0500
+th_type	= $0502
+th_room	= $0504
+room_th_o	= $0506
+map_name	= $0508
+map_text	= $050A
 !if (map_text - room_x) & 1 {
 	!error "map pointer table is not aligned words"
 }
 !if (map_text - room_x) / 2 > 255 {
 	!error "map pointer table exceeds 256 fields"
 }
-; MAP_BSS_END = $051A  size=282
-; $051A..$0523 is a gap; play BSS still starts at $0524.
+; MAP_BSS_END = $050C  size=268
+; $050C..$0523 is a gap; play BSS still starts at $0524.

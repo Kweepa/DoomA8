@@ -21,12 +21,13 @@ Caps used by the mesh path: **16 verts**, **32 edges**, **6 unique world X** and
 | `$0002`–`$00FF` | 254 | Zero page — [`src/zp.asm`](src/zp.asm) |
 | `$0100`–`$01FF` | 256 | Stack |
 | `$0200`–`$03FF` | 512 | Mostly free. `MAP_SMC_HI` `$02` is a GAME operand sentinel, not occupancy. Live KERNAL shadows: `$02A1` (CIA2 ICR), `$02A6` (PAL/NTSC), `$0314`/`$0318` (IRQ/NMI vectors, also `$FFFA`) |
-| `$0400`–`$0519` | 282 | Map header + SoA pointers (`map_bss.asm`; `bind_map`). `$0417` unused. `$051A`–`$0523` free |
-| `$0524`–`$06F6` | 467 | Play BSS (frame/pose pointers and streamed-SFX state) |
-| `$06F7`–`$0875` | 383 | Boot-loaded immutable enemy metadata (`enemydata.prg`) |
-| `$0876`–`$0885` | 16 | Streamed AI entry pointers (8 lo + 8 hi) |
-| `$0886`–`$0895` | 16 | Fused enemy-bank base pointers (8 lo + 8 hi) |
-| `$0896`–`$08F8` | 99 | Free during play |
+| `$0400`–`$050B` | 268 | Map header + SoA pointers (`map_bss.asm`; `bind_map`). `$0417` unused. `$050C`–`$0523` free |
+| `$0524`–`$06D4` | 433 | Play BSS (enemy/pose pointers, streamed-SFX state; `$056A`–`$06D4` free) |
+| `$06D5`–`$0700` | 44 | PAL hue tables (`a8_pal_hue`, `a8_hue_lo`), then boot scratch (`$06F0`+) |
+| `$0701`–`$084F` | 335 | Boot-loaded immutable enemy metadata (`enemydata.prg`) |
+| `$0850`–`$085F` | 16 | Streamed AI entry pointers and fused-bank base pointers (4 types each) |
+| `$0860`–`$0876` | 23 | Custom-skeleton BSS and quick-save latches |
+| `$0877`–`$08F8` | 130 | Free during play |
 | `$08F9`–`$08FB` | 3 | `REBOOT_STUB` (`JMP reboot_game`) |
 | `$08FC` | 1 | `level_num` |
 | `$08FD`–`$08FF` | 3 | `effects_vol` / `game_complete` / `difficulty` (survive GAME load) |
@@ -37,20 +38,18 @@ Caps used by the mesh path: **16 verts**, **32 edges**, **6 unique world X** and
 
 | Address | Size | Label |
 | :--- | ---: | :--- |
-| `$0524`–`$058D` | 106 | `frame13_lo` |
-| `$058E`–`$05F7` | 106 | `frame13_hi` |
-| `$05F8`–`$062D` | 54 | `enemy_gx/y/z` lo/hi (`ENEMY_PTR_N`=9) |
-| `$062E`–`$0645` | 24 | `box_vis_edges` |
-| `$0686`–`$0692` | 13 | `pose_gx` |
-| `$0693`–`$069F` | 13 | `pose_gy` |
-| `$06A0`–`$06AC` | 13 | `pose_gz` |
-| `$06AD`–`$06B5` | 9 | `pose_map_lo` |
-| `$06B6`–`$06BE` | 9 | `pose_map_hi` |
-| `$06BF`–`$06D0` | 18 | streamed clip-SFX event pointers |
-| `$06D1`–`$06D4` | 4 | clip-SFX animation scratch/latch |
-| `$06D5`–`$0700` | 44 | `play_bss_free` — unused (was `box_vis_vert` / `room_pack_vert`) |
+| `$0524`–`$053B` | 24 | `enemy_gx/gy/gz` lo/hi (`ENEMY_PTR_N`=4) |
+| `$053C`–`$0553` | 24 | `box_vis_edges` |
+| `$0554`–`$055B` | 8 | `pose_map_lo` / `pose_map_hi` |
+| `$055C`–`$0563` | 8 | `enemy_sfx_evt_lo` / `enemy_sfx_evt_hi` (streamed clip-SFX event pointers) |
+| `$0564`–`$0567` | 4 | `en_sfx_old` / `en_sfx_new` / `en_sfx_n` / `en_sfx_armed` (clip-SFX animation scratch/latch) |
+| `$0568`–`$0569` | 2 | `enter_wait_l` / `enter_wait_h` |
+| `$056A`–`$06D4` | 363 | `play_bss_free` — unused (up to `a8_pal_hue`) |
+| `$06D5`–`$0700` | 44 | `a8_pal_hue` / `a8_hue_lo` PAL tables (must stay below `$06F0`), then boot scratch |
 | `$0701`–`$084F` | 335 | immutable enemy metadata (`ENEMY_DATA_BASE`..`ENEMY_DATA_LIMIT`) |
-| `$0850`–`$0873` | 36 | streamed AI entry and fused-bank pointers |
+| `$0850`–`$085F` | 16 | streamed AI entry and fused-bank pointers (`AI_ENTRY_*`, `AI_BANK_*`) |
+| `$0860`–`$0870` | 17 | custom-skeleton BSS (`skel_nv`, `skel_ne`, `skel_base_*`, `skel_mul_n`) |
+| `$0871`–`$0876` | 6 | quick-save latches (`in_qsave` … `ut_end`) |
 
 ### GAME `$0900`–`end_game`
 
