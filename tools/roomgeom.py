@@ -441,23 +441,6 @@ def _compose(face: dict, a: int, b: int) -> dict:
     return {"x": a, "y": b, "z": face["plane"]}
 
 
-def _outer_face_bits(outer: dict, a: dict, b: dict) -> int:
-    bits = 0
-
-    def on(axis: str, plane: int, bit: int) -> None:
-        nonlocal bits
-        if a[axis] == plane and b[axis] == plane:
-            bits |= bit
-
-    on("x", outer["x"], 0x01)
-    on("x", outer["x"] + outer["sx"], 0x02)
-    on("y", outer["y"], 0x04)
-    on("y", outer["y"] + outer["sy"], 0x08)
-    on("z", outer["z"], 0x10)
-    on("z", outer["z"] + outer["sz"], 0x20)
-    return bits
-
-
 def _vert_on_open_seg(a: dict, b: dict, p: dict) -> bool:
     if a["x"] == b["x"] and a["y"] == b["y"] and a["z"] != b["z"] and p["x"] == a["x"] and p["y"] == a["y"]:
         return min(a["z"], b["z"]) < p["z"] < max(a["z"], b["z"])
@@ -530,19 +513,13 @@ def _dissolve_collinear(verts: list[dict], edges: list[dict]) -> None:
                 continue
             drop = {ia, ib}
             nxt = [e for i, e in enumerate(edges) if i not in drop]
-            nxt.append(
-                {
-                    "a": oa,
-                    "b": ob,
-                    "faces": edges[ia]["faces"] | edges[ib]["faces"],
-                }
-            )
+            nxt.append({"a": oa, "b": ob})
             edges[:] = nxt
             changed = True
             break
 
 
-def _union_hull(colliders: list[dict], outer: dict) -> dict:
+def _union_hull(colliders: list[dict]) -> dict:
     hull_faces = []
     for i, box in enumerate(colliders):
         for face in _aabb_faces(box):
@@ -633,13 +610,7 @@ def _union_hull(colliders: list[dict], outer: dict) -> dict:
                 break
         if buried:
             continue
-        edges.append(
-            {
-                "a": ia,
-                "b": ib,
-                "faces": _outer_face_bits(outer, va, vb),
-            }
-        )
+        edges.append({"a": ia, "b": ib})
     _dissolve_collinear(verts, edges)
     used = set()
     for e in edges:
@@ -683,7 +654,7 @@ def room_geometry(room: dict) -> dict:
     fp = _local_footprint(room, basis)
     colliders = [_uvw_box_to_world(room, box, basis) for box in fp]
     cutouts = [_uvw_box_to_world(room, box, basis) for box in _local_cutouts(room, basis)]
-    hull = _union_hull(colliders, outer)
+    hull = _union_hull(colliders)
     return {"outer": outer, "shape": shape, "colliders": colliders, "cutouts": cutouts, **hull}
 
 

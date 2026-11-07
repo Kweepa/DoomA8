@@ -191,7 +191,6 @@ bind_tab
 	+bind_add room_col, map_nvert
 	+bind_add room_e0, map_nedge
 	+bind_add room_e1, map_nedge
-	+bind_add room_efaces, map_nedge
 	+bind_add door_x, map_ndoors
 	+bind_add door_y, map_ndoors
 	+bind_add door_z, map_ndoors

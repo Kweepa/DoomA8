@@ -77,7 +77,7 @@ room_col	= $0464
 room_e0	= $0466
 room_e1	= $0468
 ; $046A was room_evert
-room_efaces	= $046C
+; $046C was room_efaces
 door_x	= $046E
 door_y	= $0470
 door_z	= $0472

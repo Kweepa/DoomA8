@@ -1172,60 +1172,17 @@ fill_slope_verts
 
 ; ------------------------------------------------------------------
 ; Tetromino hull: unique UX/UZ * sin/cos, then verts by xid/zid/VY.
-; Packed vis edges stroke in one pass (EDGE_VIS/CLIP_* are 32-wide).
+; The baked edge list strokes in place (room_e0/e1 + room_eo), no culling:
+; the eye is always inside the outer box, so every edge would be kept.
+; EDGE_VIS/CLIP_* are 32-wide (MESH_MAX_EDGES).
 ; ------------------------------------------------------------------
 draw_room_mesh
 	jsr load_view_trig
 	lda #$ff
 	sta mesh_vmask
 	ldx room_idx
-	+lda_mx room_x
-	sta box_x
-	+lda_mx room_y
-	sta box_y
-	+lda_mx room_z
-	sta box_z
-	+lda_mx room_sx
-	sta box_sx
-	+lda_mx room_sy
-	sta box_sy
-	+lda_mx room_sz
-	sta box_sz
-	lda #1
-	sta box_inside
-	jsr cull_box_faces
-	ldx room_idx
-	+lda_mx room_ne
-	sta pv0
 	+lda_mx room_eo
-	sta pv1
-	lda #0
 	sta pv3
-.drm_pk
-	lda pv0
-	beq .drm_pkd
-	ldx pv1
-	+lda_mx room_efaces
-	beq .drm_keep
-	and face_bits
-	beq .drm_pkn
-.drm_keep
-	ldy pv3
-	+lda_mx room_e0
-	sta room_vis_a,y
-	+lda_mx room_e1
-	sta room_vis_b,y
-	inc pv3
-.drm_pkn
-	inc pv1
-	dec pv0
-	bne .drm_pk
-.drm_pkd
-	lda pv3
-	bne .drm_xf
-	rts
-.drm_xf
-	ldx room_idx
 	+lda_mx room_nv
 	sta mesh_nv
 	+lda_mx room_nx
@@ -1299,15 +1256,22 @@ draw_room_mesh
 	adc #0
 	sta col_ptr+1
 	jsr xform_mesh_xz
-	lda #<room_vis_a
+	clc
+	lda room_e0
+	adc pv3
 	sta edge_ptr
-	lda #>room_vis_a
+	lda room_e0+1
+	adc #0
 	sta edge_ptr+1
-	lda #<room_vis_b
+	clc
+	lda room_e1
+	adc pv3
 	sta edge_b
-	lda #>room_vis_b
+	lda room_e1+1
+	adc #0
 	sta edge_b+1
-	lda pv3
+	ldx room_idx
+	+lda_mx room_ne
 	sta mesh_ne
 	jmp stroke_mesh
 

@@ -1004,29 +1004,6 @@ function composePoint(face, a, b) {
   return { x: a, y: b, z: face.plane };
 }
 
-const FACE_BIT = {
-  "-x": 0x01,
-  "+x": 0x02,
-  "-y": 0x04,
-  "+y": 0x08,
-  "-z": 0x10,
-  "+z": 0x20,
-};
-
-function outerFaceBits(outer, a, b) {
-  let bits = 0;
-  const on = (axis, plane, bit) => {
-    if (a[axis] === plane && b[axis] === plane) bits |= bit;
-  };
-  on("x", outer.x, 0x01);
-  on("x", outer.x + outer.sx, 0x02);
-  on("y", outer.y, 0x04);
-  on("y", outer.y + outer.sy, 0x08);
-  on("z", outer.z, 0x10);
-  on("z", outer.z + outer.sz, 0x20);
-  return bits;
-}
-
 function weldKey(p) {
   return `${p.x},${p.y},${p.z}`;
 }
@@ -1105,11 +1082,7 @@ function dissolveCollinear(verts, edges) {
       if (!axisCollinear(verts[ia.o], verts[v], verts[ib.o])) continue;
       const drop = new Set([ia.i, ib.i]);
       const next = edges.filter((_, i) => !drop.has(i));
-      next.push({
-        a: ia.o,
-        b: ib.o,
-        faces: edges[ia.i].faces | edges[ib.i].faces,
-      });
+      next.push({ a: ia.o, b: ib.o });
       edges.length = 0;
       edges.push(...next);
       changed = true;
@@ -1118,7 +1091,7 @@ function dissolveCollinear(verts, edges) {
   }
 }
 
-function unionHull(colliders, outer) {
+function unionHull(colliders) {
   const hullFaces = [];
   for (let i = 0; i < colliders.length; i++) {
     const box = colliders[i];
@@ -1226,11 +1199,7 @@ function unionHull(colliders, outer) {
       }
     }
     if (buried) continue;
-    kept.push({
-      a: ia,
-      b: ib,
-      faces: outerFaceBits(outer, va, vb),
-    });
+    kept.push({ a: ia, b: ib });
   }
   dissolveCollinear(verts, kept);
   const used = new Set();
@@ -1376,19 +1345,19 @@ export function roomGeometry(room) {
       { x: outer.x, y: outer.y + outer.sy, z: outer.z + outer.sz },
     ];
     const edges = [
-      [0, 1, 0x14],
-      [1, 2, 0x06],
-      [2, 3, 0x24],
-      [3, 0, 0x05],
-      [4, 5, 0x18],
-      [5, 6, 0x0a],
-      [6, 7, 0x28],
-      [7, 4, 0x09],
-      [0, 4, 0x11],
-      [1, 5, 0x12],
-      [2, 6, 0x22],
-      [3, 7, 0x21],
-    ].map(([a, b, faces]) => ({ a, b, faces }));
+      [0, 1],
+      [1, 2],
+      [2, 3],
+      [3, 0],
+      [4, 5],
+      [5, 6],
+      [6, 7],
+      [7, 4],
+      [0, 4],
+      [1, 5],
+      [2, 6],
+      [3, 7],
+    ].map(([a, b]) => ({ a, b }));
     const hullFaces = aabbFaces(outer).map((f) => ({
       ...f,
       corners: [
@@ -1415,7 +1384,7 @@ export function roomGeometry(room) {
   const fp = localFootprint(room, basis);
   const colliders = fp.map((box) => uvwBoxToWorld(room, box, basis));
   const cutouts = localCutouts(room, basis).map((box) => uvwBoxToWorld(room, box, basis));
-  const { hullFaces, verts, edges } = unionHull(colliders, outer);
+  const { hullFaces, verts, edges } = unionHull(colliders);
   return {
     outer,
     shape,

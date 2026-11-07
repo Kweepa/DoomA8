@@ -41,7 +41,6 @@ Caps used by the mesh path: **16 verts**, **32 edges**, **6 unique world X** and
 | `$058E`–`$05F7` | 106 | `frame13_hi` |
 | `$05F8`–`$062D` | 54 | `enemy_gx/y/z` lo/hi (`ENEMY_PTR_N`=9) |
 | `$062E`–`$0645` | 24 | `box_vis_edges` |
-| `$0646`–`$0685` | 64 | `room_pack_edges` |
 | `$0686`–`$0692` | 13 | `pose_gx` |
 | `$0693`–`$069F` | 13 | `pose_gy` |
 | `$06A0`–`$06AC` | 13 | `pose_gz` |
