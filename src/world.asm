@@ -780,7 +780,9 @@ sync_eye
 ; ------------------------------------------------------------------
 ; ledge_unstick — landed eye is inside a room box but outside PLAYER_R.
 ; A vertical L/T/S lip is one cell deep; step to a cardinal that is inset
-; at floor_y. cam_yh restored so fall_y0 stays the height the drop started.
+; at floor_y. A pit slab corner violates two walls at once, so the four
+; diagonals are tried after the cardinals.
+; cam_yh restored so fall_y0 stays the height the drop started.
 ; X/Z fraction parks on the near edge of the new cell ($ff down, 0 up).
 ; ------------------------------------------------------------------
 ledge_unstick
@@ -798,7 +800,7 @@ ledge_unstick
 	bcs .lu_out
 	ldx #0
 .lu_n
-	cpx #4
+	cpx #8
 	bcs .lu_out
 	stx ledge_i
 	lda .lu_dx,x
@@ -880,9 +882,9 @@ ledge_unstick
 	sec
 	rts
 
-; -x, +x, -z, +z
-.lu_dx	!byte $ff, 1, 0, 0
-.lu_dz	!byte 0, 0, $ff, 1
+; -x, +x, -z, +z, then -x-z, +x-z, -x+z, +x+z
+.lu_dx	!byte $ff, 1, 0, 0, $ff, 1, $ff, 1
+.lu_dz	!byte 0, 0, $ff, 1, $ff, $ff, 1, 1
 
 ; ------------------------------------------------------------------
 ; update_fall — snap if gap <= FALL_LEDGE; else accelerate down (no WASD).
