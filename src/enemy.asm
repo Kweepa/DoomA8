@@ -1655,8 +1655,6 @@ shotgun_hitscan
 	sec
 	sbc #SHOT_SPREAD_HALF		; uniform −32..+31
 	sta scan_aim
-	lda #SHOT_PELLET_X
-	sta scan_hit_x
 	lda #$ff
 	sta scan_hit_y
 	lda #SHOT_DMG_ROLL
@@ -2102,6 +2100,12 @@ shotgun_miss_splat
 scan_shoot_barrels
 	lda scan_aim
 	sta scan_off
+	lda #0				; pellets test the barrel's body width
+	ldx scan_dmg_all
+	cpx #SCAN_PELLET
+	bne +
+	lda #1
++	sta sc_body
 	lda #$ff
 	sta scan_best_i
 	sta scan_best_z
@@ -2143,6 +2147,7 @@ scan_best_ret
 scan_shoot_switches
 	lda #0
 	sta scan_off
+	sta sc_body
 	lda #$ff
 	sta scan_best_i
 	sta scan_best_z
@@ -2189,6 +2194,8 @@ scan_shoot_switches
 	inx
 	jmp .ss_lp
 
+sc_body	!byte 0			; 1 = scan_cand uses shot_hw_tab instead of scan_hit_x
+
 ; Candidate at ent_w* / ln_b*. Keeps the nearest in scan_best_i/z. Clobbers X.
 scan_cand
 	jsr ln_a_from_cam
@@ -2216,7 +2223,14 @@ scan_cand
 	clc
 	adc #1
 .sc_xabs
+	ldy sc_body
+	beq .sc_fix
+	ldy gidx
+	cmp shot_hw_tab,y		; pellet vs barrel: 1-unit radius at this depth
+	jmp .sc_cmp
+.sc_fix
 	cmp scan_hit_x
+.sc_cmp
 	beq .sc_xok
 	bcs .sc_rts
 .sc_xok

@@ -437,7 +437,6 @@ IMP_ATK_MS	= 2500		; imp post-attack pause; sight and pain leave the timer at 0.
 DEMON_MELEE_R	= 4		; claw Chebyshev
 PUNCH_HIT_R		= 3			; XZ chebyshev radius for fist / chainsaw
 SHOT_FAN_X	= 12			; |sx − SCREEN_CX| ≤ this for a shotgun switch hit (not the pellet fan)
-SHOT_PELLET_X	= 2			; |sx − column| for one pellet vs a barrel (enemies use body width only)
 SHOT_PELLETS	= 7			; pellets per shot
 SHOT_SPREAD_MASK = 63			; rnd8 & this − SHOT_SPREAD_HALF = pellet column
 SHOT_SPREAD_HALF = 32			; spread −32..+31 px
