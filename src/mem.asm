@@ -436,12 +436,13 @@ GRUNT_ATK_MS	= DOOM_ATK_MS	; possessed post-shot pause. Sight delay is the 0–1
 IMP_ATK_MS	= 2500		; imp post-attack pause; sight and pain leave the timer at 0. ~4 s between throws with the clip tail
 DEMON_MELEE_R	= 4		; claw Chebyshev
 PUNCH_HIT_R		= 3			; XZ chebyshev radius for fist / chainsaw
-SHOT_FAN_X	= 12			; pellet fan half-width; cols 18..22
-SHOT_PELLET_X	= 2			; |sx − column| for one pellet
-SHOT_BODY_NEAR	= 6			; CAM_ZH below this: pellet limit reaches ±10
-SHOT_BODY_MID	= 12			; CAM_ZH below this: pellet limit reaches ±5
-SHOT_BODY_NEAR_ADD = 12			; SHOT_PELLET_X + this = 14
-SHOT_BODY_MID_ADD = 5			; SHOT_PELLET_X + this = 7
+SHOT_FAN_X	= 12			; |sx − SCREEN_CX| ≤ this for a shotgun switch hit (not the pellet fan)
+SHOT_PELLET_X	= 2			; |sx − column| for one pellet vs a barrel (enemies use body width only)
+SHOT_PELLETS	= 7			; pellets per shot
+SHOT_SPREAD_MASK = 63			; rnd8 & this − SHOT_SPREAD_HALF = pellet column
+SHOT_SPREAD_HALF = 32			; spread −32..+31 px
+SHOT_DMG_ROLL	= 8			; roll_upto ceiling per pellet
+SHOT_DMG_BASE	= 2			; + roll 1..8 → 3..10
 SHOT_Z_MAX	= 32			; view-Z high max range
 SHOT_MID_H	= 3			; mid-body Y above feet (≈ ENEMY_CULL_H/2)
 CHAIN_HIT_X	= 6			; |sx − SCREEN_CX| ≤ this (pixels)

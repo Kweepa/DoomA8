@@ -1635,40 +1635,31 @@ rnd_mod_rot1
 
 ; ------------------------------------------------------------------
 ; Hitscan: mid-body project → |sx−(CX+aim)|≤limit (no screen-Y gate;
-; height auto-aims). Pellets widen that limit when close. Flat guns roll
+; height auto-aims). Pellets replace that limit with the body half-width
+; (enemy_block_r) projected at that depth. Flat guns roll
 ; 1..scan_dmg_max on the closest body.
-; Shotgun is five pellets, one column each. Pistol and chaingun are one.
+; Shotgun is SHOT_PELLETS pellets, each a uniform random column in
+; −SHOT_SPREAD_HALF..+SHOT_SPREAD_HALF−1. Pistol and chaingun are one.
 ; z in 0..SHOT_Z_MAX-1. Blood splat on a hit; wall splat on a miss.
 shotgun_hitscan
 	lda #$ff
 	sta sg_hit
 	lda #0
 	sta shot_abs
-	ldy #5
+	ldy #SHOT_PELLETS
 .sg_pel
 	tya
 	pha
 	jsr rnd8
-	and #15
-.sg_red
-	cmp #5
-	bcc .sg_col
-	sbc #5
-	jmp .sg_red
-.sg_col
+	and #SHOT_SPREAD_MASK
 	sec
-	sbc #2				; −2..+2
-	sta rot0
-	asl
-	asl
-	clc
-	adc rot0			; ×5 → −10..+10
+	sbc #SHOT_SPREAD_HALF		; uniform −32..+31
 	sta scan_aim
 	lda #SHOT_PELLET_X
 	sta scan_hit_x
 	lda #$ff
 	sta scan_hit_y
-	lda #PISTOL_DMG_MAX
+	lda #SHOT_DMG_ROLL
 	sta scan_dmg_max
 	lda #SCAN_PELLET
 	sta scan_dmg_all
@@ -1899,6 +1890,8 @@ gun_hitscan
 	beq .sh_pel_rts
 	lda scan_dmg_max
 	jsr roll_upto
+	clc
+	adc #SHOT_DMG_BASE		; 3..10 per pellet
 	ldx shot_hit_i
 	stx enemy_idx
 	jmp damage_enemy
@@ -2001,27 +1994,39 @@ gun_hitscan
 .sh_rts
 	rts
 
-; A = |sx−CX| limit. Pellets widen while the body still covers the fan
-; (CAM_ZH < 6 → ±10, < 12 → ±5). Pistol and chaingun keep scan_hit_x.
-; Y is free (sy already in rot1). rot0 and gidx stay.
+; A = |sx−CX| limit. Pellets use the body half-width in px alone (no slop):
+; (enemy_block_r + 1) × shot_hw_tab[CAM_ZH], saturating at $ff.
+; Pistol and chaingun keep scan_hit_x.
+; X, Y free (sy already in rot1). rot0 and gidx stay.
 pellet_hit_lim
 	lda scan_hit_x
 	ldy scan_dmg_all
 	cpy #SCAN_PELLET
 	bne .shl_rts
+	ldx enemy_idx
+	jsr ldy_slot			; Y = slot
+	lda enemy_block_r,y
+	tax
+	inx				; count = blockR + 1 (set_blk_lim's box_sx)
 	ldy CAM_ZH
-	cpy #SHOT_BODY_NEAR
-	bcc .shl_near
-	cpy #SHOT_BODY_MID
-	bcs .shl_rts
+	lda #0
+.shl_add
 	clc
-	adc #SHOT_BODY_MID_ADD
-	rts
-.shl_near
-	clc
-	adc #SHOT_BODY_NEAR_ADD
+	adc shot_hw_tab,y
+	bcs .shl_sat
+	dex
+	bne .shl_add
 .shl_rts
 	rts
+.shl_sat
+	lda #$ff
+	rts
+
+; Half-width px of a 1-unit radius at CAM_ZH = z: round(100 / (z + 0.5)).
+; z = 0 saturates.
+shot_hw_tab
+	!byte 255, 67, 40, 29, 22, 18, 15, 13, 12, 11, 10, 9, 8, 7, 7, 6
+	!byte 6, 6, 5, 5, 5, 5, 4, 4, 4, 4, 4, 4, 4, 3, 3, 3
 
 ; Mid-body blood splat on shot_hit_i (view trig loaded).
 shotgun_hit_splat
