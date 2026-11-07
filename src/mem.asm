@@ -965,7 +965,8 @@ pv3		= $CFAE + A8_OFF
 pv4		= $CFAF + A8_OFF
 col_bg		= $CFB0 + A8_OFF			; active room paper: Atari colour byte (editor-made) → COLPF0
 doom_anim_ph	= $CFB1 + A8_OFF			; flips each ANIM_MS; 0 = fine enemies hold this step
-; $CFB2, $CFB5 were col_line, col_wpn
+blast_room	= $CFB2 + A8_OFF			; room of the blast origin: rkt_place / barrel_place; splash and barrel chain skip other rooms
+; $CFB5 was col_wpn ($CFB2 was col_line)
 palette_room	= $CFB3 + A8_OFF			; last room_idx palette ($ff = none)
 sfx_ch		= $CFB6 + A8_OFF			; current channel 0..2
 sfx_id		= $CFB7 + A8_OFF			; sound id / freq scratch

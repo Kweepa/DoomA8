@@ -434,6 +434,9 @@ rkt_hit_enemies
 	lda en_state,x
 	cmp #EN_DYING
 	bcs .ghe_n
+	+lda_mx en_room
+	cmp room_idx
+	bne .ghe_n
 	+lda_mx en_x
 	sta pv0
 	+lda_mx en_z
@@ -577,6 +580,8 @@ rkt_explode
 	rts
 
 rkt_place
+	lda room_idx
+	sta blast_room
 	ldx obj_i
 	lda gr_xl,x
 	sta fx_oxl
@@ -630,6 +635,9 @@ rkt_splash
 	lda en_state,x
 	cmp #EN_DYING
 	bcs .gsp_n
+	+lda_mx en_room
+	cmp blast_room
+	bne .gsp_n
 	+lda_mx en_x
 	sta pv0
 	+lda_mx en_y
@@ -664,6 +672,9 @@ rkt_touch_barrel
 	bne .gtb_n
 	+lda_mx th_type
 	cmp #TH_BARREL
+	bne .gtb_n
+	+lda_mx th_room
+	cmp room_idx
 	bne .gtb_n
 	+lda_mx th_x
 	sta box_x
@@ -731,6 +742,8 @@ barrel_explode
 
 ; X = thing. Mesh centre → fx origin and ent_w* (splash / graphic).
 barrel_place
+	+lda_mx th_room
+	sta blast_room
 	jsr barrel_pv
 	lda #0
 	sta fx_oxl
@@ -773,6 +786,9 @@ barrel_queue
 	bne .bq_n
 	+lda_mx th_type
 	cmp #TH_BARREL
+	bne .bq_n
+	+lda_mx th_room
+	cmp blast_room
 	bne .bq_n
 	jsr barrel_pv
 	jsr rkt_cheby
