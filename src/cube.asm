@@ -1950,6 +1950,7 @@ try_bite_splat
 	lda #COL_SPLAT_HIT
 	sta splat_col
 	ldx #0
+	stx splat_anch				; damage feedback stays in screen space
 	lda rot2
 	jsr start_splat
 	lda #$ff

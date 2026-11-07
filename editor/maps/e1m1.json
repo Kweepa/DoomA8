@@ -1209,6 +1209,51 @@
       "text": "",
       "tag": "",
       "roomId": "7829dd75-fb2b-45f0-8433-12f03dd4f80f"
+    },
+    {
+      "id": "fe0b1136-381d-4cf6-af56-88a1c1f59428",
+      "kind": "platform",
+      "x": 128,
+      "y": 56,
+      "z": 125,
+      "sx": 6,
+      "sy": 1,
+      "sz": 9,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "roomId": "7829dd75-fb2b-45f0-8433-12f03dd4f80f",
+      "collide": true
+    },
+    {
+      "id": "2f445a96-52a6-4954-9336-710ae2265097",
+      "kind": "platform",
+      "x": 117,
+      "y": 56,
+      "z": 119,
+      "sx": 17,
+      "sy": 1,
+      "sz": 6,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "roomId": "7829dd75-fb2b-45f0-8433-12f03dd4f80f",
+      "collide": true
+    },
+    {
+      "id": "f687e47b-4496-44b0-b87b-7a3806a7db22",
+      "kind": "platform",
+      "x": 117,
+      "y": 56,
+      "z": 109,
+      "sx": 6,
+      "sy": 1,
+      "sz": 10,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "roomId": "7829dd75-fb2b-45f0-8433-12f03dd4f80f",
+      "collide": true
     }
   ]
 }

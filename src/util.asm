@@ -112,8 +112,9 @@ check_face_front
 	rts
 
 ; Y = room. ln_a* = origin, ln_b* = signed dir.
-; B = origin except on the dominant look axis, where B sits just outside
-; the room AABB (min−1 or exclusive max). ln_r0/1/2 temps. X clobbered.
+; B is on the aim ray: just outside the room AABB on the dominant look axis
+; (min−1 or exclusive max), scaled by lerpdv on the others. ln_r0/1/2, ln_t0/1
+; temps. X clobbered.
 line_fit_b
 	jsr load_box_room
 	jsr line_box_max
@@ -143,14 +144,6 @@ line_fit_b
 	lda ln_bz
 	sta ln_r2
 .lfb_nz
-	lda ln_ax
-	sta ln_bx
-	lda ln_ay
-	sta ln_by
-	lda ln_az
-	sta ln_bz
-	lda ln_r2
-	beq .lfb_rts
 	ldx ln_r1
 	lda ln_r2
 	bpl .lfb_pos
@@ -162,8 +155,45 @@ line_fit_b
 .lfb_pos
 	lda ln_mx,x
 .lfb_st
+	sta ln_t0				; B on the dominant axis
+	sec
+	sbc ln_ax,x
+	bcs .lfb_rp
+	eor #$ff
+	adc #1
+.lfb_rp
+	bpl .lfb_rk
+	lda #127
+.lfb_rk
+	sta ln_t1				; R = |B − A| there
+	ldx #2
+.lfb_ax
+	stx ln_r2
+	lda ln_r0
+	sta div_c				; M = |d| on the dominant axis
+	lda ln_bx,x
+	ldy ln_t1
+	jsr lerpdv				; d * R / M: B stays on the aim ray
+	ldx ln_r2
+	tay
+	bmi .lfb_ng
+	clc
+	adc ln_ax,x
+	bcc .lfb_sv
+	lda #255
+	bne .lfb_sv
+.lfb_ng
+	clc
+	adc ln_ax,x
+	bcs .lfb_sv
+	lda #0
+.lfb_sv
 	sta ln_bx,x
-.lfb_rts
+	dex
+	bpl .lfb_ax
+	ldx ln_r1
+	lda ln_t0
+	sta ln_bx,x
 	rts
 
 .lfb_abs

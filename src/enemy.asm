@@ -2034,20 +2034,10 @@ shotgun_hit_splat
 	sta ent_wy
 	+lda_mx en_z
 	sta ent_wz
-	jsr xform_ent_view
-	jsr project_cam0_screen
-	bcc .shs_rts
-	ldx CAM_ZH				; view depth → EMUZ_Z* LOD
-	stx rot0
-	jsr splat_aim_jitter			; A/Y = projected ±jitter
-	sta rot2
 	lda #COL_SPLAT_HIT
 	sta splat_col
-	ldx rot0
-	lda rot2
-	jmp start_splat
-.shs_rts
-	rts
+	lda #0					; jitter about the point's own projection
+	jmp splat_spawn
 
 ; Camera high bytes → line A endpoint.
 ln_a_from_cam
@@ -2094,21 +2084,11 @@ shotgun_miss_splat
 	sta ent_wy
 	lda col_z
 	sta ent_wz
-	jsr xform_ent_view
-	ldx CAM_ZH
-	bpl .sms_z
-	ldx #0
-.sms_z
-	stx rot0				; view depth → EMUZ_Z* LOD
-	lda #SCREEN_CX
-	ldy #64				; viewport centre = look
-	jsr splat_aim_jitter			; A/Y = centre ±jitter
-	sta rot2
 	lda #COL_SPLAT_MISS
 	sta splat_col
-	ldx rot0
-	lda rot2
-	jmp start_splat
+	lda #SCREEN_CX
+	ldy #64				; viewport centre = look
+	jmp splat_spawn
 
 ; Closest barrel in the cone. A = index ($ff none), Y = its CAM_ZH.
 ; View trig already loaded. Screen X matches a body: scan_aim, scan_hit_x.

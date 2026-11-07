@@ -331,6 +331,7 @@ Vertex tables are 16 slots. Edge clip tables are 32 slots. Unique-X/Z product ta
 | `$CE95` | 24 | `en_pat_n` | `ENEMY_MAX` |
 | `$CEAD` | 24 | `en_pain_i` | `ENEMY_MAX` |
 | `$CEC5` | 1 | `have_keys` | |
+| `$CF7B` | 7 | `splat_wx/wy/wz`, `splat_jx/jy`, `splat_anch`, `splat_trk` | World-anchored splat: hit point, screen jitter, flags (`splat_track`) |
 | `$CFE1` | 1 | `saw_rng` | Chainsaw bite LFSR |
 | `$CFE2` | 8 | `elev_y` | `MAP_NELEVS` ≤ 8 |
 | `$CFEA` | 1 | `elev_match` | Tag group while an elevator trigger fans out |

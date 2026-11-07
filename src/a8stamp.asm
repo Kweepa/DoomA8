@@ -76,6 +76,8 @@ stamp_view
 .noe
 	lda splat_on
 	beq .nos
+	jsr splat_track			; world-anchored: re-project for this frame's camera
+	bcc .nos
 	lda splat_vx
 	ldx splat_xmsb
 	jsr stamp_set_xmsb

@@ -899,6 +899,8 @@ start_world_spr
 	lda #COL_FX
 	+ws_sta ws_col_lo, ws_col_hi
 .sws_nocol
+	lda splat_trk			; splat_track re-place: keep the running timer
+	bne .sws_end
 	lda ws_snd,x
 	beq .sws_arm
 	lda ws_hdr_lo,x
@@ -928,6 +930,99 @@ start_world_spr
 	lda ws_ms_h,x
 	iny
 	sta (fx_ptr),y
+.sws_end
+	rts
+
+; Per-frame re-place of a world-anchored splat (from stamp_view, current
+; camera). C=1: splat_vx/vy/xmsb/src valid (or the splat is screen-fixed).
+; C=0: behind the camera or outside the viewport, so skip the stamp. The
+; projection clamps to the viewport, so an edge value means off-screen.
+; splat_trk makes start_world_spr return before it re-arms the timer.
+splat_track
+	lda splat_anch
+	bne .st_go
+	sec
+	rts
+.st_go
+	jsr load_view_trig
+	ldx #2
+.st_cp
+	lda splat_wx,x
+	sta ent_wx,x
+	dex
+	bpl .st_cp
+	jsr xform_ent_view
+	jsr project_cam0_screen
+	bcc .st_no
+	beq .st_no
+	cmp #191
+	bcs .st_no
+	adc splat_jx			; C=0; sum >= 192 also catches negative
+	cmp #192
+	bcs .st_no
+	tax
+	tya
+	beq .st_no
+	cmp #127
+	bcs .st_no
+	adc splat_jy
+	cmp #128
+	bcs .st_no
+	tay
+	txa
+	ldx CAM_ZH
+	inc splat_trk
+	jsr start_splat
+	dec splat_trk
+	sec
+	rts
+.st_no
+	clc
+	rts
+
+; ent_wx/wy/wz = hit point. A = jitter centre sx (0 = the point's own
+; projection), Y = centre sy. splat_col set. Anchors the point in world space;
+; splat_jx/jy keep jittered centre minus the projection, so the first frame
+; lands on the centre whatever the integer rounding of the point.
+splat_spawn
+	pha
+	tya
+	pha
+	jsr xform_ent_view
+	jsr project_cam0_screen
+	bcc .ss_no
+	sta splat_jx
+	sty splat_jy
+	pla
+	tay
+	pla
+	bne .ss_ctr
+	lda splat_jx
+	ldy splat_jy
+.ss_ctr
+	jsr splat_aim_jitter
+	sta rot2
+	sec
+	sbc splat_jx
+	sta splat_jx
+	tya
+	sec
+	sbc splat_jy
+	sta splat_jy
+	ldx #2
+.ss_cp
+	lda ent_wx,x
+	sta splat_wx,x
+	dex
+	bpl .ss_cp
+	lda #1
+	sta splat_anch
+	ldx CAM_ZH			; view depth → EMUZ_Z* LOD
+	lda rot2
+	jmp start_splat
+.ss_no
+	pla
+	pla
 	rts
 
 ; Count the blast, then wait until the kick and the muzzle flash are both gone.

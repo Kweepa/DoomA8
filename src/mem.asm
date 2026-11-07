@@ -898,12 +898,20 @@ stream_room	= $CF42 + A8_OFF
 ; Explosion particle vel — FX_N × vx/vy s8 (integrated at draw)
 fx_vx		= $CF43 + A8_OFF			; 24
 fx_vy		= $CF5B + A8_OFF			; 24
-; Barrel chain ($CF73–$CF82). Do not slide splat_src.
+; Barrel chain ($CF73–$CF7A), splat anchor ($CF7B–$CF81). Do not slide splat_src.
 barrel_pend	= $CF73 + A8_OFF		; 4 bytes, bit = thing index
 barrel_ch_l	= $CF77 + A8_OFF
 barrel_ch_h	= $CF78 + A8_OFF
 shot_th		= $CF79 + A8_OFF		; hitscan barrel winner, $ff = none
 shot_abs	= $CF7A + A8_OFF		; shotgun pellet detonated a barrel
+; World-anchored splat ($CF7B–$CF81): re-projected each frame by splat_track.
+splat_wx	= $CF7B + A8_OFF			; world int of the hit point
+splat_wy	= $CF7C + A8_OFF
+splat_wz	= $CF7D + A8_OFF
+splat_jx	= $CF7E + A8_OFF			; signed screen-px jitter added after projection
+splat_jy	= $CF7F + A8_OFF
+splat_anch	= $CF80 + A8_OFF			; 1 = world-anchored, 0 = fixed in screen space
+splat_trk	= $CF81 + A8_OFF			; 1 = splat_track re-placing (start_world_spr must not re-arm)
 splat_src	= $CF83 + A8_OFF			; clipped splat rect
 !if barrel_pend != fx_vy + FX_N {
 	!error "barrel_pend must follow fx_vy"
