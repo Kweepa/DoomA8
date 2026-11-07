@@ -26,6 +26,7 @@ import {
   rayRoomHull,
   roomFloorY,
   roomById,
+  outsideRoomBoxMap,
   itemMeshFor,
   itemMeshWorldSegs,
   layoutSearchTerms,
@@ -1702,6 +1703,8 @@ export class LayoutView {
       this.#drawObject(ctx, doc, obj, cam, w, h, hi, sel, obj.id === primary);
     }
 
+    this.#drawOutsideRoomMarks(ctx, doc, objs, selected, cam, w, h);
+
     if (this.placePreview && this.placePreviewOverCanvas) {
       ctx.globalAlpha = 0.85;
       this.#drawObject(ctx, doc, this.placePreview, cam, w, h, true, false, false);
@@ -1899,6 +1902,61 @@ export class LayoutView {
       this.#drawGlyphs(ctx, obj, cam, w, h, color);
     }
     if (primary && !this.#pointSelActive()) this.#drawGizmo(ctx, obj, cam, w, h);
+  }
+
+  /**
+   * Objects outside their assigned room's bbox: dashed violet box (skipped when
+   * selected/hovered so the yellow highlight wins), a small diamond above, and a
+   * thin tether to the nearest point of the room's bbox.
+   */
+  #drawOutsideRoomMarks(ctx, doc, objs, selected, cam, w, h) {
+    const outside = outsideRoomBoxMap(doc);
+    if (!outside.size) return;
+    const color = "#b28cff";
+    ctx.strokeStyle = color;
+    for (const obj of objs) {
+      const room = outside.get(obj.id);
+      if (!room) continue;
+      const hi = selected.has(obj.id) || obj.id === this.hoverId;
+      const c = aabbCenter(obj);
+
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      if (!hi) {
+        for (const [i, j] of BOX_EDGES) {
+          this.#line3(ctx, cornerWorld(obj, i), cornerWorld(obj, j), cam, w, h);
+        }
+      }
+      const near = {
+        x: Math.max(room.x, Math.min(room.x + room.sx, c.x)),
+        y: Math.max(room.y, Math.min(room.y + room.sy, c.y)),
+        z: Math.max(room.z, Math.min(room.z + room.sz, c.z)),
+      };
+      if (near.x !== c.x || near.y !== c.y || near.z !== c.z) {
+        ctx.globalAlpha = 0.6;
+        this.#line3(ctx, c, near, cam, w, h);
+        ctx.globalAlpha = 1;
+      }
+      ctx.setLineDash([]);
+
+      const top = obj.y + obj.sy + 2;
+      const r = 1.25;
+      const apexU = { x: c.x, y: top + r, z: c.z };
+      const apexD = { x: c.x, y: top - r, z: c.z };
+      const ring = [
+        { x: c.x - r, y: top, z: c.z },
+        { x: c.x, y: top, z: c.z - r },
+        { x: c.x + r, y: top, z: c.z },
+        { x: c.x, y: top, z: c.z + r },
+      ];
+      ctx.lineWidth = 1.5;
+      for (let i = 0; i < 4; i++) {
+        this.#line3(ctx, ring[i], ring[(i + 1) % 4], cam, w, h);
+        this.#line3(ctx, apexU, ring[i], cam, w, h);
+        this.#line3(ctx, apexD, ring[i], cam, w, h);
+      }
+    }
+    ctx.lineWidth = 1;
   }
 
   #drawElevDestGhosts(ctx, doc, elev, cam, w, h) {

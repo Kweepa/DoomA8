@@ -798,6 +798,15 @@ button:disabled {
   border-color: #f88;
 }
 
+.object-tree button.outside-room {
+  color: #b28cff;
+}
+
+.object-tree button.outside-room.active {
+  color: #b28cff;
+  border-color: #b28cff;
+}
+
 .level-list ul {
   list-style: none;
   margin: 0 0 1rem;

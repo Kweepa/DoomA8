@@ -2899,6 +2899,35 @@ export function roomUnderObject(doc, obj) {
   return roomById(doc, obj.roomId);
 }
 
+/**
+ * Objects whose AABB is not fully inside the AABB of their assigned room.
+ * Legal but unusual, so the editor flags them. Doorways are skipped (they
+ * straddle a wall by design) as are objects with no valid roomId.
+ * Returns Map<objId, room>.
+ */
+export function outsideRoomBoxMap(doc) {
+  const out = new Map();
+  const map = activeMap(doc);
+  const rooms = new Map();
+  for (const o of map.objects) if (o.kind === "room") rooms.set(o.id, o);
+  for (const o of map.objects) {
+    if (o.kind === "room" || o.kind === "doorway" || !o.roomId) continue;
+    const r = rooms.get(o.roomId);
+    if (!r) continue;
+    if (
+      o.x < r.x ||
+      o.y < r.y ||
+      o.z < r.z ||
+      o.x + o.sx > r.x + r.sx ||
+      o.y + o.sy > r.y + r.sy ||
+      o.z + o.sz > r.z + r.sz
+    ) {
+      out.set(o.id, r);
+    }
+  }
+  return out;
+}
+
 /** Rooms that contain / overlap an object (doors may sit in two). */
 export function roomsForObject(doc, obj) {
   if (!obj || obj.kind === "room") return [];

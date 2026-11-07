@@ -76,6 +76,7 @@ import {
   ensureSpawnExclusive,
   objectLabel,
   objectTree,
+  outsideRoomBoxMap,
   layoutSearchTerms,
   objectMatchesLayoutSearch,
   mapMatchesLayoutSearch,
@@ -1866,7 +1867,7 @@ function connectUnlinkedDoors(ids) {
   return true;
 }
 
-function makeObjectListButton(obj, terms) {
+function makeObjectListButton(obj, terms, outside) {
   const btn = document.createElement("button");
   btn.type = "button";
   btn.textContent = objectLabel(obj);
@@ -1876,6 +1877,10 @@ function makeObjectListButton(obj, terms) {
   if (obj.kind === "doorway" && !doorDoublyConnected(doc, obj)) {
     btn.classList.add("door-unlinked");
     btn.title = "Not connected to two rooms";
+  }
+  if (outside?.has(obj.id)) {
+    btn.classList.add("outside-room");
+    btn.title = "Outside its room's bounding box";
   }
   btn.addEventListener("click", (e) => {
     selectObjectIds([obj.id], e.shiftKey);
@@ -1888,6 +1893,7 @@ function renderObjectList() {
   ul.innerHTML = "";
   ul.classList.add("object-tree");
   const { nodes, orphans } = objectTree(doc);
+  const outside = outsideRoomBoxMap(doc);
   const terms = layoutSearchTerms(layoutSearch);
   const searching = terms.length > 0;
 
@@ -1911,7 +1917,7 @@ function renderObjectList() {
       markUi();
       renderObjectList();
     });
-    const roomBtn = makeObjectListButton(room, terms);
+    const roomBtn = makeObjectListButton(room, terms, outside);
     roomBtn.classList.add("tree-room-btn");
     row.append(twist, roomBtn);
     li.appendChild(row);
@@ -1926,7 +1932,7 @@ function renderObjectList() {
       } else {
         for (const obj of children) {
           const cli = document.createElement("li");
-          cli.appendChild(makeObjectListButton(obj, terms));
+          cli.appendChild(makeObjectListButton(obj, terms, outside));
           childUl.appendChild(cli);
         }
       }
@@ -1946,7 +1952,7 @@ function renderObjectList() {
     childUl.className = "tree-children";
     for (const obj of orphans) {
       const cli = document.createElement("li");
-      cli.appendChild(makeObjectListButton(obj, terms));
+      cli.appendChild(makeObjectListButton(obj, terms, outside));
       childUl.appendChild(cli);
     }
     li.appendChild(childUl);
