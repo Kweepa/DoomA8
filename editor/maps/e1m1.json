@@ -1284,21 +1284,6 @@
       "dir": 1,
       "roomId": "00aeb867-15d6-47b6-b4b4-a470a4532db4",
       "pickup": "small health"
-    },
-    {
-      "id": "1e542c35-0d79-4acf-88f0-92bc9daacbd4",
-      "kind": "pickup",
-      "x": 61,
-      "y": 57,
-      "z": 125,
-      "sx": 0.9270509831248422,
-      "sy": 1.5,
-      "sz": 0.8028497019894523,
-      "face": "+z",
-      "axis": "z",
-      "dir": 1,
-      "roomId": "8841eb7b-abb9-4365-b2ce-44a25e3ca288",
-      "pickup": "shotgun"
     }
   ]
 }

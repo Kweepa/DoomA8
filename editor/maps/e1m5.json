@@ -573,7 +573,7 @@
       "dir": 1,
       "roomId": "f17826fd-3bea-45c7-9bee-265d02451500",
       "lockKey": "yellow",
-      "doorType": "Tech",
+      "doorType": "Arch",
       "doorScale": 1,
       "tag": "",
       "otherRoomId": "9167b6ab-cf0d-4772-86c6-870c4eced4b3",
@@ -790,7 +790,7 @@
       "id": "709770fd-4c4e-4125-bc55-2c2b32cc31ea",
       "kind": "elevator",
       "x": 105,
-      "y": 71,
+      "y": 74,
       "z": 72,
       "sx": 6,
       "sy": 1,
@@ -2487,7 +2487,7 @@
       "face": "+z",
       "axis": "z",
       "dir": 1,
-      "flags": 0,
+      "flags": 3,
       "roomId": "b0bd609c-c09c-458a-bed8-bdcdea00052d"
     }
   ]
