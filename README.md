@@ -4,9 +4,7 @@ A line-drawn *Doom* demake for the Atari 8-bit: portal rooms, stick-figure enemi
 
 ## Display
 
-The 3D view is a **mode-E** window under a 9-row text HUD. The world is still projected at 192×128; the plotter keeps every other column, so 96 colour-clock pixels are drawn in the middle of each 32-byte row. Two bitmaps (`$C000` and `$E000`) swap each frame. Lines are unrolled Bresenham bodies in `a8line.asm`.
-
-The HUD is the text window: title, map name, bullets / shells / rockets, health, armour, and a powerup icon. Pickup names and trigger messages flash on a status line. Frame time in ms can sit on row 0.
+The 3D view is a **mode-E** window under a 9-row text HUD. The world is still projected at 192×128; the plotter keeps every other column, so 96 colour-clock pixels are drawn in the middle of each 32-byte row. It's double buffered by updating display lists. Lines are unrolled Bresenham bodies.
 
 ## World
 
@@ -14,15 +12,15 @@ The map is **rooms as axis-aligned hulls**, not a global mesh. Floor plans can b
 
 Ramps use the AABB for **rise/run** (`height = slope_y + (local * sy) / run` in 8.8) so the eye rides the slope. Elevators, switches, and crates share the same box tests. Step off a ledge and you fall; a hard landing costs health.
 
-Walk-over **things** grant ammo, weapons, health, armour, keys, a soulsphere, and the radsuit. Killed enemies can drop a pack. Message, hurt, and elevator **triggers** are undrawn AABBs; a switch can arm a trigger that would otherwise stay inert. End-of-level advances `e1mN` or returns to the menu endings.
+Walk-over **things** grant ammo, weapons, health, armour, keys, a soulsphere, and the radsuit. Message, hurt, and elevator **triggers** are undrawn AABBs; a switch can arm a trigger that would otherwise stay inert. End-of-level advances `e1mN` or returns to the menu endings.
 
 Off-screen **items** (AABB meshes) and **enemies** skip rotate/project/draw. Horizontal and vertical tests use a fat 45° cone (`|axis| ≤ z` plus a size pad) so the miss is drawing something a bit off-screen, not dropping something that is still in the 192×128 view. The active room’s bounding lines are not frustum-culled.
 
-There’s an editor for maps (Unity-style orbit in the viewport), item meshes, weapon sprites, and enemy animations retargeted from Doom MD2/MD3 meshes.
+There’s an editor for maps (Unity-style orbit in the viewport), item meshes, and enemy animations.
 
 ## Entities
 
-Enemies are **Possessed, Imp, Pinky, and Baron**. Poses live in local space as signed offsets from the creature base. Animations are retargeted from Doom MD2/MD3 meshes onto the skeleton. A few KB of poses per type, plus one line layout.
+Enemies are **Possessed, Imp, Pinky, and Baron**. Poses live in local space as signed offsets from the creature base. Animations are rotoscoped from Doom sprites onto custom skeletons. A few KB of poses per type, plus one line layout.
 
 They run a room-scoped state machine (idle / patrol / alert / approach / attack / pain / death). Imp and Baron throw fireballs. Pinky closes to melee. A room holds at most two types.
 
