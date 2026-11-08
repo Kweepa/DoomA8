@@ -111,8 +111,13 @@ init_irq
 	sta $d40e
 	rts
 
+; VBI only. a8_vbi turns the DLI bit on once DMA is back. LoadPrg leaves DMACTL
+; at 0 with ANTIC still holding whatever list instruction it last latched (the
+; OS page-2/3 install can leave $FF there: DLI, one row). With DMA off ANTIC
+; replays it, so NMIEN=$c0 here is a DLI every scanline, the handler is slower
+; than a line, and the stack overflows before the first VBI.
 a8_nmi_on
-	lda #$c0
+	lda #$40
 	sta $d40e
 	cli
 	rts
@@ -367,6 +372,12 @@ suit_col
 	txa
 +
 	sta $d400				; 0 also stops the DL, so no seam DLI either
+	cmp #1					; C = DMA on
+	lda #$40				; DMA off (held): VBI only, no DLIs
+	bcc +
+	lda #$c0				; DMA on: the list restarts next frame, DLIs are safe
++
+	sta $d40e
 	inc frame_flag
 	inc vbi_count_l
 	bne +
