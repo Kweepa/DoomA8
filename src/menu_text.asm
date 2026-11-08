@@ -75,19 +75,20 @@ credits2_text
 	!byte 0
 
 credits3_text
+	!scr "Design and technical direction",0
+	!scr "by steve mcccrea.",0
+	!scr "Programming by claude sonnet.",0
+	!scr " ",0
 	!scr "Music by benjamin dibbert,",0
 	!scr "butchered by an automatic sid to",0
 	!scr "pokey translation.",0
 	!scr " ",0
-	!scr "Developed using the acme assembler",0
-	!scr "by marco baye.",0
-	!scr " ",0
-	!scr "Tested using the Altirra emulator",0
-	!scr "by avery lee.",0
+	!scr "Acme assembler by marco baye.",0
+	!scr "altirra emulator by avery lee.",0
 	!scr " ",0
 	!scr "Thanks y'all!",0
 	!scr " ",0
-	!scr "DoomA8 v1.01.0, built 7 Nov 2026",0
+	!scr "DoomA8 v1.00.0, built 7 Nov 2026",0
 	!byte 0
 
 credits_lo
@@ -141,7 +142,7 @@ readthis4_text
 	!scr "\"Volunteers\" entering them have ",0
 	!scr "either disappeared or been stricken ",0
 	!scr "with a strange form of ",0
-	!scr "insanity---babbling vulgarities, ",0
+	!scr "insanity++babbling vulgarities, ",0
 	!scr "bludgeoning anything that breathes, ",0
 	!scr "before finally suffering an untimely ",0
 	!scr "death: explosive dismemberment. ",0

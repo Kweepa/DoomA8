@@ -18,16 +18,17 @@ from tom hall, bobby prince, paul
 radek, gregor punchatz, american
 mcgee and donna jackson.
 ^
+Design and technical direction
+by steve mcccrea.
+Programming by claude sonnet.
+
 Music by benjamin dibbert,
 butchered by an automatic sid to
 pokey translation.
 
-Developed using the acme assembler
-by marco baye.
-
-Tested using the Altirra emulator
-by avery lee.
+Acme assembler by marco baye.
+altirra emulator by avery lee.
 
 Thanks y'all!
 
-DoomA8 v1.01.0, built 6 Nov 2026
+DoomA8 v1.00.0, built 7 Nov 2026

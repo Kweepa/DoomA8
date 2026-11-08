@@ -35,7 +35,7 @@ grown dangerously unstable.
 "Volunteers" entering them have 
 either disappeared or been stricken 
 with a strange form of 
-insanity---babbling vulgarities, 
+insanity++babbling vulgarities, 
 bludgeoning anything that breathes, 
 before finally suffering an untimely 
 death: explosive dismemberment. 
