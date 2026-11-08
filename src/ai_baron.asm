@@ -159,11 +159,13 @@ ai_baron_entry
 	clc
 	rts
 
+; 0–1023 ms attack hold, same roll as Possessed. enemy_enter_approach adds 0–255.
 .approach_enter
 	ldx enemy_idx
-	lda #<DOOM_ATK_MS
+	jsr rnd8
 	sta en_timer,x
-	lda #>DOOM_ATK_MS
+	jsr rnd8
+	and #3
 	sta en_timer_h,x
 	jmp select_dodge_dir
 
@@ -356,8 +358,18 @@ ai_baron_entry
 	clc
 	rts
 
+; Reattack pause DOOM_ATK_MS + 0–255, set after enter_approach so the entry roll doesn't replace it.
 .attack_end
-	jmp enemy_enter_approach
+	jsr enemy_enter_approach
+	ldx enemy_idx
+	jsr rnd8
+	clc
+	adc #<DOOM_ATK_MS
+	sta en_timer,x
+	lda #>DOOM_ATK_MS
+	adc #0
+	sta en_timer_h,x
+	rts
 
 ; After every opcode so the reloc walk stays aligned.
 .thr	!byte 0

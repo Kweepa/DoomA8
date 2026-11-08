@@ -330,16 +330,22 @@ ai_imp_entry
 	clc
 	rts
 
+; IMP_ATK_MS + 0–511. Sight/pain stay at 0 (responsiveness); this is the only desync roll.
 .attack_end
 	jsr enemy_enter_approach
 	ldx enemy_idx
 	jsr rnd8
+	and #1
+	clc
+	adc #>IMP_ATK_MS
+	sta en_timer_h,x
+	jsr rnd8
 	clc
 	adc #<IMP_ATK_MS
 	sta en_timer,x
-	lda #>IMP_ATK_MS
-	adc #0
-	sta en_timer_h,x
+	bcc +
+	inc en_timer_h,x
++
 	rts
 
 ; After every opcode so the reloc walk stays aligned.
