@@ -47,6 +47,7 @@ DEF FB          EQU $C000
 DEF FB_HI       EQU $C0
 DEF FB_SIZE     EQU $1000
 DEF BLANK_TILE  EQU 14            ; pad slot of column 0: always blank
+DEF FOCAL_HALF  EQU 40            ; FOCAL (80) / 2, for SMul16's >> 7
 
 ; Joypad byte (hJoy): active high.
 DEF JOY_RIGHT   EQU %00000001

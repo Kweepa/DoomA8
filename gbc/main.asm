@@ -1,8 +1,10 @@
 ; da8m GBC port - phase 1 spike.
 ; CGB-only header, MBC5, double speed, 128x112 viewport (16x14 column-major
-; tiles) drawn from a WRAM framebuffer. Static line test for now.
+; tiles) drawn from a WRAM framebuffer into VRAM bank 0/1 (double buffered by
+; flipping the tile-attribute bank bit).
 ;
-; Build with -D TEST_EXIT=1 for the headless test ROM (stops on `ld b,b`).
+; Build modes (build-gbc.bat): default = spinning room demo; `test` = static
+; line pattern; `bench`; `pose`; `live` (demo that stops after 3 frames).
 
 INCLUDE "hw.inc"
 
@@ -42,39 +44,14 @@ Start:
     ldh [rKEY1], a
     stop
 
-    ; Hex font -> VRAM bank 1 tiles $8000.
+    ; VRAM: clear both banks, hex font, map.
     ld a, 1
     ldh [rVBK], a
-    ld hl, FontTiles
-    ld de, VRAM_TILES
-    ld bc, FontTilesEnd - FontTiles
-.copyFont:
-    ld a, [hl+]
-    ld [de], a
-    inc de
-    dec bc
-    ld a, b
-    or c
-    jr nz, .copyFont
-
-    ; Attribute map: clear, then bank 1 for the four debug-readout cells.
-    ld hl, VRAM_MAP0
-    ld bc, $0400
-.clearAttr:
-    xor a
-    ld [hl+], a
-    dec bc
-    ld a, b
-    or c
-    jr nz, .clearAttr
-    ld a, $08
-    ld [VRAM_MAP0 + 32 * 15 + 2], a
-    ld [VRAM_MAP0 + 32 * 15 + 3], a
-    ld [VRAM_MAP0 + 32 * 16 + 2], a
-    ld [VRAM_MAP0 + 32 * 16 + 3], a
+    call ClearVRAMBank
     xor a
     ldh [rVBK], a
-
+    call ClearVRAMBank
+    call InstallFont
     call InitViewMap
 
     ; BG palette 0: dark brown, light, red, white (BGR555).
@@ -93,15 +70,34 @@ Start:
     ldh [rSCY], a
     ldh [hFrame], a
     ldh [hVBlank], a
+    ldh [hShow], a
 
     ldh a, [rKEY1]
     and $80
     ldh [hSpeed], a
 
-    ; Test scene.
+    ; Camera for the demo.
+    ld a, LOW(22 * 256 + 77)
+    ld [wCamX], a
+    ld a, HIGH(22 * 256 + 77)
+    ld [wCamX + 1], a
+    ld a, LOW(20 * 256 + 5)
+    ld [wCamZ], a
+    ld a, HIGH(20 * 256 + 5)
+    ld [wCamZ + 1], a
+    xor a
+    ld [wCamY], a
+    ld a, $18                       ; eye height 24
+    ld [wCamY + 1], a
+    xor a
+    ld [wYaw], a
+    ld [wPoseI], a
+
+    ; Static test scene into bank 0 (shown until the demo loop replaces it).
     call ClearFB
     call DrawTestSet
-    call CopyFBToVRAM
+    xor a
+    call CopyFBGeneral
 
     ld a, IEF_VBLANK
     ldh [rIE], a
@@ -111,6 +107,10 @@ Start:
 
 IF DEF(BENCH)
     call RunBench
+ENDC
+
+IF DEF(POSETEST)
+    call RunPoseTest
 ENDC
 
 IF DEF(TEST_EXIT)
@@ -125,22 +125,71 @@ IF DEF(TEST_EXIT)
 ENDC
 
 MainLoop:
-.wait:
+IF DEF(TEST_EXIT)
+    ; Test builds stop here; park instead of running the demo.
+.park:
     halt
     nop
-    ldh a, [hVBlank]
-    and a
-    jr z, .wait
-    xor a
-    ldh [hVBlank], a
+    jr .park
+ENDC
 
+; ---- demo: spinning room, double buffered ---------------------------------
+Demo:
+    call ClearFB
+    ei
+    call RenderScene
+    ldh a, [hShow]
+    xor 1
+    call CopyFBHBlank               ; into the hidden bank
+    call WaitVBlank
+    ldh a, [hShow]
+    xor 1
+    ldh [hShow], a
+    call ShowBank                   ; flip
     ld hl, VRAM_MAP0 + 32 * 15 + 2
-    ldh a, [hFrame]
+    ld a, [wYaw]
     call PutHex
     ld hl, VRAM_MAP0 + 32 * 16 + 2
     ldh a, [hSpeed]
     call PutHex
-    jr MainLoop
+IF DEF(LIVETEST)
+    ; Record the VBlank counter per iteration under a "LIVE" magic.
+    ld hl, wPoseMagic
+    ld a, 'L'
+    ld [hl+], a
+    ld a, 'I'
+    ld [hl+], a
+    ld a, 'V'
+    ld [hl+], a
+    ld a, 'E'
+    ld [hl], a
+    ld a, [wPoseI]
+    ld c, a
+    ld b, 0
+    ld hl, wPoseOut
+    add hl, bc
+    ldh a, [hFrame]
+    ld [hl], a
+    ld a, c
+    inc a
+    ld [wPoseI], a
+    cp 6
+    jr nz, .noStop
+    call WaitVBlank
+    call WaitVBlank
+    jp LiveStop
+.noStop:
+ENDC
+    ld a, [wYaw]
+    add 2
+    ld [wYaw], a
+    jr Demo
+
+IF DEF(LIVETEST)
+LiveStop::                           ; headless test breakpoint (tools/gbc_check.py --live)
+    nop
+    jr LiveStop
+ENDC
 
 ; Draw every line in TestLines. Clobbers all.
 DrawTestSet::
@@ -161,16 +210,18 @@ DrawTestSet::
     pop hl
     jr .next
 
-; a = value, hl = dest. Writes two font tiles (digit + 1, bank 1).
+; a = value, hl = dest. Writes two hex-digit tiles (digit d = tile d*16+15).
 PutHex:
     ld b, a
     swap a
     and $0F
-    inc a
+    swap a
+    or $0F
     ld [hl+], a
     ld a, b
     and $0F
-    inc a
+    swap a
+    or $0F
     ld [hl], a
     ret
 

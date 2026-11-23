@@ -8,7 +8,7 @@ INCLUDE "hw.inc"
 
 SECTION "bench", ROM0
 
-TimerStart:
+TimerStart::
     xor a
     ldh [rTAC], a
     ldh [hOver], a
@@ -22,7 +22,7 @@ TimerStart:
     ret
 
 ; BC = ticks since TimerStart (hOver:TIMA, consistent read).
-TimerRead:
+TimerRead::
 .retry:
     ldh a, [hOver]
     ld b, a
@@ -33,7 +33,7 @@ TimerRead:
     jr nz, .retry
     ret
 
-WaitVBlank:
+WaitVBlank::
     xor a
     ldh [hVBlank], a
 .w:

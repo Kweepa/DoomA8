@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
-"""Run the GBC test ROM headless in BGB and compare the screen to the reference.
+"""Run a GBC test ROM headless in BGB and compare the screen to the reference.
 
-Usage: gbc_check.py [rom] [--shot out.png]
-Needs build-gbc.bat test first. BGB path from env GBEMU (default C:\\dev\\tools\\bgb\\bgb64.exe).
+  gbc_check.py          static line pattern (build-gbc.bat test), break at MainLoop
+  gbc_check.py --live   spinning-room demo, 3 frames (build-gbc.bat live), break at LiveStop;
+                        checks the double-buffered, HBlank-DMA'd frame against the spec render
+
+BGB path from env GBEMU (default C:\\dev\\tools\\bgb\\bgb64.exe).
 """
 import os
 import subprocess
@@ -12,34 +15,54 @@ from PIL import Image
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import gbc_genlines as gl  # noqa: E402
+import gbc_room as gr  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 VIEW_X0 = 16          # map column 2 * 8
 
+LIVE_CAM = (22 * 256 + 77, 20 * 256 + 5)
+LIVE_FRAMES = 6
+LIVE_YAW_STEP = 2
+
 
 def main():
-    rom = os.path.join(ROOT, "gbc", "build", "doomgbc_test.gbc")
-    shot = os.path.join(ROOT, "gbc", "build", "test_screen.bmp")
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    if args:
-        rom = args[0]
+    live = "--live" in sys.argv
+    name = "doomgbc_live" if live else "doomgbc_test"
+    label = "LiveStop" if live else "MainLoop"
+    rom = os.path.join(ROOT, "gbc", "build", name + ".gbc")
+    shot = os.path.join(ROOT, "gbc", "build", name + "_screen.bmp")
     bgb = os.environ.get("GBEMU", r"C:\dev\tools\bgb\bgb64.exe")
     if os.path.exists(shot):
         os.remove(shot)
-    # Headless BGB exits when it would break to the debugger: break at MainLoop.
-    sym = os.path.splitext(rom)[0] + ".sym"
+    # Headless BGB exits when it would break to the debugger.
     addr = None
-    for line in open(sym):
-        if line.strip().endswith(" MainLoop"):
+    for line in open(os.path.splitext(rom)[0] + ".sym"):
+        if line.strip().endswith(" " + label):
             addr = line.split()[0].split(":")[1]
     if addr is None:
-        sys.exit("MainLoop not found in " + sym)
-    subprocess.run([bgb, "-hf", "-nobatt", "-rom", rom, "-br", addr,
-                    "-screenonexit", shot], timeout=20)
+        sys.exit(label + " not found in sym file")
+    state = os.path.join(ROOT, "gbc", "build", name + ".sna")
+    args = [bgb, "-hf", "-nobatt", "-rom", rom, "-br", addr, "-screenonexit", shot]
+    if live:
+        args += ["-stateonexit", state]
+    subprocess.run(args, timeout=60)
+    if live:
+        d = open(state, "rb").read()
+        i = d.find(b"LIVE")
+        if i >= 0:
+            fr = list(d[i + 6:i + 6 + LIVE_FRAMES])      # skip wPoseTicks
+            diffs = [(b - a) & 255 for a, b in zip(fr, fr[1:])]
+            print("VBlanks per demo iteration:", diffs,
+                  "-> ~%.1f fps" % (59.7275 / (sum(diffs) / len(diffs))))
     img = Image.open(shot).convert("RGB")
     print("screenshot", img.size)
     bg = img.getpixel((0, 0))
-    expect = gl.reference_frame()
+    if live:
+        yaw = LIVE_YAW_STEP * (LIVE_FRAMES - 1)
+        expect = gr.render(LIVE_CAM[0], LIVE_CAM[1], yaw)
+        print("live: expecting yaw %d" % yaw)
+    else:
+        expect = gl.reference_frame()
     got = set()
     for y in range(gl.VIEW_H):
         for x in range(gl.VIEW_W):

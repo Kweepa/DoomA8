@@ -5,6 +5,8 @@ cd /d "%~dp0"
 REM build-gbc.bat        -> gbc\build\doomgbc.gbc
 REM build-gbc.bat test   -> gbc\build\doomgbc_test.gbc (headless screenshot check)
 REM build-gbc.bat bench  -> gbc\build\doomgbc_bench.gbc (timing run, see tools\gbc_bench.py)
+REM build-gbc.bat live   -> gbc\build\doomgbc_live.gbc (demo that stops after 3 frames; tools\gbc_check.py --live)
+REM build-gbc.bat pose   -> gbc\build\doomgbc_pose.gbc (render checksums, see tools\gbc_posetest.py)
 
 if exist "%~dp0setup-env.bat" call "%~dp0setup-env.bat"
 if not defined RGBDS set "RGBDS=C:\dev\tools\rgbds"
@@ -23,6 +25,14 @@ if /i "%~1"=="bench" (
   set "DEFS=-D TEST_EXIT=1 -D BENCH=1"
   set "NAME=doomgbc_bench"
 )
+if /i "%~1"=="live" (
+  set "DEFS=-D LIVETEST=1"
+  set "NAME=doomgbc_live"
+)
+if /i "%~1"=="pose" (
+  set "DEFS=-D TEST_EXIT=1 -D POSETEST=1"
+  set "NAME=doomgbc_pose"
+)
 
 if not exist gbc\build mkdir gbc\build
 
@@ -30,9 +40,11 @@ python tools\gbc_font.py gbc\build\font.inc
 if errorlevel 1 exit /b 1
 python tools\gbc_genlines.py gbc\build
 if errorlevel 1 exit /b 1
+python tools\gbc_room.py gbc\build
+if errorlevel 1 exit /b 1
 
 set "OBJS="
-for %%F in (main vars line fb bench) do (
+for %%F in (main vars line fb bench math render posetest data) do (
   "%RGBDS%\rgbasm.exe" -Weverything %DEFS% -I gbc\ -I gbc\build\ -o gbc\build\%%F.o gbc\%%F.asm
   if errorlevel 1 exit /b 1
   call set "OBJS=%%OBJS%% gbc\build\%%F.o"
