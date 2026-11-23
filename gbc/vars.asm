@@ -103,6 +103,9 @@ wCamSave::   ds 8
 wTestCnt::   ds 2
 wTestRoom::  ds 1
 wFindOut::   ds 400
+wDbgOut::    ds 160
+wScriptPtr:: ds 2
+wStepCnt::   ds 1
 
 ; Level / world state
 SECTION "worldvars", WRAMX, BANK[1]
@@ -119,3 +122,77 @@ wMoveDt::     ds 1
 ; The packed map payload (<= 3901 B for the largest level) in its own WRAM bank.
 SECTION "mapram", WRAMX, BANK[2]
 wMap::        ds 4096
+
+; Current room's collision data, copied from the cooker's 159-byte record (gbc_world.room_record).
+; Layout must match exactly: colliders (4-entry arrays), join masks, crates, solid platforms, slopes.
+SECTION "roomcache", WRAMX, BANK[1]
+wRoomCache::
+wRcX::        ds 4
+wRcY::        ds 4
+wRcZ::        ds 4
+wRcSX::       ds 4
+wRcSY::       ds 4
+wRcSZ::       ds 4
+wRcJ::        ds 12                 ; [collider*4 + face], face 0 xmin 1 xmax 2 zmin 3 zmax; bit j = sibling j
+wCrN::        ds 1
+wCrX::        ds 8
+wCrY::        ds 8
+wCrZ::        ds 8
+wCrSX::       ds 8
+wCrSY::       ds 8
+wCrSZ::       ds 8
+wPlN::        ds 1
+wPlX::        ds 8
+wPlY::        ds 8
+wPlZ::        ds 8
+wPlSX::       ds 8
+wPlSZ::       ds 8
+wSlN::        ds 1
+wSlX::        ds 4
+wSlY::        ds 4
+wSlZ::        ds 4
+wSlSX::       ds 4
+wSlSY::       ds 4
+wSlSZ::       ds 4
+wSlAxis::     ds 4
+wSlDir::      ds 4
+wRoomCacheEnd::
+
+SECTION "collvars", WRAMX, BANK[1]
+wCollTab::    ds 2
+wColX::       ds 1
+wColZ::       ds 1
+wBoxX::       ds 1
+wBoxY::       ds 1
+wBoxZ::       ds 1
+wBoxSX::      ds 1
+wBoxSY::      ds 1
+wBoxSZ::      ds 1
+wJk::         ds 1
+wJf::         ds 1
+wJmask::      ds 1
+wVal::        ds 1
+wFound::      ds 1
+wFloorTmp::   ds 1
+wTmpY::       ds 1
+wRun::        ds 1
+wFrac::       ds 1
+wSlYv::       ds 1
+wSlI::        ds 1
+wFloorY::     ds 1
+wFloorYL::    ds 1
+wFloorSlope:: ds 1
+wFalling::    ds 1
+wFallVL::     ds 1
+wFallVH::     ds 1
+wFallAcc::    ds 1
+wFallY0::     ds 1
+wAcc::        ds 1
+wDtMs::       ds 1
+wLedgeI::     ds 1
+wLedgeSaveY:: ds 1
+wWishX::      ds 2
+wWishZ::      ds 2
+wSaveX::      ds 2
+wF1::         ds 1
+wF2::         ds 1

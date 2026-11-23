@@ -9,6 +9,10 @@ INCLUDE "poses.inc"
 ENDC
 
 INCLUDE "maps.inc"
+INCLUDE "worldrec.inc"
+IF DEF(WORLDTEST)
+INCLUDE "worldtest.inc"
+ENDC
 IF DEF(MAPTEST)
 INCLUDE "maptest.inc"
 ENDC

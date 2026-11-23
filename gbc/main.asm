@@ -110,6 +110,10 @@ IF DEF(MOVETEST)
     call RunMoveTest
 ENDC
 
+IF DEF(WORLDTEST)
+    call RunWorldTest
+ENDC
+
 IF DEF(TEST_EXIT)
     ; Let a couple of frames reach the screen before MainLoop, where
     ; tools/gbc_check.py sets a breakpoint (headless BGB exits on it).
@@ -178,7 +182,6 @@ IF DEF(LIVETEST)
 .noStop:
 ENDC
     call UpdateMove
-    call FindRoom
     jr Demo
 
 IF DEF(LIVETEST)

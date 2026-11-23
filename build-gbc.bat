@@ -37,11 +37,16 @@ if /i "%~1"=="move" (
   set "DEFS=-D TEST_EXIT=1 -D MOVETEST=1"
   set "NAME=doomgbc_move"
 )
+if /i "%~1"=="world" (
+  set "DEFS=-D TEST_EXIT=1 -D WORLDTEST=1"
+  set "NAME=doomgbc_world"
+)
 if /i "%~1"=="pose" (
   set "DEFS=-D TEST_EXIT=1 -D POSETEST=1"
   set "NAME=doomgbc_pose"
 )
 
+if defined GBC_DEFS set "DEFS=%DEFS% %GBC_DEFS%"
 if not exist gbc\build mkdir gbc\build
 
 python tools\gbc_font.py gbc\build\font.inc
@@ -52,9 +57,11 @@ python tools\gbc_room.py gbc\build
 if errorlevel 1 exit /b 1
 python tools\gbc_genmap.py gbc\build
 if errorlevel 1 exit /b 1
+python tools\gbc_genworld.py gbc\build
+if errorlevel 1 exit /b 1
 
 set "OBJS="
-for %%F in (main vars line fb bench math render posetest data input world) do (
+for %%F in (main vars line fb bench math render posetest data input world collide) do (
   "%RGBDS%\rgbasm.exe" -Weverything %DEFS% -I gbc\ -I gbc\build\ -o gbc\build\%%F.o gbc\%%F.asm
   if errorlevel 1 exit /b 1
   call set "OBJS=%%OBJS%% gbc\build\%%F.o"

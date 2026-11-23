@@ -5,7 +5,6 @@
 INCLUDE "hw.inc"
 INCLUDE "map_fields.inc"
 
-DEF EYE_HEIGHT   EQU 3
 DEF MOVE_SPEED   EQU 48            ; 8.8 world units per VBlank (0.1875)
 DEF TURN_SPEED   EQU 2             ; yaw units (256 per turn) per VBlank
 
@@ -76,6 +75,30 @@ LoadRoomMesh::
     ld l, a
     jp LoadMesh
 
+; A = room. Makes it the current room: mesh for the renderer, collision cache.
+EnterRoom::
+    push af
+    call LoadRoomMesh
+    pop af
+    ; fall through
+
+; A = room. Copies the cooker's 159-byte collision record into the WRAM room cache.
+LoadRoomCache::
+    add a
+    ld c, a
+    ld b, 0
+    ld a, [wCollTab]
+    ld l, a
+    ld a, [wCollTab + 1]
+    ld h, a
+    add hl, bc
+    ld a, [hl+]
+    ld h, [hl]
+    ld l, a
+    ld de, wRoomCache
+    ld b, wRoomCacheEnd - wRoomCache
+    jp CopyN
+
 ; A = level index. Maps the level's ROM bank (stays mapped), copies the packed map into
 ; WRAM bank 2, binds the field pointer table, spawns the player.
 LoadLevel::
@@ -114,6 +137,12 @@ LoadLevel::
     ld [wRoomTab], a
     ld a, [hl]
     ld [wRoomTab + 1], a
+    ld hl, LevelCollTab
+    add hl, bc
+    ld a, [hl+]
+    ld [wCollTab], a
+    ld a, [hl]
+    ld [wCollTab + 1], a
 
     ; header -> wMapHdr (bank 1)
     ld a, [wLoadSrc]
@@ -184,8 +213,17 @@ LoadLevel::
     swap a
     add a
     ld [wYaw], a
+    ld a, [wMapHdr + H_SPAWN_Y]
+    ld [wFloorY], a
+    xor a
+    ld [wFloorYL], a
+    ld [wFloorSlope], a
+    ld [wFalling], a
+    ld [wFallVL], a
+    ld [wFallVH], a
+    ld [wFallAcc], a
     ld a, [wMapHdr + H_SPAWN_ROOM]
-    jp LoadRoomMesh
+    jp EnterRoom
 
 ; A = field id, C = index -> A = payload byte. Preserves C. Clobbers B, DE, HL.
 MapGet::
@@ -253,7 +291,7 @@ FindRoom::
     cp b
     ret z
     ld a, b
-    jp LoadRoomMesh
+    jp EnterRoom
 .next:
     ld a, [wI]
     inc a
@@ -265,7 +303,7 @@ FindRoom::
     ret
 
 ; In: B = dx multiplier, C = dz multiplier (signed 8-bit, +-127 = 1.0), wTa = distance (8.8).
-; camX += wTa * B >> 7, camZ += wTa * C >> 7.
+; wWishX += wTa * B >> 7, wWishZ += wTa * C >> 7.
 MoveAlong:
     ld a, c
     ld [wTb], a
@@ -275,12 +313,12 @@ MoveAlong:
     ld a, [wTa + 1]
     ld d, a
     call SMul16
-    ld a, [wCamX]
+    ld a, [wWishX]
     add e
-    ld [wCamX], a
-    ld a, [wCamX + 1]
+    ld [wWishX], a
+    ld a, [wWishX + 1]
     adc d
-    ld [wCamX + 1], a
+    ld [wWishX + 1], a
     ld a, [wTb]
     ld c, a
     ld a, [wTa]
@@ -288,12 +326,12 @@ MoveAlong:
     ld a, [wTa + 1]
     ld d, a
     call SMul16
-    ld a, [wCamZ]
+    ld a, [wWishZ]
     add e
-    ld [wCamZ], a
-    ld a, [wCamZ + 1]
+    ld [wWishZ], a
+    ld a, [wWishZ + 1]
     adc d
-    ld [wCamZ + 1], a
+    ld [wWishZ + 1], a
     ret
 
 ; Poll the pad, advance yaw / position by the number of VBlanks since the last call
@@ -316,9 +354,22 @@ UpdateMove::
 .dtNz:
     ld [wMoveDt], a
     call ReadJoy
+    ; fall through
 
-; hJoy and wMoveDt set: turn, then move. Split out so tests can script the pad.
+; hJoy and wMoveDt set: input -> turn/wish -> collide -> floor -> gravity.
 ApplyMove::
+    call ApplyInput
+    call ApplyWish
+    call UpdateFloor
+    jp UpdateFall
+
+; hJoy and wMoveDt set: turn, then accumulate the movement wish. No collision.
+ApplyInput::
+    xor a
+    ld [wWishX], a
+    ld [wWishX + 1], a
+    ld [wWishZ], a
+    ld [wWishZ + 1], a
     ; distance = dt * MOVE_SPEED
     ld a, [wMoveDt]
     ld c, a

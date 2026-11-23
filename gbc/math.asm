@@ -278,3 +278,25 @@ Lerp16::
 .zero:
     ld de, 0
     ret
+
+; B:D:E = 24-bit numerator (B high), C = divisor, quotient must fit 16 bits (B < C).
+; DE = floor(N / C). Clobbers A, B, H.
+Div24x8::
+    ld h, 16
+.div:
+    sla e
+    rl d
+    rl b
+    jr c, .sub
+    ld a, b
+    cp c
+    jr c, .nosub
+.sub:
+    ld a, b
+    sub c
+    ld b, a
+    inc e
+.nosub:
+    dec h
+    jr nz, .div
+    ret

@@ -52,6 +52,7 @@ DEF VIEW_TILES  EQU VIEW_COLS * VIEW_ROWS   ; 224
 DEF BLANK_TILE  EQU VIEW_TILES    ; tile 224 = blank, 225.. = hex digits 0-F
 DEF FONT_TILE0  EQU VIEW_TILES + 1
 DEF STACK_TOP   EQU $D000         ; stack lives in WRAM0 $CF00-$CFFF (outside the WRAMX window)
+DEF EYE_HEIGHT   EQU 3            ; eye above the feet, world units
 DEF FOCAL_HALF  EQU 40            ; FOCAL (80) / 2, for SMul16's >> 7
 
 ; Joypad byte (hJoy): active high.
