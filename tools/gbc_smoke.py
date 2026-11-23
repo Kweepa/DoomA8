@@ -89,6 +89,9 @@ def pack(L, li, room, px, pz, yaw, floor_y, *, keys=0, wmask=0b010001, wcur=4, h
 
 
 def run_rom():
+    # The smoke ROM draws the scene every frame (RenderScene + DrawWorldObjects), so a draw-path hang with
+    # awake enemies is caught; the VBlank wait / DMA path is not part of it (WaitVBlank hangs in this ROM).
+    os.environ["GBC_DEFS"] = "-D SMOKEDRAW=1 -D SDNODISP=1 -D SDAPPLY=1"
     subprocess.run(["cmd", "/c", os.path.join(ROOT, "build-gbc.bat"), "smoke"], check=True,
                    stdout=subprocess.DEVNULL)
     rom = os.path.join(ROOT, "gbc", "build", "doomgbc_smoke.gbc")
@@ -100,7 +103,7 @@ def run_rom():
             addr = line.split()[0].split(":")[1]
     if os.path.exists(state):
         os.remove(state)
-    subprocess.run([bgb, "-hf", "-nobatt", "-rom", rom, "-br", addr, "-stateonexit", state], timeout=300)
+    subprocess.run([bgb, "-hf", "-nobatt", "-rom", rom, "-br", addr, "-stateonexit", state], timeout=60)
     data = open(state, "rb").read()
     i = data.find(b"POSE")
     base = i + 4 + 2
@@ -243,6 +246,9 @@ def main():
         try:
             if not SCENARIOS[n]():
                 failed.append(n)
+        except subprocess.TimeoutExpired:
+            print("  FAIL hang: the ROM never reached MainLoop")
+            failed.append(n)
         finally:
             subprocess.run(["taskkill", "/F", "/IM", "bgb64.exe"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     print("smoke scenarios: %d, failed: %d %s" % (len(names), len(failed), failed))

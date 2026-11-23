@@ -371,6 +371,7 @@ UpdateMove::
     ld a, b
     ldh [hLastFrame], a
     sub c
+    ld [wRawDt], a                  ; frame time in VBlanks, for the HUD
     cp 13
     jr c, .dtOk
     ld a, 12

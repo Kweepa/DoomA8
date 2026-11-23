@@ -900,6 +900,51 @@ RunSmoke::
     ld [wScriptPtr], a
     ld a, h
     ld [wScriptPtr + 1], a
+IF DEF(SMOKEDRAW)
+    ; the real demo frame: draw, flip, then UpdateMove (real frame time, room changes) and the game
+    ldh a, [hJoy]
+    ld [wScriptJoy], a
+    call ClearFB
+    call RenderScene
+    call DrawWorldObjects
+IF !DEF(SDNODISP)
+IF !DEF(SDNOCOPY)
+    ldh a, [hShow]
+    xor 1
+    call CopyFBHBlank
+ENDC
+IF !DEF(SDNOWAIT)
+    call WaitVBlank
+ENDC
+    ldh a, [hShow]
+    xor 1
+    ldh [hShow], a
+IF !DEF(SDNOSHOW)
+    call ShowBank
+ENDC
+IF !DEF(SDNOWPN)
+    call WpnVBlank
+ENDC
+IF !DEF(SDNOHUD)
+    call HudBlit
+ENDC
+ENDC
+IF DEF(SDAPPLY)
+    ld a, [wTestCnt + 1]
+    ld [wMoveDt], a
+    ld b, a
+    ld a, [wSpin]
+    add b
+    ld [wSpin], a
+    call ApplyMove
+ELSE
+    call UpdateMove
+ENDC
+    call WpnUpdate
+    call PickupScan
+    call CombatUpdate
+    call HudUpdate
+ELSE
     ld a, [wTestCnt + 1]
     ld [wMoveDt], a
     ld b, a
@@ -910,6 +955,7 @@ RunSmoke::
     call WpnUpdate
     call PickupScan
     call CombatUpdate
+ENDC
     ld a, [wStepCnt]
     inc a
     ld [wStepCnt], a

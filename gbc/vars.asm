@@ -322,7 +322,7 @@ wFy::         ds 1
 wCnt::        ds 1
 wTile::       ds 1
 wDec::        ds 3
-wHud::        ds 12
+wHud::        ds 15
 wPkN::        ds 1
 wPkI::        ds 1
 wPkIdx::      ds 1
@@ -388,3 +388,5 @@ wLpZ::        ds 1
 wLsx::        ds 1
 wLsz::        ds 1
 wCellFy::     ds 1
+wRawDt::      ds 1                   ; VBlanks the last frame took (unclamped)
+wScriptJoy::  ds 1

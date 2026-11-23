@@ -99,7 +99,27 @@ HudUpdate::
     ld a, [wKills]
     call DecimalA
     ld hl, wHud + 9
-    ; fall into .put3
+    call .put3
+    ; frame time in ms (VBlank = 16.74 ms: 16.75 * n), 255 max
+    ld a, [wRawDt]
+    cp 16
+    jr c, .msOk
+    ld a, 255
+    jr .msHave
+.msOk:
+    ld b, a
+    swap a
+    add b
+    ld c, a                         ; 17 * n
+    ld a, b
+    srl a
+    srl a
+    ld b, a
+    ld a, c
+    sub b                           ; - n / 4
+.msHave:
+    call DecimalA
+    ld hl, wHud + 12
 .put3:
     ld a, [wDec]
     ld [hl+], a
@@ -369,6 +389,8 @@ HudBlit::
     ld hl, VRAM_MAP0 + 32 * 16 + 2
     call .three
     ld hl, VRAM_MAP0 + 32 * 16 + 7
+    call .three
+    ld hl, VRAM_MAP0 + 32 * 15 + 12   ; frame time, ms
 .three:
     ld a, [de]
     inc de

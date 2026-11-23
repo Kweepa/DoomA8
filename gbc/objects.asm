@@ -342,13 +342,13 @@ DrawWorldObjects::
     ld a, [wTmpFrame]
     jr nz, .haveTimer
     ld a, [wObjI]                   ; walk cycle: global counter, phase offset per enemy
-    ld b, a
+    ld c, a                         ; (B holds the clip length)
     add a
     add a
-    add b
-    ld b, a
+    add c
+    ld c, a
     ld a, [wSpin]
-    add b
+    add c
 .haveTimer:
     srl a
     srl a
