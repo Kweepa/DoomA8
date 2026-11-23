@@ -51,8 +51,8 @@ def main():
     for (joy, dt) in script:
         t.append("    db %d, %d" % (joy, dt))
     t.append("WorldTestTab::")
-    for (lv_, room, cx, cz, cy, yaw, fy) in tests:
-        t.append("    db %d, %d\n    dw %d, %d, %d\n    db %d, %d" % (lv_, room, cx, cz, cy, yaw, fy))
+    for (lv_, room, cx, cz, cy, yaw, fy, held) in tests:
+        t.append("    db %d, %d\n    dw %d, %d, %d\n    db %d, %d, %d" % (lv_, room, cx, cz, cy, yaw, fy, held))
     open(os.path.join(outdir, "worldtest.inc"), "w", newline="\n").write("\n".join(t) + "\n")
     print("world records: %d levels, %d tests (slice %d:%d of %d), record %d B" % (len(keys), len(tests), a, b, len(gw.world_tests()), gw.ROOM_REC_LEN))
 

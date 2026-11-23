@@ -49,6 +49,9 @@ class Player:
         self.fall_vel = 0
         self.fall_acc = 0
         self.fall_y0 = 0
+        self.keys = 0
+        self.door_key = [lv.f("door_key", d) for d in range(lv.p[1])]
+        self.door_type = [lv.f("door_type", d) for d in range(lv.p[1])]
 
     @property
     def xh(self):
@@ -250,7 +253,125 @@ def solid_at(P, col_x, col_z):
         if in_box_xz(col_x, col_z, L.f("plat_x", x), L.f("plat_z", x),
                      L.f("plat_sx", x), L.f("plat_sz", x), False):
             return True
-    return False                                  # doors: not yet
+    return door_blocks(P, col_x, col_z)
+
+
+HAVE_YELLOW, HAVE_BLUE, HAVE_RED = 1, 2, 4
+DOOR_Y_SLACK = 1
+DOOR_AIM = 32
+THRU_YAW = [128, 0, 192, 64]          # PZ, MZ, PX, MX
+DOOR_HIDDEN = 0x80
+
+
+def door_unlocked(P, d):
+    key = P.door_key[d]
+    if key == 0:
+        return True
+    if key == 3:                      # remote: opened by a switch / trigger only
+        return False
+    if key == 2:
+        return bool(P.keys & HAVE_BLUE)
+    if key == 4:
+        return bool(P.keys & HAVE_RED)
+    return bool(P.keys & HAVE_YELLOW)
+
+
+def room_doors(P):
+    lo = P.lv.f("room_door_o", P.room)
+    return range(lo, lo + P.lv.f("room_ndoor", P.room))
+
+
+def door_blocks(P, col_x, col_z):
+    L = P.lv
+    for d in room_doors(P):
+        if door_unlocked(P, d):
+            continue
+        if in_box_xz(col_x, col_z, L.f("door_x", d), L.f("door_z", d),
+                     L.f("door_sx", d), L.f("door_sz", d), False):
+            return True
+    return False
+
+
+def door_y_ok(P, d):
+    a = (feet(P) - P.lv.f("door_y", d)) & 255
+    return a <= DOOR_Y_SLACK or a >= 256 - DOOR_Y_SLACK
+
+
+def door_thru(P, d, joy_up, wx, wz):
+    """Forward held, yaw within DOOR_AIM of the through-heading, wish pointing through."""
+    if not joy_up:
+        return False
+    face = P.lv.f("door_face", d)
+    delta = (P.yaw - THRU_YAW[face & 3]) & 255
+    if delta >= 128:
+        delta = (256 - delta) & 255
+    if delta > DOOR_AIM:
+        return False
+    minus = face & 1
+    zaxis = (face >> 1) == 0
+    w = wz if zaxis else wx
+    hi = (w >> 8) & 255
+    if not minus:
+        return hi >= 128                      # negative: toward -axis
+    return w != 0 and hi < 128                # positive and non-zero
+
+
+def door_snap(P, d):
+    L = P.lv
+    face = L.f("door_face", d)
+    minus = face & 1
+    if (face >> 1) == 0:
+        if not minus:
+            a = L.f("door_z", d) - 2
+            a = 0 if a < 0 else a
+        else:
+            a = (L.f("door_z", d) + L.f("door_sz", d)) & 255
+            a = (a + 1) & 255
+        P.cam_z = a << 8
+    else:
+        if not minus:
+            a = L.f("door_x", d) - 2
+            a = 0 if a < 0 else a
+        else:
+            a = (L.f("door_x", d) + L.f("door_sx", d)) & 255
+            a = (a + 1) & 255
+        P.cam_x = a << 8
+
+
+def try_door_wish(P, joy_up, wx, wz, blk):
+    """A wall-ward wish that was blocked may pass through an unlocked door. True = transit."""
+    if blk == 0 or (wx | wz) == 0:
+        return False
+    L = P.lv
+    save_x, save_z = P.cam_x, P.cam_z
+    if blk & 1:
+        P.cam_x = (P.cam_x + wx) & 0xFFFF
+    if blk & 2:
+        P.cam_z = (P.cam_z + wz) & 0xFFFF
+    for d in room_doors(P):
+        if P.door_type[d] & DOOR_HIDDEN:
+            continue
+        dx, dz = L.f("door_x", d), L.f("door_z", d)
+        bx = 0 if dx == 0 else dx - 1
+        bz = 0 if dz == 0 else dz - 1
+        bsx = (L.f("door_sx", d) + 2) & 255
+        bsz = (L.f("door_sz", d) + 2) & 255
+        if not in_box_xz(P.xh, P.zh, bx, bz, bsx, bsz, False):
+            continue
+        if not door_y_ok(P, d):
+            continue
+        if not door_thru(P, d, joy_up, wx, wz):
+            continue
+        if not door_unlocked(P, d):
+            break                              # key HUD; restore below
+        other = L.f("door_other", d)
+        if other == 0xFF:
+            continue
+        door_snap(P, d)
+        P.room = other
+        return True
+    P.cam_x, P.cam_z = save_x, save_z
+    return False
 
 
 def pos_ok(P, col_x, col_z):
@@ -450,34 +571,41 @@ def wish_of(yaw, joy, dt):
 
 
 def apply_wish(P, wx, wz):
+    """Returns door_blk: bit0 = X rejected, bit1 = Z rejected."""
+    blk = 0
     if P.falling:
-        return
+        return blk
     if wx:
         save = P.cam_x
         P.cam_x = (P.cam_x + wx) & 0xFFFF
         if not pos_ok(P, P.xh, P.zh):
             P.cam_x = save
+            blk |= 1
     if wz:
         save = P.cam_z
         P.cam_z = (P.cam_z + wz) & 0xFFFF
         if not pos_ok(P, P.xh, P.zh):
             P.cam_z = save
+            blk |= 2
+    return blk
 
 
 def step(P, joy, dt):
     P.yaw, wx, wz = wish_of(P.yaw, joy, dt)
-    apply_wish(P, wx, wz)
+    blk = apply_wish(P, wx, wz)
+    try_door_wish(P, bool(joy & 4), wx, wz, blk)
     update_floor(P)
     update_fall(P, dt * MS_PER_VBLANK)
 
 
 # ---- test scenarios -----------------------------------------------------------------
 
-def walk_script(n=48, seed=12345):
-    """Deterministic pad script: forward-heavy with turns, strafes and back steps."""
+def walk_script(n=32, seed=12345):
+    """Deterministic pad script: 16 steady forward steps (to push into walls / doors), then a
+    forward-heavy random mix with turns, strafes and back steps."""
     joys = [0x04, 0x04, 0x04, 0x04, 0x05, 0x06, 0x04, 0x08, 0x25, 0x26, 0x24, 0x04, 0x0C, 0x00]
     s = seed
-    out = []
+    out = [(0x04, 3)] * 16
     for _ in range(n):
         s = (s * 1103515245 + 12345) & 0x7FFFFFFF
         joy = joys[(s >> 8) % len(joys)]
@@ -488,7 +616,7 @@ def walk_script(n=48, seed=12345):
 
 
 def world_tests():
-    """[(level_idx, room, camx16, camz16, camy16, yaw, floor_y)].
+    """[(level_idx, room, camx16, camz16, camy16, yaw, floor_y, keys)].
     Per room: start in collider 0 (centre). Per crate / solid platform / slope of a room: start just
     west of the object facing it, and start above its centre (falls onto it)."""
     out = []
@@ -509,7 +637,7 @@ def world_tests():
             fy = L.f("rc_y", X)
             cx = (L.f("rc_x", X) + L.f("rc_sx", X) // 2) * 256 + 77
             cz = (L.f("rc_z", X) + L.f("rc_sz", X) // 2) * 256 + 131
-            base.append((li, r, cx, cz, ((fy + EYE) & 255) << 8, (r * 37 + li * 11) & 255, fy))
+            base.append((li, r, cx, cz, ((fy + EYE) & 255) << 8, (r * 37 + li * 11) & 255, fy, 0))
             objs = []
             for x in range(L.ncrates):
                 if L.f("crate_room", x) == r:
@@ -523,8 +651,25 @@ def world_tests():
                 objs.append((L.f("slope_x", x), L.f("slope_z", x), L.f("slope_sx", x), L.f("slope_sz", x)))
             for (ox, oz, osx, osz) in objs:
                 zc = (oz + osz // 2) * 256 + 9
-                extra.append((li, r, ((ox - 1) & 255) * 256 + 200, zc, ((fy + EYE) & 255) << 8, 64 + (r & 7), fy))
-                extra.append((li, r, (ox + osx // 2) * 256 + 13, zc, ((fy + EYE + 10) & 255) << 8, (r * 5) & 255, fy))
+                extra.append((li, r, ((ox - 1) & 255) * 256 + 200, zc, ((fy + EYE) & 255) << 8, 64 + (r & 7), fy, 0))
+                extra.append((li, r, (ox + osx // 2) * 256 + 13, zc, ((fy + EYE + 10) & 255) << 8, (r * 5) & 255, fy, 0))
+            # doors of this room: start inside, a step or two from the slab, aimed through it
+            lo = L.f("room_door_o", r)
+            for d in range(lo, lo + L.f("room_ndoor", r)):
+                dx, dy, dz = L.f("door_x", d), L.f("door_y", d), L.f("door_z", d)
+                dsx, dsz, face = L.f("door_sx", d), L.f("door_sz", d), L.f("door_face", d)
+                if face == 0:
+                    px, pz = dx + dsx // 2, dz + dsz + 1
+                elif face == 1:
+                    px, pz = dx + dsx // 2, dz - 2
+                elif face == 2:
+                    px, pz = dx + dsx + 1, dz + dsz // 2
+                else:
+                    px, pz = dx - 2, dz + dsz // 2
+                yaw = (THRU_YAW[face & 3] + (d * 7) % 24 - 12) & 255
+                for keys in ((0, 7) if L.f("door_key", d) else (0,)):
+                    extra.append((li, r, (px & 255) * 256 + 100, (pz & 255) * 256 + 100,
+                                  ((dy + EYE) & 255) << 8, yaw, dy, keys))
         out += base + extra
         li += 1
     return out
@@ -539,13 +684,14 @@ def wslice():
 
 def run_test(L, t, script):
     """Run one scenario; returns the per-test record the ROM stores: (checksum16, camx, camz, camy)."""
-    (_, room, cx, cz, cy, yaw, fy) = t
+    (_, room, cx, cz, cy, yaw, fy, keys) = t
     P = Player(L, room, cx, cz, cy, yaw, fy)
+    P.keys = keys
     s1 = s2 = 0
     for (joy, dt) in script:
         step(P, joy, dt)
         for b in (P.cam_x & 255, P.cam_x >> 8, P.cam_z & 255, P.cam_z >> 8, P.cam_y & 255, P.cam_y >> 8,
-                  P.floor_y, P.falling | (P.floor_slope << 1), P.yaw):
+                  P.floor_y, P.falling | (P.floor_slope << 1), P.yaw, P.room):
             s1 = (s1 + b) & 255
             s2 = (s2 + s1) & 255
     return ((s2 << 8) | s1, P.cam_x, P.cam_z, P.cam_y), P
@@ -590,7 +736,7 @@ def _pad(vals, n):
     return list(vals) + [0] * (n - len(vals))
 
 
-ROOM_REC_LEN = 36 + 49 + 41 + 33          # = 159
+ROOM_REC_LEN = 36 + 49 + 41 + 33 + 65     # = 224
 
 
 def room_record(L, room):
@@ -618,5 +764,12 @@ def room_record(L, room):
     rec.append(len(slopes))
     for name in ("slope_x", "slope_y", "slope_z", "slope_sx", "slope_sy", "slope_sz", "slope_axis", "slope_dir"):
         rec += _pad([L.f(name, x) for x in slopes], 4)
+    lo = L.f("room_door_o", room)
+    doors = list(range(lo, lo + L.f("room_ndoor", room)))
+    assert len(doors) <= 8
+    rec.append(len(doors))
+    rec += _pad(doors, 8)
+    for name in ("door_x", "door_y", "door_z", "door_sx", "door_sz", "door_face", "door_other"):
+        rec += _pad([L.f(name, d) for d in doors], 8)
     assert len(rec) == ROOM_REC_LEN, len(rec)
     return rec

@@ -106,6 +106,7 @@ wFindOut::   ds 400
 wDbgOut::    ds 160
 wScriptPtr:: ds 2
 wStepCnt::   ds 1
+wTestKeys::  ds 1
 
 ; Level / world state
 SECTION "worldvars", WRAMX, BANK[1]
@@ -116,8 +117,12 @@ wRoomTab::    ds 2                  ; ROM pointer: per-room mesh record table
 wLoadSrc::    ds 2
 wLoadLen::    ds 2
 wFOffPtr::    ds 2
-wFieldPtr::   ds 240                ; NUM_FIELDS (120) words: column base inside wMap (bank 2)
 wMoveDt::     ds 1
+
+; Field pointer table: NUM_FIELDS (120) words, base of each column inside wMap (bank 2).
+; Page aligned so MapGet can index it with one `ld l`.
+SECTION "fieldptr", WRAMX, BANK[1], ALIGN[8]
+wFieldPtr::   ds 240
 
 ; The packed map payload (<= 3901 B for the largest level) in its own WRAM bank.
 SECTION "mapram", WRAMX, BANK[2]
@@ -156,6 +161,15 @@ wSlSY::       ds 4
 wSlSZ::       ds 4
 wSlAxis::     ds 4
 wSlDir::      ds 4
+wDrN::        ds 1
+wDrIdx::      ds 8                  ; global door index (payload door_key / door_type)
+wDrX::        ds 8
+wDrY::        ds 8
+wDrZ::        ds 8
+wDrSX::       ds 8
+wDrSZ::       ds 8
+wDrFace::     ds 8
+wDrOther::    ds 8
 wRoomCacheEnd::
 
 SECTION "collvars", WRAMX, BANK[1]
@@ -196,3 +210,7 @@ wWishZ::      ds 2
 wSaveX::      ds 2
 wF1::         ds 1
 wF2::         ds 1
+wHaveKeys::   ds 1                  ; HAVE_YELLOW 1 / HAVE_BLUE 2 / HAVE_RED 4
+wDoorBlk::    ds 1                  ; bit0 = X move rejected, bit1 = Z
+wDoorI::      ds 1
+wTdwSave::    ds 4

@@ -225,24 +225,27 @@ LoadLevel::
     ld a, [wMapHdr + H_SPAWN_ROOM]
     jp EnterRoom
 
-; A = field id, C = index -> A = payload byte. Preserves C. Clobbers B, DE, HL.
+; A = field id, C = index -> A = payload byte. Preserves BC and DE. Clobbers HL.
 MapGet::
     add a
-    ld e, a
-    ld d, 0
-    ld hl, wFieldPtr
-    add hl, de
+    ld l, a
+    ld h, HIGH(wFieldPtr)
     ld a, [hl+]
     ld h, [hl]
     ld l, a
-    ld b, 0
-    add hl, bc
+    ld a, c
+    add l
+    ld l, a
+    ld a, h
+    adc 0
+    ld h, a
     ld a, 2
     ldh [rSVBK], a
-    ld b, [hl]
+    ld a, [hl]
+    ld l, a
     ld a, 1
     ldh [rSVBK], a
-    ld a, b
+    ld a, l
     ret
 
 ; A = position field (F_ROOM_X/Y/Z), C = room, wTc = coordinate (high byte of the camera).
@@ -354,12 +357,19 @@ UpdateMove::
 .dtNz:
     ld [wMoveDt], a
     call ReadJoy
+    ldh a, [hJoy]                   ; debug cheat until pickups exist: Start = all keys
+    bit 7, a
+    jr z, .noCheat
+    ld a, 7
+    ld [wHaveKeys], a
+.noCheat:
     ; fall through
 
 ; hJoy and wMoveDt set: input -> turn/wish -> collide -> floor -> gravity.
 ApplyMove::
     call ApplyInput
     call ApplyWish
+    call TryDoorWish
     call UpdateFloor
     jp UpdateFall
 

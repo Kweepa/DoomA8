@@ -442,11 +442,13 @@ PlatsBlock:
     scf
     ret
 
-; Carry = blocked by a crate or solid platform (doors: not yet).
+; Carry = blocked by a crate, a solid platform or a locked door.
 SolidAt::
     call CratesBlock
     ret c
-    jp PlatsBlock
+    call PlatsBlock
+    ret c
+    jp DoorBlocks
 
 ; Carry = the player may stand at (wColX, wColZ).
 PosOk::
@@ -463,6 +465,8 @@ PosOk::
 
 ; Slide on X then Z by the accumulated wish. No movement while falling.
 ApplyWish::
+    xor a
+    ld [wDoorBlk], a
     ld a, [wFalling]
     and a
     ret nz
@@ -495,6 +499,9 @@ ApplyWish::
     ld [wCamX], a
     ld a, [wSaveX + 1]
     ld [wCamX + 1], a
+    ld a, [wDoorBlk]
+    or 1
+    ld [wDoorBlk], a
 .z:
     ld a, [wWishZ]
     ld b, a
@@ -525,6 +532,9 @@ ApplyWish::
     ld [wCamZ], a
     ld a, [wSaveX + 1]
     ld [wCamZ + 1], a
+    ld a, [wDoorBlk]
+    or 2
+    ld [wDoorBlk], a
     ret
 
 ; ---- floor -------------------------------------------------------------------------------

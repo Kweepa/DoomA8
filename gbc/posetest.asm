@@ -454,6 +454,8 @@ ENDC
     ld [wYaw], a
     ld a, [hl+]
     ld [wFloorY], a
+    ld a, [hl+]
+    ld [wTestKeys], a
     ld a, l
     ld [wPosePtr], a
     ld a, h
@@ -480,6 +482,8 @@ ENDC
 .sameLevel:
     ld a, [wTestRoom]
     call EnterRoom
+    ld a, [wTestKeys]
+    ld [wHaveKeys], a
     xor a
     ld [wFloorYL], a
     ld [wFloorSlope], a
@@ -535,6 +539,8 @@ ENDC
     or b
     call FletchByte
     ld a, [wYaw]
+    call FletchByte
+    ld a, [wRoom]
     call FletchByte
     ld a, [wStepCnt]
     dec a

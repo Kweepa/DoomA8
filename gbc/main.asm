@@ -80,6 +80,7 @@ Start:
     xor a
     ld [wPoseI], a
     ldh [hLastFrame], a
+    ld [wHaveKeys], a
     call LoadLevel
 
     ; Static test scene into bank 0 (shown until the demo loop replaces it).
