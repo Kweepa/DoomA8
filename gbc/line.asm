@@ -3,6 +3,25 @@
 
 INCLUDE "hw.inc"
 
+; HL += FB_STRIDE (next framebuffer column). A (the error term) is preserved via E.
+MACRO COLSTEP
+    ld e, a
+    ld a, l
+    add FB_STRIDE
+    ld l, a
+    jr nc, .nc\@
+    inc h
+.nc\@:
+    ld a, e
+ENDM
+
+; Base address of each framebuffer column (16 entries, 32-byte aligned).
+SECTION "colbase", ROM0, ALIGN[5]
+ColBase:
+FOR i, VIEW_COLS
+    dw FB + i * FB_STRIDE
+ENDR
+
 SECTION "line", ROM0
 
 ; B=x0 C=y0 D=x1 E=y1, all within the viewport (0..127, 0..111). Clobbers all.
@@ -24,11 +43,24 @@ DrawLine::
     srl a
     srl a
     srl a
-    add FB_HI
-    ldh [hPtrH], a
+    add a                           ; column * 2
+    add LOW(ColBase)
+    ld l, a
+    ld h, HIGH(ColBase)
+    ld a, [hl+]
+    ld h, [hl]
+    ld l, a                         ; HL = column base
     ld a, c
-    add a
+    add a                           ; y * 2
+    add l
+    ld l, a
+    ld a, h
+    adc 0
+    ld h, a
+    ld a, l
     ldh [hPtrL], a
+    ld a, h
+    ldh [hPtrH], a
     ld a, d
     sub b
     ld d, a                         ; D = dx

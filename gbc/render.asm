@@ -98,8 +98,8 @@ RenderScene::
     ld a, [hl]
     ld [wCos], a
 
-    ROT_UNIQUES SceneNUX, SceneUX, wCamX, 0, 16
-    ROT_UNIQUES SceneNUZ, SceneUZ, wCamZ, 32, 48
+    ROT_UNIQUES wSceneNUX, wSceneUX, wCamX, 0, 16
+    ROT_UNIQUES wSceneNUZ, wSceneUZ, wCamZ, 32, 48
 
     ; ---- columns -------------------------------------------------------
     xor a
@@ -109,7 +109,7 @@ RenderScene::
     add a
     ld c, a
     ld b, 0
-    ld hl, SceneCols
+    ld hl, wSceneCols
     add hl, bc
     ld a, [hl+]
     ld [wXid], a
@@ -237,7 +237,7 @@ RenderScene::
     ld a, [wI]
     inc a
     ld [wI], a
-    ld hl, SceneNC
+    ld hl, wSceneNC
     cp [hl]
     jp nz, .col
 
@@ -249,7 +249,7 @@ RenderScene::
     add a
     ld c, a
     ld b, 0
-    ld hl, SceneVerts
+    ld hl, wSceneVerts
     add hl, bc
     ld a, [hl+]
     ld [wXid], a                    ; column
@@ -387,7 +387,7 @@ RenderScene::
     ld a, [wI]
     inc a
     ld [wI], a
-    ld hl, SceneNV
+    ld hl, wSceneNV
     cp [hl]
     jp nz, .vert
 
@@ -399,7 +399,7 @@ RenderScene::
     add a
     ld c, a
     ld b, 0
-    ld hl, SceneEdges
+    ld hl, wSceneEdges
     add hl, bc
     ld a, [hl+]
     ld [wVa], a
@@ -438,7 +438,7 @@ RenderScene::
     ld a, [wI]
     inc a
     ld [wI], a
-    ld hl, SceneNE
+    ld hl, wSceneNE
     cp [hl]
     jp nz, .edge
     ret

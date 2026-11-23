@@ -25,7 +25,7 @@ SECTION "code", ROM0
 
 Start:
     di
-    ld sp, $E000                    ; top of WRAMX bank 1
+    ld sp, STACK_TOP                ; WRAM0 $CF00-$CFFF
 
 .waitVBlank:
     ldh a, [rLY]
@@ -76,22 +76,11 @@ Start:
     and $80
     ldh [hSpeed], a
 
-    ; Camera for the demo.
-    ld a, LOW(22 * 256 + 77)
-    ld [wCamX], a
-    ld a, HIGH(22 * 256 + 77)
-    ld [wCamX + 1], a
-    ld a, LOW(20 * 256 + 5)
-    ld [wCamZ], a
-    ld a, HIGH(20 * 256 + 5)
-    ld [wCamZ + 1], a
+    ; Level 0 (E1M1): map into WRAM bank 2, spawn camera, spawn room mesh.
     xor a
-    ld [wCamY], a
-    ld a, $18                       ; eye height 24
-    ld [wCamY + 1], a
-    xor a
-    ld [wYaw], a
     ld [wPoseI], a
+    ldh [hLastFrame], a
+    call LoadLevel
 
     ; Static test scene into bank 0 (shown until the demo loop replaces it).
     call ClearFB
@@ -111,6 +100,14 @@ ENDC
 
 IF DEF(POSETEST)
     call RunPoseTest
+ENDC
+
+IF DEF(MAPTEST)
+    call RunMapTest
+ENDC
+
+IF DEF(MOVETEST)
+    call RunMoveTest
 ENDC
 
 IF DEF(TEST_EXIT)
@@ -150,7 +147,7 @@ Demo:
     ld a, [wYaw]
     call PutHex
     ld hl, VRAM_MAP0 + 32 * 16 + 2
-    ldh a, [hSpeed]
+    ld a, [wRoom]
     call PutHex
 IF DEF(LIVETEST)
     ; Record the VBlank counter per iteration under a "LIVE" magic.
@@ -180,9 +177,8 @@ IF DEF(LIVETEST)
     jp LiveStop
 .noStop:
 ENDC
-    ld a, [wYaw]
-    add 2
-    ld [wYaw], a
+    call UpdateMove
+    call FindRoom
     jr Demo
 
 IF DEF(LIVETEST)
@@ -210,18 +206,16 @@ DrawTestSet::
     pop hl
     jr .next
 
-; a = value, hl = dest. Writes two hex-digit tiles (digit d = tile d*16+15).
+; a = value, hl = dest. Writes two hex-digit tiles (digit d = tile FONT_TILE0 + d).
 PutHex:
     ld b, a
     swap a
     and $0F
-    swap a
-    or $0F
+    add FONT_TILE0
     ld [hl+], a
     ld a, b
     and $0F
-    swap a
-    or $0F
+    add FONT_TILE0
     ld [hl], a
     ret
 

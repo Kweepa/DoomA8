@@ -4,4 +4,11 @@ INCLUDE "room_tables.inc"
 
 SECTION "scene", ROM0
 INCLUDE "scene.inc"
+IF DEF(POSETEST) || DEF(MOVETEST)
 INCLUDE "poses.inc"
+ENDC
+
+INCLUDE "maps.inc"
+IF DEF(MAPTEST)
+INCLUDE "maptest.inc"
+ENDC

@@ -58,9 +58,16 @@ def main():
     print("screenshot", img.size)
     bg = img.getpixel((0, 0))
     if live:
-        yaw = LIVE_YAW_STEP * (LIVE_FRAMES - 1)
-        expect = gr.render(LIVE_CAM[0], LIVE_CAM[1], yaw)
-        print("live: expecting yaw %d" % yaw)
+        # E1M1 spawn: room mesh from the cooker, camera at the spawn point, no pad input.
+        import gbc_genmap as gmap
+        lv = gmap.gm.load_level("E1M1")
+        payload = gmap.gm.cook_one(lv, "E1M1")
+        sx, sy, sz, rot, sroom = payload[17], payload[18], payload[19], payload[20], payload[21]
+        rooms = [o for o in lv["objects"] if o.get("kind") == "room"]
+        gr.set_scene(*gmap.room_mesh(rooms[sroom]))
+        yaw = (rot * 32) & 255
+        expect = gr.render((sx + 1) * 256, (sz + 1) * 256, yaw, (sy + 3) * 256)
+        print("live: E1M1 spawn room %d, cam (%d,%d,%d) yaw %d" % (sroom, sx + 1, sy + 3, sz + 1, yaw))
     else:
         expect = gl.reference_frame()
     got = set()

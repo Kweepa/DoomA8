@@ -19,6 +19,7 @@ DEF rHDMA2  EQU $FF52
 DEF rHDMA3  EQU $FF53
 DEF rHDMA4  EQU $FF54
 DEF rHDMA5  EQU $FF55
+DEF rSVBK   EQU $FF70             ; WRAM bank (1-7) at $D000-$DFFF
 DEF rBCPS   EQU $FF68
 DEF rBCPD   EQU $FF69
 DEF rIE     EQU $FFFF
@@ -37,16 +38,20 @@ DEF rROMB1  EQU $3000             ; ROM bank bit 8
 DEF VRAM_TILES  EQU $8000
 DEF VRAM_MAP0   EQU $9800
 
-; Viewport: 16 x 14 tiles = 128 x 112 px, column-major tiles, 256 B per column
-; (only the first 224 B are pixels; the tail pads each column to a page so
-; pixel (x,y) is H = FB_HI + (x>>3), L = y*2).
+; Viewport: 16 x 14 tiles = 128 x 112 px, column-major tiles. Column tx is 224 bytes
+; at FB + tx*224; pixel (x,y) is at column(x>>3) + y*2 (plane 0), bit 7-(x&7).
+; Tile id = tx*14 + ty, so the whole buffer is one contiguous DMA run of 224 blocks.
 DEF VIEW_COLS   EQU 16
 DEF VIEW_ROWS   EQU 14
 DEF VIEW_MAPX   EQU 2             ; BG map column of the viewport's left edge
 DEF FB          EQU $C000
 DEF FB_HI       EQU $C0
-DEF FB_SIZE     EQU $1000
-DEF BLANK_TILE  EQU 14            ; pad slot of column 0: always blank
+DEF FB_STRIDE   EQU 224           ; bytes per column
+DEF FB_SIZE     EQU FB_STRIDE * VIEW_COLS   ; 3584
+DEF VIEW_TILES  EQU VIEW_COLS * VIEW_ROWS   ; 224
+DEF BLANK_TILE  EQU VIEW_TILES    ; tile 224 = blank, 225.. = hex digits 0-F
+DEF FONT_TILE0  EQU VIEW_TILES + 1
+DEF STACK_TOP   EQU $D000         ; stack lives in WRAM0 $CF00-$CFFF (outside the WRAMX window)
 DEF FOCAL_HALF  EQU 40            ; FOCAL (80) / 2, for SMul16's >> 7
 
 ; Joypad byte (hJoy): active high.

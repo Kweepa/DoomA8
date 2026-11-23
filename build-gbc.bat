@@ -29,6 +29,14 @@ if /i "%~1"=="live" (
   set "DEFS=-D LIVETEST=1"
   set "NAME=doomgbc_live"
 )
+if /i "%~1"=="map" (
+  set "DEFS=-D TEST_EXIT=1 -D MAPTEST=1"
+  set "NAME=doomgbc_map"
+)
+if /i "%~1"=="move" (
+  set "DEFS=-D TEST_EXIT=1 -D MOVETEST=1"
+  set "NAME=doomgbc_move"
+)
 if /i "%~1"=="pose" (
   set "DEFS=-D TEST_EXIT=1 -D POSETEST=1"
   set "NAME=doomgbc_pose"
@@ -42,9 +50,11 @@ python tools\gbc_genlines.py gbc\build
 if errorlevel 1 exit /b 1
 python tools\gbc_room.py gbc\build
 if errorlevel 1 exit /b 1
+python tools\gbc_genmap.py gbc\build
+if errorlevel 1 exit /b 1
 
 set "OBJS="
-for %%F in (main vars line fb bench math render posetest data) do (
+for %%F in (main vars line fb bench math render posetest data input world) do (
   "%RGBDS%\rgbasm.exe" -Weverything %DEFS% -I gbc\ -I gbc\build\ -o gbc\build\%%F.o gbc\%%F.asm
   if errorlevel 1 exit /b 1
   call set "OBJS=%%OBJS%% gbc\build\%%F.o"
