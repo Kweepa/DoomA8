@@ -77,6 +77,10 @@ LoadRoomMesh::
 
 ; A = room. Makes it the current room: mesh for the renderer, collision cache.
 EnterRoom::
+    ld b, a
+    ld a, [wLevelBank]
+    ld [rROMB0], a
+    ld a, b
     push af
     call LoadRoomMesh
     pop af
@@ -108,6 +112,7 @@ LoadLevel::
     ld hl, LevelBank
     add hl, de
     ld a, [hl]
+    ld [wLevelBank], a
     ld [rROMB0], a
     ld a, [wLevel]
     add a
@@ -143,6 +148,17 @@ LoadLevel::
     ld [wCollTab], a
     ld a, [hl]
     ld [wCollTab + 1], a
+    ld hl, LevelObjTab
+    add hl, bc
+    ld a, [hl+]
+    ld [wObjTab], a
+    ld a, [hl]
+    ld [wObjTab + 1], a
+    ld a, [ObjBank0]
+    ld b, a
+    ld a, [wLevel]
+    add b
+    ld [wObjBank], a
 
     ; header -> wMapHdr (bank 1)
     ld a, [wLoadSrc]
@@ -222,6 +238,14 @@ LoadLevel::
     ld [wFallVL], a
     ld [wFallVH], a
     ld [wFallAcc], a
+    ld hl, wThTaken
+    ld b, 32
+    xor a
+.clrTh:
+    ld [hl+], a
+    dec b
+    jr nz, .clrTh
+    call LoadEnemies
     ld a, [wMapHdr + H_SPAWN_ROOM]
     jp EnterRoom
 
@@ -347,15 +371,19 @@ UpdateMove::
     ld a, b
     ldh [hLastFrame], a
     sub c
-    cp 5
+    cp 13
     jr c, .dtOk
-    ld a, 4
+    ld a, 12
 .dtOk:
     and a
     jr nz, .dtNz
     inc a
 .dtNz:
     ld [wMoveDt], a
+    ld b, a
+    ld a, [wSpin]
+    add b
+    ld [wSpin], a
     call ReadJoy
     ldh a, [hJoy]                   ; debug cheat until pickups exist: Start = all keys
     bit 7, a

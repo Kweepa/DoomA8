@@ -58,23 +58,49 @@ def main():
     print("screenshot", img.size)
     bg = img.getpixel((0, 0))
     if live:
-        # E1M1 spawn: room mesh from the cooker, camera at the spawn point, no pad input.
-        import gbc_genmap as gmap
-        lv = gmap.gm.load_level("E1M1")
-        payload = gmap.gm.cook_one(lv, "E1M1")
+        # E1M1 spawn room: room mesh + objects + things + enemies, camera at the spawn point.
+        import gbc_scene as gsc
+        sd = gsc.SceneData("E1M1")
+        payload = sd.L.p
         sx, sy, sz, rot, sroom = payload[17], payload[18], payload[19], payload[20], payload[21]
-        rooms = [o for o in lv["objects"] if o.get("kind") == "room"]
-        gr.set_scene(*gmap.room_mesh(rooms[sroom]))
         yaw = (rot * 32) & 255
-        expect = gr.render((sx + 1) * 256, (sz + 1) * 256, yaw, (sy + 3) * 256)
-        print("live: E1M1 spawn room %d, cam (%d,%d,%d) yaw %d" % (sroom, sx + 1, sy + 3, sz + 1, yaw))
+        spin = 0
+        d = open(state, "rb").read()
+        i = d.find(b"LIVE")
+        if i >= 0:
+            spin = d[i + 6 + 8]                      # wSpin saved at LiveStop (wPoseOut[8])
+        expect = gsc.scene_pixels(sd, sroom, (sx + 1) * 256, (sz + 1) * 256, (sy + 3) * 256, yaw, spin)
+        print("live: E1M1 spawn room %d, cam (%d,%d,%d) yaw %d spin %d" % (sroom, sx + 1, sy + 3, sz + 1, yaw, spin))
     else:
         expect = gl.reference_frame()
     got = set()
+    weapon_got = set()
     for y in range(gl.VIEW_H):
         for x in range(gl.VIEW_W):
-            if img.getpixel((VIEW_X0 + x, y)) != bg:
-                got.add((x, y))
+            c = img.getpixel((VIEW_X0 + x, y))
+            if c != bg:
+                if live and min(c) >= 248:           # OBJ palette 0 ink (white): the weapon sprite
+                    weapon_got.add((x, y))
+                else:
+                    got.add((x, y))
+    if live:
+        import gbc_genwpn as gw
+        name = "PISTOL"                             # WpnInit selects the pistol; no input in the test
+        bits = gw.scale(gw.load_ink(dict(gw.BODY)["pistol_lines.png" if False else "PISTOL"] if False else "pistol_lines.png"))
+        h, w = len(bits), len(bits[0])
+        ox, oy = (128 - w) // 2, 112 - h
+        weapon_exp = {(ox + x, oy + y) for y in range(h) for x in range(w) if bits[y][x]}
+        weapon_exp = {(x, y) for (x, y) in weapon_exp if 0 <= x < 128 and 0 <= y < 112}
+        wmiss, wextra = sorted(weapon_exp - weapon_got), sorted(weapon_got - weapon_exp)
+        print("weapon sprite: expected %d px, drawn %d, missing %d, extra %d" %
+              (len(weapon_exp), len(weapon_got), len(wmiss), len(wextra)))
+        # the sprite covers room lines under it
+        expect = expect - weapon_exp
+        if wmiss or wextra:
+            print("  weapon missing e.g.", wmiss[:8], "extra e.g.", wextra[:8])
+            wfail = True
+        else:
+            wfail = False
     missing = sorted(expect - got)
     extra = sorted(got - expect)
     print("expected %d px, drawn %d px, missing %d, extra %d" %
@@ -87,7 +113,7 @@ def main():
     stray = [(x, y) for y in range(gl.VIEW_H) for x in list(range(0, VIEW_X0)) +
              list(range(VIEW_X0 + gl.VIEW_W, 160)) if img.getpixel((x, y)) != bg]
     print("stray border px:", len(stray))
-    ok = not missing and not extra and not stray
+    ok = not missing and not extra and not stray and not (live and wfail)
     print("PASS" if ok else "FAIL")
     sys.exit(0 if ok else 1)
 

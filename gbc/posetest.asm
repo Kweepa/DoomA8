@@ -255,9 +255,12 @@ RunMapTest::
     ld a, [wRoom]
     ld [hl], a
     ld a, [wTestRoom]
-    call LoadRoomMesh
+    call EnterRoom
+    ld a, [wTestCnt]
+    ld [wSpin], a
     call ClearFB
     call RenderScene
+    call DrawWorldObjects
     call FletcherFB
     ld a, [wOutPtr]
     ld l, a
@@ -624,5 +627,578 @@ IF DEF(WORLDTIME)
     ld a, b
     ld [wPoseTicks + 1], a
 ENDC
+    ret
+ENDC
+
+IF DEF(ENTTEST)
+; Entity renders: per case, point DrawEntity at an item / enemy-frame mesh in the entity bank,
+; clear, draw, Fletcher the framebuffer. One word per case after the "POSE" magic.
+; Case: db kind, idx, frame; dw camx, camz, camy; db camyaw; dw ox, oz, oy; db objyaw  (17 bytes)
+RunEntTest::
+    ld hl, wPoseMagic
+    ld a, 'P'
+    ld [hl+], a
+    ld a, 'O'
+    ld [hl+], a
+    ld a, 'S'
+    ld [hl+], a
+    ld a, 'E'
+    ld [hl], a
+    ld a, [EntBank]
+    ld [rROMB0], a
+IF DEF(ENTTIME)
+    ld a, IEF_VBLANK | IEF_TIMER
+    ldh [rIE], a
+    ei
+    call TimerStart
+ENDC
+    ld hl, EntTestTab
+    ld a, l
+    ld [wPosePtr], a
+    ld a, h
+    ld [wPosePtr + 1], a
+    ld hl, wPoseOut
+    ld a, l
+    ld [wOutPtr], a
+    ld a, h
+    ld [wOutPtr + 1], a
+    xor a
+    ld [wTestCnt], a
+.case:
+    ld a, [wPosePtr]
+    ld l, a
+    ld a, [wPosePtr + 1]
+    ld h, a
+    ld a, [hl+]
+    ld [wTestRoom], a               ; kind
+    ld a, [hl+]
+    ld c, a                         ; idx
+    ld a, [hl+]
+    ld [wTestKeys], a               ; frame
+    ld a, [hl+]
+    ld [wCamX], a
+    ld a, [hl+]
+    ld [wCamX + 1], a
+    ld a, [hl+]
+    ld [wCamZ], a
+    ld a, [hl+]
+    ld [wCamZ + 1], a
+    ld a, [hl+]
+    ld [wCamY], a
+    ld a, [hl+]
+    ld [wCamY + 1], a
+    ld a, [hl+]
+    ld [wYaw], a
+    ld a, [hl+]
+    ld [wEntOX], a
+    ld a, [hl+]
+    ld [wEntOX + 1], a
+    ld a, [hl+]
+    ld [wEntOZ], a
+    ld a, [hl+]
+    ld [wEntOZ + 1], a
+    ld a, [hl+]
+    ld [wEntOY], a
+    ld a, [hl+]
+    ld [wEntOY + 1], a
+    ld a, [hl+]
+    ld [wEntYaw], a
+    ld a, l
+    ld [wPosePtr], a
+    ld a, h
+    ld [wPosePtr + 1], a
+    ; mesh header
+    ld a, [wTestRoom]
+    and a
+    jr nz, .enemy
+    ld b, 0
+    ld hl, ItemTab
+    add hl, bc
+    add hl, bc
+    ld a, [hl+]
+    ld h, [hl]
+    ld l, a                         ; HL = item mesh
+    ld a, [hl+]
+    ld [wEntNV], a
+    ld a, [hl+]
+    ld [wEntNE], a
+    ld a, [hl+]
+    ld [wEntShift], a
+    ld a, [hl+]
+    ld [wEntRadius], a
+    ld a, l
+    ld [wEntVP], a
+    ld a, h
+    ld [wEntVP + 1], a              ; verts follow the 4-byte header
+    ld a, [wEntNV]
+    ld c, a
+    add a
+    add c                           ; nv * 3
+    ld c, a
+    ld b, 0
+    add hl, bc
+    ld a, l
+    ld [wEntEP], a
+    ld a, h
+    ld [wEntEP + 1], a
+    jr .draw
+.enemy:
+    ld b, 0
+    ld hl, EnemyTab
+    add hl, bc
+    add hl, bc
+    ld a, [hl+]
+    ld h, [hl]
+    ld l, a                         ; HL = enemy record
+    ld a, [hl+]
+    ld [wEntNV], a
+    ld a, [hl+]
+    ld [wEntNE], a
+    ld a, [hl+]
+    ld [wEntShift], a
+    ld a, [hl+]
+    ld [wEntRadius], a
+    ld bc, 4 + 10                   ; skip nframes, hp, block_r, weapon_vert + clip table
+    add hl, bc
+    ld a, l
+    ld [wEntEP], a
+    ld a, h
+    ld [wEntEP + 1], a
+    ld a, [wEntNE]
+    add a
+    ld c, a
+    ld b, 0
+    add hl, bc                      ; HL = frame 0
+    ld a, [wEntNV]
+    ld c, a
+    add a
+    add c
+    ld c, a                         ; bytes per frame
+    ld a, [wTestKeys]
+.frame:
+    and a
+    jr z, .gotFrame
+    ld b, 0
+    add hl, bc
+    dec a
+    jr .frame
+.gotFrame:
+    ld a, l
+    ld [wEntVP], a
+    ld a, h
+    ld [wEntVP + 1], a
+.draw:
+IF DEF(ENTTIME)
+    call DrawEntity
+ELSE
+    call ClearFB
+    call DrawEntity
+    call FletcherFB
+ENDC
+    ld a, [wOutPtr]
+    ld l, a
+    ld a, [wOutPtr + 1]
+    ld h, a
+    ld a, d
+    ld [hl+], a
+    ld a, e
+    ld [hl+], a
+    ld a, l
+    ld [wOutPtr], a
+    ld a, h
+    ld [wOutPtr + 1], a
+    ld a, [wTestCnt]
+    inc a
+    ld [wTestCnt], a
+    cp NumEntTests
+    jp nz, .case
+IF DEF(ENTTIME)
+    call TimerRead
+    ld a, c
+    ld [wPoseTicks], a
+    ld a, b
+    ld [wPoseTicks + 1], a
+ENDC
+    ret
+ENDC
+
+IF DEF(SMOKE)
+; Headless gameplay scenario (tools/gbc_smoke.py): load a level / room, place the player, run
+; SmokeFrames game updates with a scripted pad (no drawing), dump the state after the "POSE"
+; magic. Scenario: db level, room; dw camx, camz, camy; db yaw, floor_y, keys, wmask, wcur, hp,
+; bullets, shells, rockets, frames, dt ; then frames bytes of pad state.
+RunSmoke::
+    ld hl, wPoseMagic
+    ld a, 'P'
+    ld [hl+], a
+    ld a, 'O'
+    ld [hl+], a
+    ld a, 'S'
+    ld [hl+], a
+    ld a, 'E'
+    ld [hl], a
+    ld hl, SmokeScenario
+    ld a, [hl+]
+    ld b, a                         ; level
+    ld a, [hl]
+    ld [wTestRoom], a
+    ld a, b
+    call LoadLevel
+    call WpnInit
+    ld a, [wTestRoom]
+    call EnterRoom
+    ld hl, SmokeScenario + 2
+    ld a, [hl+]
+    ld [wCamX], a
+    ld a, [hl+]
+    ld [wCamX + 1], a
+    ld a, [hl+]
+    ld [wCamZ], a
+    ld a, [hl+]
+    ld [wCamZ + 1], a
+    ld a, [hl+]
+    ld [wCamY], a
+    ld a, [hl+]
+    ld [wCamY + 1], a
+    ld a, [hl+]
+    ld [wYaw], a
+    ld a, [hl+]
+    ld [wFloorY], a
+    ld a, [hl+]
+    ld [wHaveKeys], a
+    ld a, [hl+]
+    ld [wHaveWpn], a
+    ld a, [hl+]
+    ld [wWpnCur], a
+    ld a, [hl+]
+    ld [wHP], a
+    ld a, [hl+]
+    ld [wAmmoBul], a
+    ld a, [hl+]
+    ld [wAmmoShl], a
+    ld a, [hl+]
+    ld [wAmmoRkt], a
+    ld a, [hl+]
+    ld [wTestCnt], a                ; frames
+    ld a, [hl+]
+    ld [wTestCnt + 1], a            ; dt
+    ld a, l
+    ld [wScriptPtr], a
+    ld a, h
+    ld [wScriptPtr + 1], a
+    xor a
+    ld [wStepCnt], a
+    ld [wSpin], a
+.frame:
+    ld a, [wScriptPtr]
+    ld l, a
+    ld a, [wScriptPtr + 1]
+    ld h, a
+    ld a, [hl+]
+    ldh [hJoy], a
+    ld a, l
+    ld [wScriptPtr], a
+    ld a, h
+    ld [wScriptPtr + 1], a
+    ld a, [wTestCnt + 1]
+    ld [wMoveDt], a
+    ld b, a
+    ld a, [wSpin]
+    add b
+    ld [wSpin], a
+    call ApplyMove
+    call WpnUpdate
+    call PickupScan
+    call CombatUpdate
+    ld a, [wStepCnt]
+    inc a
+    ld [wStepCnt], a
+    ld b, a
+    ld a, [wTestCnt]
+    cp b
+    jr nz, .frame
+    ; ---- dump ----
+    ld hl, wPoseOut
+    ld a, [wHP]
+    ld [hl+], a
+    ld a, [wArmor]
+    ld [hl+], a
+    ld a, [wKills]
+    ld [hl+], a
+    ld a, [wAmmoBul]
+    ld [hl+], a
+    ld a, [wAmmoShl]
+    ld [hl+], a
+    ld a, [wAmmoRkt]
+    ld [hl+], a
+    ld a, [wHaveWpn]
+    ld [hl+], a
+    ld a, [wHaveKeys]
+    ld [hl+], a
+    ld a, [wWpnCur]
+    ld [hl+], a
+    ld a, [wRoom]
+    ld [hl+], a
+    ld a, [wCamX]
+    ld [hl+], a
+    ld a, [wCamX + 1]
+    ld [hl+], a
+    ld a, [wCamZ]
+    ld [hl+], a
+    ld a, [wCamZ + 1]
+    ld [hl+], a
+    ld a, [wCamY]
+    ld [hl+], a
+    ld a, [wCamY + 1]
+    ld [hl+], a
+    ld a, [wFloorY]
+    ld [hl+], a
+    ld a, [wFalling]
+    ld [hl+], a
+    ld a, [wLevel]
+    ld [hl+], a
+    ld a, [wEnN]
+    ld [hl+], a                     ; offset 19: enemy count
+    ld a, [wPkN]
+    ld [hl+], a
+    ld a, [wPkI]
+    ld [hl+], a
+    ld a, [wPkIdx]
+    ld [hl+], a
+    ld a, [wPkType]
+    ld [hl+], a
+    ld a, [wObjBank]
+    ld [hl+], a
+    ld a, [wLevelBank]
+    ld [hl+], a
+    xor a
+    ld [hl+], a
+    ld [hl+], a
+    ld [hl+], a
+    ld [hl+], a
+    ld [hl+], a
+    ld [hl+], a
+                                    ; debug bytes 20..25, pad to 32
+    ld de, wThTaken
+    ld b, 32
+.th:
+    ld a, [de]
+    inc de
+    ld [hl+], a
+    dec b
+    jr nz, .th
+    ld de, wEnState
+    ld b, 24
+.es:
+    ld a, [de]
+    inc de
+    ld [hl+], a
+    dec b
+    jr nz, .es
+    ld de, wEnHp
+    ld b, 24
+.eh:
+    ld a, [de]
+    inc de
+    ld [hl+], a
+    dec b
+    jr nz, .eh
+    ld de, wEnX
+    ld b, 24
+.ex:
+    ld a, [de]
+    inc de
+    ld [hl+], a
+    dec b
+    jr nz, .ex
+    ld de, wEnZ
+    ld b, 24
+.ez:
+    ld a, [de]
+    inc de
+    ld [hl+], a
+    dec b
+    jr nz, .ez
+    ret
+ENDC
+
+IF DEF(PICKUNIT)
+; Apply every pickup type in PickUnitTab to a fresh player; after each, store
+; (hp, armor, bullets, shells, rockets, weapons, keys) -> wPoseOut, 7 bytes per step.
+RunPickUnit::
+    ld hl, wPoseMagic
+    ld a, 'P'
+    ld [hl+], a
+    ld a, 'O'
+    ld [hl+], a
+    ld a, 'S'
+    ld [hl+], a
+    ld a, 'E'
+    ld [hl], a
+    call WpnInit
+    xor a
+    ld [wHaveKeys], a
+    ld hl, PickUnitTab
+    ld a, l
+    ld [wScriptPtr], a
+    ld a, h
+    ld [wScriptPtr + 1], a
+    ld hl, wPoseOut
+    ld a, l
+    ld [wOutPtr], a
+    ld a, h
+    ld [wOutPtr + 1], a
+    xor a
+    ld [wTestCnt], a
+.next:
+    ld a, [wScriptPtr]
+    ld l, a
+    ld a, [wScriptPtr + 1]
+    ld h, a
+    ld a, [hl+]
+    ld b, a
+    ld a, l
+    ld [wScriptPtr], a
+    ld a, h
+    ld [wScriptPtr + 1], a
+    ld a, b
+    call ApplyPickup
+    ld a, [wOutPtr]
+    ld l, a
+    ld a, [wOutPtr + 1]
+    ld h, a
+    ld a, [wHP]
+    ld [hl+], a
+    ld a, [wArmor]
+    ld [hl+], a
+    ld a, [wAmmoBul]
+    ld [hl+], a
+    ld a, [wAmmoShl]
+    ld [hl+], a
+    ld a, [wAmmoRkt]
+    ld [hl+], a
+    ld a, [wHaveWpn]
+    ld [hl+], a
+    ld a, [wHaveKeys]
+    ld [hl+], a
+    ld a, l
+    ld [wOutPtr], a
+    ld a, h
+    ld [wOutPtr + 1], a
+    ld a, [wTestCnt]
+    inc a
+    ld [wTestCnt], a
+    cp NumPickUnit
+    jr nz, .next
+    ret
+ENDC
+
+IF DEF(COMBUNIT)
+; AngleTo and PlayerDamage against tools/gbc_game.py: one angle byte per angle case, then
+; (hp, armor) per damage case, all into wPoseOut.
+RunCombUnit::
+    ld hl, wPoseMagic
+    ld a, 'P'
+    ld [hl+], a
+    ld a, 'O'
+    ld [hl+], a
+    ld a, 'S'
+    ld [hl+], a
+    ld a, 'E'
+    ld [hl], a
+    ld hl, AngCases
+    ld a, l
+    ld [wScriptPtr], a
+    ld a, h
+    ld [wScriptPtr + 1], a
+    ld hl, wPoseOut
+    ld a, l
+    ld [wOutPtr], a
+    ld a, h
+    ld [wOutPtr + 1], a
+    ld a, LOW(NumAngCases)
+    ld [wTestCnt], a
+    ld a, HIGH(NumAngCases)
+    ld [wTestCnt + 1], a
+.ang:
+    ld a, [wScriptPtr]
+    ld l, a
+    ld a, [wScriptPtr + 1]
+    ld h, a
+    ld a, [hl+]
+    ld [wDx], a
+    ld a, [hl+]
+    ld [wDx + 1], a
+    ld a, [hl+]
+    ld [wDz], a
+    ld a, [hl+]
+    ld [wDz + 1], a
+    ld a, l
+    ld [wScriptPtr], a
+    ld a, h
+    ld [wScriptPtr + 1], a
+    call AngleTo
+    ld b, a
+    ld a, [wOutPtr]
+    ld l, a
+    ld a, [wOutPtr + 1]
+    ld h, a
+    ld a, b
+    ld [hl+], a
+    ld a, l
+    ld [wOutPtr], a
+    ld a, h
+    ld [wOutPtr + 1], a
+    ld a, [wTestCnt]
+    sub 1
+    ld [wTestCnt], a
+    ld a, [wTestCnt + 1]
+    sbc 0
+    ld [wTestCnt + 1], a
+    ld b, a
+    ld a, [wTestCnt]
+    or b
+    jr nz, .ang
+    ; damage cases
+    ld hl, DmgCases
+    ld a, l
+    ld [wScriptPtr], a
+    ld a, h
+    ld [wScriptPtr + 1], a
+    ld a, NumDmgCases
+    ld [wTestCnt], a
+.dmg:
+    ld a, [wScriptPtr]
+    ld l, a
+    ld a, [wScriptPtr + 1]
+    ld h, a
+    ld a, [hl+]
+    ld [wHP], a
+    ld a, [hl+]
+    ld [wArmor], a
+    ld b, [hl]
+    inc hl
+    ld a, l
+    ld [wScriptPtr], a
+    ld a, h
+    ld [wScriptPtr + 1], a
+    ld a, b
+    call PlayerDamage
+    ld a, [wOutPtr]
+    ld l, a
+    ld a, [wOutPtr + 1]
+    ld h, a
+    ld a, [wHP]
+    ld [hl+], a
+    ld a, [wArmor]
+    ld [hl+], a
+    ld a, l
+    ld [wOutPtr], a
+    ld a, h
+    ld [wOutPtr + 1], a
+    ld a, [wTestCnt]
+    dec a
+    ld [wTestCnt], a
+    jr nz, .dmg
     ret
 ENDC

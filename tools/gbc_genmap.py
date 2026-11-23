@@ -113,6 +113,15 @@ def db(vals, per=16):
     return "\n".join(out)
 
 
+def map_slice():
+    """Optional env GBC_MSLICE=a:b selects a slice of the scene tests (ROM0 holds one slice at a time)."""
+    spec = os.environ.get("GBC_MSLICE")
+    if not spec:
+        return None
+    a, b = spec.split(":")
+    return int(a), int(b)
+
+
 def map_tests(levels_filter=None):
     """[(level_idx, room_idx, camx, camz, camy, yaw)]: every room of every level from its
     centre (8.8, with fractional offsets) at two yaws. Used by MAPTEST and gbc_maptest.py."""
@@ -133,7 +142,8 @@ def map_tests(levels_filter=None):
             for yaw in (13, 141):
                 out.append((li, ri, camx, camz, camy, yaw))
         li += 1
-    return out
+    sl = map_slice()
+    return out[sl[0]:sl[1]] if sl else out
 
 
 def main():

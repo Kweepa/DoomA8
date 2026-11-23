@@ -41,6 +41,22 @@ if /i "%~1"=="world" (
   set "DEFS=-D TEST_EXIT=1 -D WORLDTEST=1"
   set "NAME=doomgbc_world"
 )
+if /i "%~1"=="ent" (
+  set "DEFS=-D TEST_EXIT=1 -D ENTTEST=1"
+  set "NAME=doomgbc_ent"
+)
+if /i "%~1"=="smoke" (
+  set "DEFS=-D TEST_EXIT=1 -D SMOKE=1"
+  set "NAME=doomgbc_smoke"
+)
+if /i "%~1"=="pick" (
+  set "DEFS=-D TEST_EXIT=1 -D PICKUNIT=1"
+  set "NAME=doomgbc_pick"
+)
+if /i "%~1"=="comb" (
+  set "DEFS=-D TEST_EXIT=1 -D COMBUNIT=1"
+  set "NAME=doomgbc_comb"
+)
 if /i "%~1"=="pose" (
   set "DEFS=-D TEST_EXIT=1 -D POSETEST=1"
   set "NAME=doomgbc_pose"
@@ -59,9 +75,17 @@ python tools\gbc_genmap.py gbc\build
 if errorlevel 1 exit /b 1
 python tools\gbc_genworld.py gbc\build
 if errorlevel 1 exit /b 1
+python tools\gbc_genent.py gbc\build
+if errorlevel 1 exit /b 1
+python tools\gbc_genobj.py gbc\build
+if errorlevel 1 exit /b 1
+python tools\gbc_genwpn.py gbc\build
+if errorlevel 1 exit /b 1
+python tools\gbc_game.py gbc\build
+if errorlevel 1 exit /b 1
 
 set "OBJS="
-for %%F in (main vars line fb bench math render posetest data input world collide doors) do (
+for %%F in (main vars line fb bench math render posetest data input world collide doors entity objects wpn combat ai) do (
   "%RGBDS%\rgbasm.exe" -Weverything %DEFS% -I gbc\ -I gbc\build\ -o gbc\build\%%F.o gbc\%%F.asm
   if errorlevel 1 exit /b 1
   call set "OBJS=%%OBJS%% gbc\build\%%F.o"

@@ -391,7 +391,17 @@ RenderScene::
     cp [hl]
     jp nz, .vert
 
-    ; ---- edges ---------------------------------------------------------
+    ld a, [wSceneNE]
+    ld [wEdgeN], a
+    ld a, LOW(wSceneEdges)
+    ld [wEdgePtr], a
+    ld a, HIGH(wSceneEdges)
+    ld [wEdgePtr + 1], a
+    ; fall through
+
+; Near-clip, screen-clip and plot every edge of wScene (NE / Edges) using the vertex arrays
+; (wVerts: VX VY VZ VSX VSY VF) already filled by RenderScene or DrawEntity.
+DrawEdges::
     xor a
     ld [wI], a
 .edge:
@@ -399,7 +409,10 @@ RenderScene::
     add a
     ld c, a
     ld b, 0
-    ld hl, wSceneEdges
+    ld a, [wEdgePtr]
+    ld l, a
+    ld a, [wEdgePtr + 1]
+    ld h, a
     add hl, bc
     ld a, [hl+]
     ld [wVa], a
@@ -438,7 +451,7 @@ RenderScene::
     ld a, [wI]
     inc a
     ld [wI], a
-    ld hl, wSceneNE
+    ld hl, wEdgeN
     cp [hl]
     jp nz, .edge
     ret

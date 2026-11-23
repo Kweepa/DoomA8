@@ -32,6 +32,8 @@ hT2::        ds 1
 hT3::        ds 1
 hR::         ds 2                   ; reciprocal for ProjectMul
 hS::         ds 1                   ; shift for ProjectMul
+hSh::        ds 1                   ; SMulSh8 product shift
+hRnd::        ds 1                   ; LFSR state (never 0)
 
 ; Framebuffer: 16 columns x 224 B at $C000-$CDFF. $CE00-$CEFF is free (hot vars);
 ; the stack owns $CF00-$CFFF (STACK_TOP = $D000).
@@ -214,3 +216,175 @@ wHaveKeys::   ds 1                  ; HAVE_YELLOW 1 / HAVE_BLUE 2 / HAVE_RED 4
 wDoorBlk::    ds 1                  ; bit0 = X move rejected, bit1 = Z
 wDoorI::      ds 1
 wTdwSave::    ds 4
+
+; Entity draw state (entity.asm)
+SECTION "entvars", WRAMX, BANK[1]
+wEntOX::      ds 2
+wEntOZ::      ds 2
+wEntOY::      ds 2
+wEntYaw::     ds 1
+wEntVP::      ds 2                  ; local vertex array (signed x,y,z bytes)
+wEntEP::      ds 2                  ; edge array (a,b bytes)
+wEntNV::      ds 1
+wEntNE::      ds 1
+wEntShift::   ds 1                  ; S: local units are 2^-S world units
+wEntRadius::  ds 1
+wEntSh::      ds 1
+wEntX0::      ds 2
+wEntY0::      ds 2
+wEntZ0::      ds 2
+wEntX::       ds 2
+wEntY::       ds 2
+wEntZ::       ds 2
+wEntAX::      ds 2
+wEntAZ::      ds 2
+wEntSin::     ds 1
+wEntCos::     ds 1
+wEntI::       ds 1
+wEntLX::      ds 1
+wEntLY::      ds 1
+wEntLZ::      ds 1
+wEntCur::     ds 2
+
+; World objects / enemies (objects.asm)
+SECTION "objvars", WRAMX, BANK[1]
+wObjTab::     ds 2                  ; ROM pointer: per-room static/thing lists (object bank)
+wObjBank::    ds 1
+wLevelBank::  ds 1
+wObjN::       ds 1
+wObjI::       ds 1
+wObjPtr::     ds 2
+wTmpMesh::    ds 2
+wTmpKind::    ds 1
+wTmpAux::     ds 1
+wTmpFrame::   ds 1
+wSpin::       ds 1                  ; animation counter (VBlanks)
+wEdgeN::      ds 1                  ; edge list for DrawEdges
+wEdgePtr::    ds 2
+wThTaken::    ds 32
+wEnN::        ds 1
+wEnX::        ds 24
+wEnY::        ds 24
+wEnZ::        ds 24
+wEnType::     ds 24
+wEnRoom::     ds 24
+wEnYaw::      ds 24
+wEnState::    ds 24
+wEnFrame::    ds 24
+wEnHp::       ds 24
+wEnXL::       ds 24
+wEnZL::       ds 24
+wEnTimer::    ds 24
+wEnCool::     ds 24
+
+; Player / weapons (wpn.asm)
+SECTION "wpnvars", WRAMX, BANK[1]
+wHP::         ds 1
+wArmor::      ds 1
+wKills::      ds 1
+wHaveWpn::    ds 1                  ; bit per weapon id
+wWpnCur::     ds 1
+wAmmoNone::   ds 1                  ; always 0 (ammo slot of weapons that need none)
+wAmmoBul::    ds 1
+wAmmoShl::    ds 1
+wAmmoRkt::    ds 1
+wWpnTimer::   ds 1                  ; VBlanks until the next shot
+wWpnAnim::    ds 1
+wWpnAnimLen:: ds 1
+wFlashTimer:: ds 1
+wFlashSel::   ds 1
+wWpnSelPrev:: ds 1
+wBobPhase::   ds 1
+wFireEvent::  ds 1                  ; set by WpnUpdate when a shot fires this frame
+wOamUsed::    ds 1
+wUsedNow::    ds 1
+wLoadedBody:: ds 1
+wLoadedFlash:: ds 1
+wBodyFrame::  ds 1
+wFlashFrame:: ds 1
+wBodyN::      ds 1
+wBodyW::      ds 1
+wBodyH::      ds 1
+wFlashN::     ds 1
+wFlashW::     ds 1
+wFlashH::     ds 1
+wWpnW::       ds 1
+wWpnH::       ds 1
+wBodyPlace::  ds 32
+wFlashPlace:: ds 16
+wBobX::       ds 1
+wBobY::       ds 1
+wKick::       ds 1
+wOx::         ds 1
+wOy::         ds 1
+wFx::         ds 1
+wFy::         ds 1
+wCnt::        ds 1
+wTile::       ds 1
+wDec::        ds 3
+wHud::        ds 12
+wPkN::        ds 1
+wPkI::        ds 1
+wPkIdx::      ds 1
+wPkType::     ds 1
+wEx::         ds 1
+wExL::        ds 1
+wEz::         ds 1
+wEzL::        ds 1
+wDx::         ds 2
+wDz::         ds 2
+wDist::       ds 2
+wAng::        ds 1
+wAngSw::      ds 1
+wDmg::        ds 1
+wShRange::    ds 1
+wShMin::      ds 1
+wShMask::     ds 1
+wShSplash::   ds 1
+wShDmg::      ds 1
+wBestF::      ds 2
+wBestI::      ds 1
+wTgtI::       ds 1
+wTgtX::       ds 1
+wTgtZ::       ds 1
+wParam::      ds 2
+wMvX::        ds 2
+wMvZ::        ds 2
+wNx::         ds 1
+wNxL::        ds 1
+wNz::         ds 1
+wNzL::        ds 1
+wDeadTimer::  ds 1
+
+; Enemy AI + fireballs (gbc/ai.asm). $CE00-$CEFF is the free page between the framebuffer and the stack.
+SECTION "aivars", WRAM0[$CE00]
+wEnDir::      ds 24                  ; walk octant 0..7 (0 = +z, 2 = +x), $FF = none yet
+wEnStep::     ds 24                  ; VBlanks walked in the current direction
+wEnAtk::      ds 24                  ; attack kind: 0 melee / hitscan, 1 fireball
+wPrOn::       ds 4
+wPrFl::       ds 4                   ; bit 0: baron fireball
+wPrRoom::     ds 4
+wPrXL::       ds 4
+wPrX::        ds 4
+wPrZL::       ds 4
+wPrZ::        ds 4
+wPrY::        ds 4                   ; chest height (cells)
+wPrFlY::      ds 4                   ; floor of the thrower
+wPrVXL::      ds 4                   ; 8.8 per VBlank
+wPrVXH::      ds 4
+wPrVZL::      ds 4
+wPrVZH::      ds 4
+wPrLife::     ds 4
+wAiI::        ds 1
+wAiT::        ds 1
+wAiK::        ds 1
+wAiN::        ds 1
+wAiTry::      ds 5
+wAiO::        ds 4                   ; position before a step: x, xl, z, zl
+wLpXL::       ds 1
+wLpX::        ds 1
+wLpZL::       ds 1
+wLpZ::        ds 1
+wLsx::        ds 1
+wLsz::        ds 1
+wCellFy::     ds 1

@@ -216,6 +216,15 @@ def clip_line(x0, y0, x1, y1):
     return None
 
 
+def project_vert(X, Y, Z):
+    """(X, Y, Z, front, sx, sy) for a view-space vertex (8.8 units)."""
+    if Z >= ZCLIP:
+        sh, zn = norm(Z)
+        R = RECIP[zn - 128]
+        return (X, Y, Z, True, CX + project(X, R, sh), CY - project(Y, R, sh))
+    return (X, Y, Z, False, 0, 0)
+
+
 def segments(cam_x, cam_z, yaw, cam_y=CAM_Y):
     """Clipped integer segments per drawn edge: [(edge_index, x0, y0, x1, y1)]."""
     sn, cs = sin_of(yaw), cos_of(yaw)
@@ -241,8 +250,13 @@ def segments(cam_x, cam_z, yaw, cam_y=CAM_Y):
         Y = y * 256 - cam_y
         sy = CY - project(Y, R, s) if front else 0
         verts.append((X, Y, Z, front, sx, sy))
+    return edge_segments(verts, EDGES)
+
+
+def edge_segments(verts, edges):
+    """verts: [(X, Y, Z, front, sx, sy)] view-space. Near clip + screen clip every edge."""
     out = []
-    for ei, (a, b) in enumerate(EDGES):
+    for ei, (a, b) in enumerate(edges):
         va, vb = verts[a], verts[b]
         fa, fb_ = va[3], vb[3]
         if not fa and not fb_:

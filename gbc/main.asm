@@ -82,6 +82,9 @@ Start:
     ldh [hLastFrame], a
     ld [wHaveKeys], a
     call LoadLevel
+    call WpnInit
+    ld a, $A5
+    ldh [hRnd], a
 
     ; Static test scene into bank 0 (shown until the demo loop replaces it).
     call ClearFB
@@ -91,7 +94,7 @@ Start:
 
     ld a, IEF_VBLANK
     ldh [rIE], a
-    ld a, LCDCF_ON | LCDCF_BGON | LCDCF_BG8000
+    ld a, LCDCF_ON | LCDCF_BGON | LCDCF_BG8000 | LCDCF_OBJON | LCDCF_OBJ16
     ldh [rLCDC], a
     ei
 
@@ -113,6 +116,22 @@ ENDC
 
 IF DEF(WORLDTEST)
     call RunWorldTest
+ENDC
+
+IF DEF(ENTTEST)
+    call RunEntTest
+ENDC
+
+IF DEF(SMOKE)
+    call RunSmoke
+ENDC
+
+IF DEF(PICKUNIT)
+    call RunPickUnit
+ENDC
+
+IF DEF(COMBUNIT)
+    call RunCombUnit
 ENDC
 
 IF DEF(TEST_EXIT)
@@ -140,6 +159,9 @@ Demo:
     call ClearFB
     ei
     call RenderScene
+IF !DEF(NOOBJ)
+    call DrawWorldObjects
+ENDC
     ldh a, [hShow]
     xor 1
     call CopyFBHBlank               ; into the hidden bank
@@ -148,12 +170,8 @@ Demo:
     xor 1
     ldh [hShow], a
     call ShowBank                   ; flip
-    ld hl, VRAM_MAP0 + 32 * 15 + 2
-    ld a, [wYaw]
-    call PutHex
-    ld hl, VRAM_MAP0 + 32 * 16 + 2
-    ld a, [wRoom]
-    call PutHex
+    call WpnVBlank
+    call HudBlit
 IF DEF(LIVETEST)
     ; Record the VBlank counter per iteration under a "LIVE" magic.
     ld hl, wPoseMagic
@@ -177,12 +195,18 @@ IF DEF(LIVETEST)
     ld [wPoseI], a
     cp 6
     jr nz, .noStop
+    ld a, [wSpin]
+    ld [wPoseOut + 8], a
     call WaitVBlank
     call WaitVBlank
     jp LiveStop
 .noStop:
 ENDC
     call UpdateMove
+    call WpnUpdate
+    call PickupScan
+    call CombatUpdate
+    call HudUpdate
     jr Demo
 
 IF DEF(LIVETEST)
