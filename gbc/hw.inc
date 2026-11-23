@@ -1,0 +1,59 @@
+; Game Boy Color hardware registers used by the port.
+
+DEF rP1     EQU $FF00
+DEF rDIV    EQU $FF04
+DEF rTIMA   EQU $FF05
+DEF rTMA    EQU $FF06
+DEF rTAC    EQU $FF07
+DEF rIF     EQU $FF0F
+DEF rLCDC   EQU $FF40
+DEF rSTAT   EQU $FF41
+DEF rSCY    EQU $FF42
+DEF rSCX    EQU $FF43
+DEF rLY     EQU $FF44
+DEF rBGP    EQU $FF47
+DEF rKEY1   EQU $FF4D
+DEF rVBK    EQU $FF4F
+DEF rHDMA1  EQU $FF51
+DEF rHDMA2  EQU $FF52
+DEF rHDMA3  EQU $FF53
+DEF rHDMA4  EQU $FF54
+DEF rHDMA5  EQU $FF55
+DEF rBCPS   EQU $FF68
+DEF rBCPD   EQU $FF69
+DEF rIE     EQU $FFFF
+
+DEF LCDCF_ON      EQU %10000000
+DEF LCDCF_BGON    EQU %00000001
+DEF LCDCF_BG8000  EQU %00010000   ; BG/window tile data at $8000
+
+DEF IEF_VBLANK    EQU %00000001
+DEF IEF_TIMER     EQU %00000100
+
+; MBC5
+DEF rROMB0  EQU $2000             ; ROM bank low 8 bits
+DEF rROMB1  EQU $3000             ; ROM bank bit 8
+
+DEF VRAM_TILES  EQU $8000
+DEF VRAM_MAP0   EQU $9800
+
+; Viewport: 16 x 14 tiles = 128 x 112 px, column-major tiles, 256 B per column
+; (only the first 224 B are pixels; the tail pads each column to a page so
+; pixel (x,y) is H = FB_HI + (x>>3), L = y*2).
+DEF VIEW_COLS   EQU 16
+DEF VIEW_ROWS   EQU 14
+DEF VIEW_MAPX   EQU 2             ; BG map column of the viewport's left edge
+DEF FB          EQU $C000
+DEF FB_HI       EQU $C0
+DEF FB_SIZE     EQU $1000
+DEF BLANK_TILE  EQU 14            ; pad slot of column 0: always blank
+
+; Joypad byte (hJoy): active high.
+DEF JOY_RIGHT   EQU %00000001
+DEF JOY_LEFT    EQU %00000010
+DEF JOY_UP      EQU %00000100
+DEF JOY_DOWN    EQU %00001000
+DEF JOY_A       EQU %00010000
+DEF JOY_B       EQU %00100000
+DEF JOY_SELECT  EQU %01000000
+DEF JOY_START   EQU %10000000

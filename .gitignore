@@ -24,6 +24,9 @@ src/qsyms.asm
 __pycache__/
 *.pyc
 
+# GBC port build outputs
+gbc/build/
+
 # Third-party tools, not redistributed
 3rdparty/
 

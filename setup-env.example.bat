@@ -4,3 +4,6 @@ REM Python 3 with Pillow: python -m pip install pillow
 set ACME=C:\app\acme\acme.exe
 set VICE=C:\app\vice3.10\bin\x64sc.exe
 set VICE_BIN=C:\app\vice3.10\bin
+REM Game Boy Color build (build-gbc.bat): RGBDS folder and BGB exe.
+set RGBDS=C:\dev\tools\rgbds
+set GBEMU=C:\dev\tools\bgb\bgb64.exe
