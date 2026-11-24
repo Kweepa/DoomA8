@@ -19,6 +19,7 @@ hPhase::     ds 1
 hPtrH::      ds 1
 hPtrL::      ds 1
 hKind::      ds 1
+hPlane::     ds 1                   ; DrawLine bitplane: 0 ink, 1 red (fireballs)
 
 ; Benchmark timer
 hOver::      ds 1                   ; TIMA overflow count (timer ISR)
@@ -258,7 +259,8 @@ wTmpMesh::    ds 2
 wTmpKind::    ds 1
 wTmpAux::     ds 1
 wTmpFrame::   ds 1
-wSpin::       ds 1                  ; animation counter (VBlanks)
+wSpin::       ds 1                  ; VBlank counter (demo / tests)
+wItemSpin::   ds 2                  ; A8 item_spin (8.8 yaw): += dt_ms << 4, ~1 rev / 4.1 s
 wEdgeN::      ds 1                  ; edge list for DrawEdges
 wEdgePtr::    ds 2
 wThTaken::    ds 32
@@ -268,14 +270,65 @@ wEnY::        ds 24
 wEnZ::        ds 24
 wEnType::     ds 24
 wEnRoom::     ds 24
-wEnYaw::      ds 24
+wEnRot::      ds 24                  ; A8 en_rot: heading 0 = +z, 64 = +x (mesh yaw = -en_rot)
 wEnState::    ds 24
-wEnFrame::    ds 24
+wEnFrame::    ds 24                  ; A8 en_frame: frame within the current clip
 wEnHp::       ds 24
 wEnXL::       ds 24
 wEnZL::       ds 24
-wEnTimer::    ds 24
-wEnCool::     ds 24
+wEnTimer::    ds 24                  ; A8 en_timer / en_timer_h: attack pause ms
+wEnTimerH::   ds 24
+wEnStepH::    ds 24                  ; A8 en_step_h (low byte: wEnStep)
+wEnPainI::    ds 24                  ; A8 en_pain_i: pain / death variant
+wAnimAcc::    ds 2                   ; A8 anim_acc: ms toward ANIM_MS
+wDoomAnimPh:: ds 1                   ; A8 doom_anim_ph
+wGunshotWake:: ds 1                  ; A8 gunshot_wake: a gun fired this frame
+wEnSfxOld::   ds 1                   ; A8 en_sfx_old: frame before this anim step
+wEnNewFrame:: ds 1                   ; frame after this anim step (attack fire check)
+wAiTurn::     ds 1                   ; A8 ai_turn / dodge_dx / dodge_dz / dodge_i / ai_probe
+wDodgeDx::    ds 1
+wDodgeDz::    ds 1
+wDodgeI::     ds 1
+wAiProbe::    ds 1
+wPreX::       ds 1                   ; A8 save_xh / save_zh: player cell before this move axis
+wPreZ::       ds 1
+; A8 line_* segment test (gbc/ai.asm LineSolidsBlocked)
+wLnA::        ds 3                   ; ln_ax / ay / az
+wLnB::        ds 3                   ; ln_bx / by / bz
+wLBox::       ds 6                   ; box_x, y, z, sx, sy, sz
+wLnM::        ds 3                   ; ln_mx / my / mz (exclusive max)
+wLnOc0::      ds 1
+wLnOc1::      ds 1
+wLnBit::      ds 1
+wLnFace::     ds 1
+wLnPlane::    ds 1
+wLnT::        ds 1
+wLnBest::     ds 1
+wLdSign::     ds 1
+wLnT0::       ds 1
+wLnT1::       ds 1
+wLnD::        ds 1
+wLnPx::       ds 1
+wLnCam::      ds 4
+wLnI::        ds 1
+wLnH0::       ds 1
+wLnH1::       ds 1
+wLnRel0::     ds 1
+wLnRel1::     ds 1
+wOrgX::       ds 2                   ; A8 org_*: world 8.8 of a bone (EnVertWorld)
+wOrgY::       ds 2
+wOrgZ::       ds 2
+wRkAcc::      ds 2                   ; rkt_tick ms accumulator
+wRkNew::      ds 2                   ; save_xl / save_xh: candidate coordinate
+wRkOld::      ds 2
+wZcSg::       ds 3                   ; .z_aim: signed / absolute deltas
+wZcAd::       ds 3
+wEmuzMs::     ds 1                   ; A8 world-sprite timer for the enemy muzzle (ms left)
+wEmuzLod::    ds 1
+wEmuzCol::    ds 1                   ; byte column of the 24x21 box (0 .. VIEW_COLS - 3)
+wEmuzY::      ds 1
+wEmuzK::      ds 1
+wEmuzSeen::   ds 1                   ; smoke builds: muzzle starts
 
 ; Player / weapons (wpn.asm)
 SECTION "wpnvars", WRAMX, BANK[1]
@@ -324,7 +377,14 @@ wFy::         ds 1
 wCnt::        ds 1
 wTile::       ds 1
 wDec::        ds 3
-wHud::        ds 15
+wHudRows::    ds 80                  ; HUD map rows 14-17 (20 tiles each; row 14 = message), gbc/hud.asm
+wMsgTmp::     ds 32                  ; message text being assembled (ASCII, NUL)
+wStatusMs::   ds 2                   ; A8 status_ms: message time left
+wHurtMs::     ds 2                   ; A8 hurt_flash: red border time left
+wPalStage::   ds 32                  ; BG palettes 0-3 (BGR555) for HudBlit
+wPalDirty::   ds 1
+wPalRoom::    ds 1                   ; room / border colour the staged palettes were built for
+wPalBorder::  ds 1
 wPkN::        ds 1
 wPkI::        ds 1
 wPkIdx::      ds 1
@@ -356,39 +416,92 @@ wNx::         ds 1
 wNxL::        ds 1
 wNz::         ds 1
 wNzL::        ds 1
-wDeadTimer::  ds 1
+wDeadMs::     ds 2                   ; A8 death_wait: ms since the player died
+wHavePack::   ds 1                   ; A8 have_pack: backpack doubles the ammo caps
+wArmorKind::  ds 1                   ; A8 combat_armor: 1 blue (saves 1/2), 0 green (5/16)
+wPuKind::     ds 1                   ; A8 pu_kind: 0 or TH_RADSUIT
+wPuMs::       ds 2                   ; A8 pu_ms: powerup time left
+wPickupMs::   ds 2                   ; A8 pickup_ms: no grabs while > 0
+wApTy::       ds 1                   ; ApplyPickupB scratch
+wApCap::      ds 1
+wApForce::    ds 1
+wPkX::        ds 1
+wPkY::        ds 1
+wPkZ::        ds 1
+wScanLim::    ds 2                   ; GunScan: flat cone half-width (tan 8.8)
+wScanAim::    ds 1                   ; pellet column, signed px (A8 scan_aim)
+wScanPel::    ds 1                   ; 1 = pellet test
+wScanCnt::    ds 1
+wScanBest::   ds 1                   ; A8 shot_hit_i / shot_hit_z
+wScanBestZ::  ds 1
+wShF::        ds 2                   ; forward / lateral of the enemy in view space (8.8)
+wShL::        ds 2
+wShLSign::    ds 1
+wTgt::        ds 3                   ; ScanCand target cell (x, y, z)
+wTgtR::       ds 1                   ; its body radius (units)
+wScanId::     ds 1                   ; candidate id: enemy index, or $40 + thing index (barrel)
+wBlast::      ds 3                   ; A8 ent_wx / wy / wz: blast origin (cells)
+wBlastRoom::  ds 1
+wFxMs::       ds 2                   ; A8 fx_on: explosion graphic time left (one at a time)
+wBarrelCh::   ds 2                   ; A8 barrel_ch: ms to the next chained barrel
+wBarrelPend:: ds 4                   ; A8 barrel_pend: one bit per thing
+wDvN::        ds 3                   ; Div24x16 numerator / quotient
 
 ; Enemy AI + fireballs (gbc/ai.asm). $CE00-$CEFF is the free page between the framebuffer and the stack.
 SECTION "aivars", WRAM0[$CE00]
-wEnDir::      ds 24                  ; walk octant 0..7 (0 = +z, 2 = +x), $FF = none yet
-wEnStep::     ds 24                  ; VBlanks walked in the current direction
-wEnAtk::      ds 24                  ; attack kind: 0 melee / hitscan, 1 fireball
+wEnDir::      ds 24                  ; A8 en_dir: octant 0..7 (0 = +z, 2 = +x)
+wEnStep::     ds 24                  ; A8 en_step: walk ms accumulator (low byte)
+wEnAtk::      ds 24                  ; A8 atk_kind: 0 claw / bite / shot, 1 fireball
+; A8 rocket slots (gr_*, RKT_MAX): enemy fireballs. Position / velocity 8.8 world units; the move
+; per RKT_TICK_MS tick is velocity >> 5.
 wPrOn::       ds 4
-wPrFl::       ds 4                   ; bit 0: baron fireball
-wPrRoom::     ds 4
+wPrFl::       ds 4                   ; RKT_F_FIREBALL | RKT_F_BARON | RKT_F_PEND
+wPrOwn::      ds 4                   ; RKT_OWN_PL / RKT_OWN_EN
 wPrXL::       ds 4
 wPrX::        ds 4
+wPrYL::       ds 4
+wPrY::        ds 4
 wPrZL::       ds 4
 wPrZ::        ds 4
-wPrY::        ds 4                   ; chest height (cells)
-wPrFlY::      ds 4                   ; floor of the thrower
-wPrVXL::      ds 4                   ; 8.8 per VBlank
+wPrVXL::      ds 4
 wPrVXH::      ds 4
+wPrVYL::      ds 4
+wPrVYH::      ds 4
 wPrVZL::      ds 4
 wPrVZH::      ds 4
-wPrLife::     ds 4
+wPrLifeL::    ds 4                   ; ms left
+wPrLifeH::    ds 4
+wPrAcc::      ds 4                   ; ms toward the next tick
 wAiI::        ds 1
 wAiT::        ds 1
 wAiK::        ds 1
 wAiN::        ds 1
 wAiTry::      ds 5
 wAiO::        ds 4                   ; position before a step: x, xl, z, zl
-wLpXL::       ds 1
-wLpX::        ds 1
-wLpZL::       ds 1
-wLpZ::        ds 1
-wLsx::        ds 1
-wLsz::        ds 1
 wCellFy::     ds 1
 wRawDt::      ds 1                   ; VBlanks the last frame took (unclamped)
 wScriptJoy::  ds 1
+
+; Input hold times. The timer interrupt (INPUT_HZ, 4 ticks per VBlank) adds a tick to the counter of
+; every direction held at that moment; ReadJoy snapshots them into wHold* once per game frame.
+; Order is fixed: forward, back, turn right, turn left, strafe right, strafe left.
+wAccF::       ds 1
+wAccB::       ds 1
+wAccTR::      ds 1
+wAccTL::      ds 1
+wAccSR::      ds 1
+wAccSL::      ds 1
+wHoldF::      ds 1
+wHoldB::      ds 1
+wHoldTR::     ds 1
+wHoldTL::     ds 1
+wHoldSR::     ds 1
+wHoldSL::     ds 1
+wPadLive::    ds 1                   ; pad as of the last timer tick (hJoy layout)
+wPadLatch::   ds 1                   ; A / Select / Start seen since the last frame (taps shorter than a frame)
+wTurnFrac::   ds 1                   ; fractional yaw (1/256 unit) carried between frames
+
+SECTION "fbvars", WRAMX, BANK[1]
+wFbProbe::    ds 1                  ; FloorBelow: highest surface y to consider
+wAiOldY::     ds 1                  ; enemy feet y before the step (EnemyMoveOk)
+wAiFloorY::   ds 1                  ; floor y at the step destination

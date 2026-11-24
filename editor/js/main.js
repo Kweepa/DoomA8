@@ -153,6 +153,7 @@ import {
   readProjectBytes,
   ensureWeaponsPngDirectory,
   writePngFile,
+  readPngFile,
 } from "./io.js";
 import { showBuildView } from "./buildView.js";
 import { parsePakBuffers } from "./pak.js";
@@ -177,6 +178,8 @@ import { PreviewView } from "./previewView.js";
 import { AnimView } from "./animView.js";
 import { WeaponView } from "./weaponView.js";
 import { ItemView } from "./itemView.js";
+import { GbSpriteView } from "./gbSpriteView.js";
+import { GBS_DEFS, gbsBlank, gbsFromBits, normalizeGbSprites } from "./gbSpriteModel.js";
 
 const statusEl = document.getElementById("status");
 const titleEl = document.querySelector(".toolbar h1");
@@ -604,6 +607,106 @@ const itemView = new ItemView(document.getElementById("view-canvas"), {
   onViewChanged: () => markUi(),
 });
 
+const gbSpriteView = new GbSpriteView({
+  left: document.getElementById("gbspr-left"),
+  panel: document.getElementById("gbspr-panel"),
+  getSprites: () => {
+    if (!doc.gbSprites) doc.gbSprites = normalizeGbSprites(null);
+    return doc.gbSprites;
+  },
+  beginUndo,
+  endUndo,
+  markDirty,
+  onChange: () => markUi(),
+  onStatus: (msg, isError) => setStatus(msg, isError),
+  onImport: () => void importGbSpritePngs(),
+  onExport: () => void exportGbSpritePngs(),
+});
+
+function gbSpriteBlob(sp) {
+  const canvas = document.createElement("canvas");
+  canvas.width = sp.w;
+  canvas.height = sp.h;
+  const ctx = canvas.getContext("2d");
+  const img = ctx.createImageData(sp.w, sp.h);
+  for (let y = 0; y < sp.h; y++) {
+    for (let x = 0; x < sp.w; x++) {
+      const o = (y * sp.w + x) * 4;
+      const v = sp.rows[y][x] === "#" ? 255 : 0;
+      img.data[o] = img.data[o + 1] = img.data[o + 2] = v;
+      img.data[o + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  return new Promise((resolve, reject) =>
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("PNG encode failed"))), "image/png"),
+  );
+}
+
+async function gbSpriteBitsFromFile(file) {
+  const bmp = await createImageBitmap(file);
+  const canvas = document.createElement("canvas");
+  canvas.width = bmp.width;
+  canvas.height = bmp.height;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  ctx.drawImage(bmp, 0, 0);
+  const d = ctx.getImageData(0, 0, bmp.width, bmp.height).data;
+  const bits = [];
+  for (let y = 0; y < bmp.height; y++) {
+    const row = [];
+    for (let x = 0; x < bmp.width; x++) {
+      const o = (y * bmp.width + x) * 4;
+      row.push(Math.max(d[o], d[o + 1], d[o + 2]) > 16 ? 1 : 0); // same threshold as gbc_genwpn.py
+    }
+    bits.push(row);
+  }
+  return bits;
+}
+
+async function exportGbSpritePngs() {
+  try {
+    const dir = await ensureWeaponsPngDirectory();
+    if (!dir) return;
+    let n = 0;
+    for (const sp of doc.gbSprites) {
+      await writePngFile(dir, `${sp.id}.png`, await gbSpriteBlob(sp));
+      n++;
+    }
+    setStatus(`Wrote ${n} PNGs to assets/weapons`);
+  } catch (err) {
+    setStatus(String(err.message || err), true);
+  }
+}
+
+async function importGbSpritePngs() {
+  try {
+    const dir = await ensureWeaponsPngDirectory();
+    if (!dir) return;
+    const found = [];
+    const missing = [];
+    for (const def of GBS_DEFS) {
+      const file = await readPngFile(dir, `${def.id}.png`);
+      if (!file) {
+        missing.push(def.id);
+        continue;
+      }
+      found.push(gbsFromBits(def.id, await gbSpriteBitsFromFile(file)));
+    }
+    if (!found.length) {
+      setStatus("No sprite PNGs in that folder (pick assets/weapons)", true);
+      return;
+    }
+    pushUndo();
+    const byId = new Map(found.map((sp) => [sp.id, sp]));
+    doc.gbSprites = doc.gbSprites.map((sp) => byId.get(sp.id) || sp);
+    markDirty();
+    gbSpriteView.refresh();
+    setStatus(`Imported ${found.length} PNGs` + (missing.length ? ` · not found: ${missing.join(", ")}` : ""));
+  } catch (err) {
+    setStatus(String(err.message || err), true);
+  }
+}
+
 function setStatus(msg, isError = false) {
   statusEl.textContent = msg || "";
   statusEl.classList.toggle("error", isError);
@@ -902,6 +1005,7 @@ function snapshot() {
     enemies: doc.enemies,
     weapons: doc.weapons,
     items: doc.items,
+    gbSprites: doc.gbSprites,
   });
 }
 
@@ -1186,18 +1290,24 @@ function setMode(mode) {
   document.getElementById("btn-mode-anim").classList.toggle("active", mode === "anim");
   document.getElementById("btn-mode-weapons").classList.toggle("active", mode === "weapons");
   document.getElementById("btn-mode-items")?.classList.toggle("active", mode === "items");
+  document.getElementById("btn-mode-gbsprites")?.classList.toggle("active", mode === "gbsprites");
   document.getElementById("btn-mode-build")?.classList.toggle("active", mode === "build");
   document.querySelector(".layout")?.classList.toggle("layout-build", mode === "build");
+  const gbs = mode === "gbsprites";
   const leftAside = document.querySelector(".left");
   if (leftAside) leftAside.hidden = mode === "build";
   const rightAside = document.querySelector(".right");
-  if (rightAside) rightAside.hidden = mode === "build";
+  if (rightAside) rightAside.hidden = mode === "build" || gbs;
   const buildPanel = document.getElementById("build-panel");
   if (buildPanel) buildPanel.hidden = mode !== "build";
+  const gbsPanel = document.getElementById("gbspr-panel");
+  if (gbsPanel) gbsPanel.hidden = !gbs;
+  const gbsLeft = document.getElementById("gbspr-left");
+  if (gbsLeft) gbsLeft.hidden = !gbs;
   const centerHeading = document.querySelector(".center-heading");
-  if (centerHeading) centerHeading.hidden = mode === "build";
+  if (centerHeading) centerHeading.hidden = mode === "build" || gbs;
   const mapStage = document.getElementById("map-stage");
-  if (mapStage) mapStage.hidden = mode === "build";
+  if (mapStage) mapStage.hidden = mode === "build" || gbs;
   const stick = mode === "anim";
   mapStage?.classList.toggle("stick-stage", stick);
   for (const id of ["stick-left", "stick-front"]) {
@@ -1207,7 +1317,7 @@ function setMode(mode) {
   stickLeft.enabled = stick;
   stickFront.enabled = stick;
   const hintEl = document.getElementById("hint");
-  if (hintEl) hintEl.hidden = mode === "build";
+  if (hintEl) hintEl.hidden = mode === "build" || gbs;
   document.getElementById("layout-left").hidden = mode !== "layout";
   document.querySelector(".left")?.classList.toggle("left-map", mode === "layout");
   document.getElementById("anim-left").hidden = mode !== "anim";
@@ -1231,13 +1341,17 @@ function setMode(mode) {
         ? "LMB drag pans · wheel scale"
         : mode === "items"
           ? "LMB box-select verts · click vert/line to select · Shift add · gizmo moves · V add vert · L add line · Ctrl+C/V copy/paste · Del · F focus · MMB pan · Alt+LMB / RMB orbit · Alt+RMB zoom"
-          : mode === "build"
+          : mode === "gbsprites"
+            ? "LMB paint · RMB erase · arrows shift (Shift = 8) · H/V flip · I invert · Del clear · Ctrl+C/V"
+            : mode === "build"
               ? "Open the repo once · Reload after a build"
               : animHintText();
   layoutView.enabled = mode === "layout";
   animView.enabled = mode === "anim";
   weaponView.enabled = mode === "weapons";
   itemView.enabled = mode === "items";
+  gbSpriteView.enabled = gbs;
+  if (gbs) gbSpriteView.refresh();
   if (mode === "layout") layoutView.resize();
   else if (mode === "anim") {
     requestAnimationFrame(() => {
@@ -4021,6 +4135,10 @@ function nudgeVert(axis, delta) {
 }
 
 function refreshPanels() {
+  if (editorMode === "gbsprites") {
+    gbSpriteView.refresh();
+    return;
+  }
   renderLevelList();
   renderObjectList();
   renderEnemyList();
@@ -4035,6 +4153,7 @@ function refreshPanels() {
   if (editorMode === "anim") animView.draw();
   if (editorMode === "weapons") weaponView.draw();
   if (editorMode === "items") itemView.draw();
+  if (editorMode === "gbsprites") gbSpriteView.refresh();
 }
 
 function refreshAll() {
@@ -4043,6 +4162,7 @@ function refreshAll() {
   if (editorMode === "layout") layoutView.draw();
   else if (editorMode === "weapons") weaponView.draw();
   else if (editorMode === "items") itemView.draw();
+  else if (editorMode === "gbsprites") gbSpriteView.refresh();
   else if (editorMode !== "build") animView.draw();
 }
 
@@ -4054,6 +4174,9 @@ document.getElementById("btn-mode-anim").addEventListener("click", () => {
 });
 document.getElementById("btn-mode-weapons").addEventListener("click", () => {
   setMode("weapons");
+});
+document.getElementById("btn-mode-gbsprites")?.addEventListener("click", () => {
+  setMode("gbsprites");
 });
 document.getElementById("btn-mode-items")?.addEventListener("click", () => {
   setMode("items");
@@ -4230,6 +4353,10 @@ window.addEventListener("keydown", (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") {
     e.preventDefault();
     redo();
+    return;
+  }
+  if (editorMode === "gbsprites" && gbSpriteView.handleKey(e)) {
+    e.preventDefault();
     return;
   }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "d" && editorMode === "layout") {

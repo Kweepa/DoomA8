@@ -24,7 +24,7 @@ def main():
             addr = line.split()[0].split(":")[1]
     if os.path.exists(state):
         os.remove(state)
-    subprocess.run([bgb, "-hf", "-nobatt", "-rom", rom, "-br", addr, "-stateonexit", state], timeout=120)
+    subprocess.run([bgb, "-hf", "-nobatt", "-rom", rom, "-br", addr, "-stateonexit", state], timeout=10)
     data = open(state, "rb").read()
     i = data.find(b"POSE")
     ang, dmg = gg.comb_unit_cases()
@@ -36,11 +36,11 @@ def main():
         if got != exp:
             bad.append(("angle", k, (dx, dz), got, exp))
     off = base + len(ang)
-    for k, (hp, ar, d) in enumerate(dmg):
-        exp = gg.player_damage(hp, ar, d)
-        got = (data[off + 2 * k], data[off + 2 * k + 1])
+    for k, (hp, ar, d, kind) in enumerate(dmg):
+        exp = gg.player_damage(hp, ar, d, kind)
+        got = (data[off + 3 * k], data[off + 3 * k + 1], data[off + 3 * k + 2])
         if got != exp:
-            bad.append(("damage", k, (hp, ar, d), got, exp))
+            bad.append(("damage", k, (hp, ar, d, kind), got, exp))
     print("angle cases %d, damage cases %d, mismatches %d" % (len(ang), len(dmg), len(bad)))
     for b in bad[:10]:
         print("  ", b)

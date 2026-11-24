@@ -417,7 +417,7 @@
       "axis": "z",
       "dir": 1,
       "roomId": "84d71151-1a34-453a-b121-476a89d1400c",
-      "pickup": "green armor"
+      "pickup": "security armor"
     },
     {
       "id": "a7075625-aa67-475f-9f34-a039f4372904",
@@ -858,7 +858,7 @@
       "axis": "z",
       "dir": 1,
       "roomId": "b5b6f86c-d9ea-4433-a749-2ffabc6e83c2",
-      "pickup": "blue armor"
+      "pickup": "combat armor"
     },
     {
       "id": "87628c66-6f5a-41fb-b905-b823cffd706f",

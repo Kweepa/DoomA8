@@ -33,7 +33,7 @@ def main():
     if os.path.exists(state):
         os.remove(state)
     subprocess.run([bgb, "-hf", "-nobatt", "-rom", rom, "-br", addr,
-                    "-stateonexit", state], timeout=300)
+                    "-stateonexit", state], timeout=10)
     data = open(state, "rb").read()
     i = data.find(b"POSE")
     if i < 0:

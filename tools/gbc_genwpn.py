@@ -37,9 +37,6 @@ BODY = [
 ]
 FLASH = [
     ("MUZZLE", "muzzle_flash.png"),
-    ("CHAIN_FL", "chain_flash_left.png"),
-    ("CHAIN_FR", "chain_flash_right.png"),
-    ("AXE_FLASH", "axe_flash.png"),
 ]
 
 

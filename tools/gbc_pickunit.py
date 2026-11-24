@@ -20,7 +20,7 @@ def main():
             addr = line.split()[0].split(":")[1]
     if os.path.exists(state):
         os.remove(state)
-    subprocess.run([bgb, "-hf", "-nobatt", "-rom", rom, "-br", addr, "-stateonexit", state], timeout=120)
+    subprocess.run([bgb, "-hf", "-nobatt", "-rom", rom, "-br", addr, "-stateonexit", state], timeout=10)
     data = open(state, "rb").read()
     i = data.find(b"POSE")
     seq = gg.pickup_unit_sequence()
@@ -28,10 +28,11 @@ def main():
     bad = []
     base = i + 4 + 2
     for k, t in enumerate(seq):
-        gg.apply_pickup(P, t)
-        got = tuple(data[base + 7 * k:base + 7 * k + 7])
-        if got != P.tup():
-            bad.append((k, t, got, P.tup()))
+        used = gg.apply_pickup(P, t)
+        got = tuple(data[base + 11 * k:base + 11 * k + 11])
+        want = P.tup() + (1 if used else 0,)
+        if got != want:
+            bad.append((k, t, got, want))
     print("pickup steps: %d, mismatches: %d, final %s" % (len(seq), len(bad), P.tup()))
     for b in bad[:8]:
         print("  step %d type %d got %s expected %s" % b)

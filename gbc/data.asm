@@ -32,3 +32,6 @@ ENDC
 IF DEF(MAPTEST)
 INCLUDE "maptest.inc"
 ENDC
+IF DEF(LOSUNIT)
+INCLUDE "losunit.inc"
+ENDC

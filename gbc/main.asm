@@ -57,23 +57,13 @@ Start:
     call InstallFont
     call InitViewMap
 
-    ; BG palette 0: dark brown, light, red, white (BGR555).
-    ld a, $80                       ; index 0, auto-increment
-    ldh [rBCPS], a
-    ld hl, BgPalette0
-    ld b, 8
-.pal:
-    ld a, [hl+]
-    ldh [rBCPD], a
-    dec b
-    jr nz, .pal
-
     xor a
     ldh [rSCX], a
     ldh [rSCY], a
     ldh [hFrame], a
     ldh [hVBlank], a
     ldh [hShow], a
+    ldh [hPlane], a
 
     ldh a, [rKEY1]
     and $80
@@ -86,6 +76,7 @@ Start:
     ld [wHaveKeys], a
     call LoadLevel
     call WpnInit
+    call HudInit                    ; HUD font / attributes, room palettes (LCD still off)
     ld a, $A5
     ldh [hRnd], a
 
@@ -99,7 +90,22 @@ Start:
     ldh [rLYC], a
     ld a, $40                       ; STAT interrupt on LY = LYC
     ldh [rSTAT], a
-    ld a, IEF_VBLANK | IEF_STAT
+    xor a                           ; input sampling: zero the counters, then TIMA 256 - 34 per tick
+    ld [wAccF], a
+    ld [wAccB], a
+    ld [wAccTR], a
+    ld [wAccTL], a
+    ld [wAccSR], a
+    ld [wAccSL], a
+    ld [wPadLive], a
+    ld [wPadLatch], a
+    ld [wTurnFrac], a
+    ld a, 256 - INPUT_DIV
+    ldh [rTMA], a
+    ldh [rTIMA], a
+    ld a, %100                      ; timer on, 4096 Hz (doubled in double speed)
+    ldh [rTAC], a
+    ld a, IEF_VBLANK | IEF_STAT | IEF_TIMER
     ldh [rIE], a
     ld a, LCDCF_ON | LCDCF_BGON | LCDCF_BG8000 | LCDCF_OBJON | LCDCF_OBJ16
     ldh [rLCDC], a
@@ -141,15 +147,26 @@ IF DEF(COMBUNIT)
     call RunCombUnit
 ENDC
 
+IF DEF(LOSUNIT)
+    call RunLosUnit
+ENDC
+
 IF DEF(TEST_EXIT)
     ; Let a couple of frames reach the screen before MainLoop, where
     ; tools/gbc_check.py sets a breakpoint (headless BGB exits on it).
     ld b, 3
-.testWait:
+IF DEF(SMOKE) || DEF(ENTTEST)
+.testWait:                          ; these ROMs never service VBlank waits (see tools/gbc_smoke.py)
     halt
     nop
     dec b
     jr nz, .testWait
+ELSE
+.testWait:
+    call WaitVBlank                 ; halt alone also wakes on the input timer
+    dec b
+    jr nz, .testWait
+ENDC
 ENDC
 
 MainLoop:
@@ -202,8 +219,21 @@ IF DEF(LIVETEST)
     ld [wPoseI], a
     cp 6
     jr nz, .noStop
-    ld a, [wSpin]
+    ld a, [wItemSpin + 1]           ; pickups' yaw at the last draw
     ld [wPoseOut + 8], a
+    ld hl, wEnFrame                 ; enemies' clip frames at the last draw
+    ld de, wPoseOut + 16
+    ld b, 24
+.cpFr:
+    ld a, [hl+]
+    ld [de], a
+    inc de
+    dec b
+    jr nz, .cpFr
+    ldh a, [hOver]                  ; input timer ticks and VBlanks since boot (tick rate check)
+    ld [wPoseOut + 9], a
+    ldh a, [hFrame]
+    ld [wPoseOut + 10], a
     call WaitVBlank
     call WaitVBlank
     jp LiveStop
@@ -254,11 +284,70 @@ PutHex:
     ld [hl], a
     ret
 
+MACRO HoldTick                      ; \1 = hJoy bit in C; HL = counter, advances; saturates at 255
+    bit \1, c
+    jr z, .s\@
+    inc [hl]
+    jr nz, .s\@
+    dec [hl]
+.s\@:
+    inc hl
+ENDM
+
+; C = pad (hJoy layout): remember it, latch A / Select / Start, count the held directions.
+; Clobbers A, B, HL.
+InputSample::
+    ld a, c
+    ld [wPadLive], a
+    and $D0                         ; A, Select, Start: latched until the next frame reads them
+    ld b, a
+    ld a, [wPadLatch]
+    or b
+    ld [wPadLatch], a
+    ld hl, wAccF
+    HoldTick 2                      ; up: forward
+    HoldTick 3                      ; down: back
+    bit 5, c                        ; B held: left / right strafe instead of turn
+    jr z, .turn
+    inc hl
+    inc hl
+.turn:
+    HoldTick 0
+    HoldTick 1
+    ret
+
+; Input tick: read the pad and sample it (see input.asm).
+; The bench / pose builds reprogram the timer and only use hOver.
 TimerISR:
     push af
+    push bc
+    push hl
     ldh a, [hOver]
     inc a
     ldh [hOver], a
+    ld a, $20                       ; d-pad
+    ldh [rP1], a
+    ldh a, [rP1]
+    ldh a, [rP1]
+    ldh a, [rP1]
+    cpl
+    and $0F
+    ld b, a
+    ld a, $10                       ; buttons
+    ldh [rP1], a
+    ldh a, [rP1]
+    ldh a, [rP1]
+    ldh a, [rP1]
+    cpl
+    and $0F
+    swap a
+    or b
+    ld c, a
+    ld a, $30
+    ldh [rP1], a
+    call InputSample
+    pop hl
+    pop bc
     pop af
     reti
 
@@ -271,7 +360,7 @@ StatISR:
     and 3
     jr nz, .hblank
     ldh a, [rLCDC]
-    and $FF - LCDCF_OBJON
+    and $FF - LCDCF_OBJON - LCDCF_BG8000    ; HUD rows: no sprites, $8800 tiles (HUD font at $9000)
     ldh [rLCDC], a
     pop af
     reti
@@ -279,7 +368,7 @@ StatISR:
 VBlankISR:
     push af
     ldh a, [rLCDC]
-    or LCDCF_OBJON
+    or LCDCF_OBJON | LCDCF_BG8000           ; viewport: sprites on, $8000 tiles
     ldh [rLCDC], a
     ld a, 1
     ldh [hVBlank], a
@@ -288,12 +377,6 @@ VBlankISR:
     ldh [hFrame], a
     pop af
     reti
-
-BgPalette0:
-    dw %0000110001100100            ; 0: dark brown
-    dw %0101101101011100            ; 1: light
-    dw %0000100001011000            ; 2: red
-    dw %0111111111111111            ; 3: white
 
 INCLUDE "font.inc"
 INCLUDE "test_lines.inc"

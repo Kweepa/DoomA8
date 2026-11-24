@@ -109,18 +109,31 @@ def set_scene(ux, uz, cols, verts, edges):
     UX, UZ, COLS, VERTS, EDGES = list(ux), list(uz), list(cols), list(verts), list(edges)
 
 
-MOVE_SPEED = 48
+# A8 rates: turn 1 yaw unit per 16 ms, move (sin * ms) >> 6 = ~7.75 units/s. One input tick is
+# 1/4 VBlank (4.17 ms): 67/256 yaw unit and 8.25 8.8-units per tick (33 per VBlank).
+MOVE_SPEED = 33
+TURN_TICK = 67
+
+
+def hold_dist(ticks):
+    """HoldDist in world.asm: 8.8 world units for `ticks` input ticks."""
+    return ticks * 8 + (ticks >> 2)
+
+
+def turn_step(yaw, frac, joy, dt):
+    """ApplyInput turn: net hold ticks * TURN_TICK into an 8.8 yaw accumulator. -> (yaw, frac)."""
+    net = 0
+    if not (joy & 0x20):
+        net = 4 * dt * ((joy & 1) - (joy >> 1 & 1))
+    tot = frac + net * TURN_TICK
+    return (yaw + (tot >> 8)) & 255, tot & 255
 
 
 def apply_move(state, joy, dt):
-    """Spec of world.asm ApplyMove. state = (camx, camz, yaw); cam 16-bit 8.8 (wraps)."""
-    x, z, yaw = state
-    dist = dt * MOVE_SPEED
-    if not (joy & 0x20):
-        if joy & 1:
-            yaw = (yaw + 2 * dt) & 255
-        if joy & 2:
-            yaw = (yaw - 2 * dt) & 255
+    """Spec of world.asm ApplyMove. state = (camx, camz, yaw, turn_frac); cam 16-bit 8.8 (wraps)."""
+    x, z, yaw, frac = state
+    dist = hold_dist(4 * dt)
+    yaw, frac = turn_step(yaw, frac, joy, dt)
     sn, cs = sin_of(yaw), cos_of(yaw)
 
     def along(bm, cm):
@@ -137,7 +150,7 @@ def apply_move(state, joy, dt):
             along(cs, -sn)
         if joy & 2:
             along(-cs, sn)
-    return (x, z, yaw)
+    return (x, z, yaw, frac)
 
 
 def move_script():
@@ -153,7 +166,7 @@ def move_script():
     return out
 
 
-MOVE_START = (40 * 256 + 17, 40 * 256 + 90, 200)
+MOVE_START = (40 * 256 + 17, 40 * 256 + 90, 200, 0)
 
 
 def poses():
@@ -336,7 +349,7 @@ def main():
         f.write("DEF NumMoveSteps EQU %d\nEXPORT NumMoveSteps\nMoveScript::\n" % len(move_script()))
         for (joy, dt) in move_script():
             f.write("    db %d, %d\n" % (joy, dt))
-        f.write("MoveStart::\n    dw %d, %d\n    db %d\n" % MOVE_START)
+        f.write("MoveStart::\n    dw %d, %d\n    db %d\n" % MOVE_START[:3])
 
 
 if __name__ == "__main__":

@@ -258,7 +258,9 @@ RunMapTest::
     call EnterRoom
     ld a, [wTestCnt]
     ld [wSpin], a
+    ld [wItemSpin + 1], a           ; pickups' yaw (A8 item_spin) for this case
     call ClearFB
+    ei                              ; ClearFB leaves interrupts off (SP fill)
     call RenderScene
     call DrawWorldObjects
     call FletcherFB
@@ -340,6 +342,7 @@ RunMoveTest::
     ld [wPosePtr], a
     ld a, h
     ld [wPosePtr + 1], a
+    call HoldsFromJoy
     call ApplyInput
     ld a, [wCamX]                   ; free movement: add the wish with no collision
     ld b, a
@@ -384,7 +387,64 @@ RunMoveTest::
     ld [wTestCnt], a
     cp NumMoveSteps
     jr nz, .step
-    ret
+    ; input sampling cases: per case 6 hold counters + hJoy appended to the dump
+    ld a, IEF_VBLANK                ; no real ticks while the cases feed the sampler
+    ldh [rIE], a
+    ld hl, InputCases
+.icase:
+    ld a, [hl]
+    cp $FF
+    ret z
+.iseg:
+    ld a, [hl+]
+    ld c, a                         ; pad
+    ld a, [hl+]                     ; ticks (0 ends the case)
+    and a
+    jr z, .iend
+    ld b, a
+.itick:
+    push hl
+    push bc
+    call InputSample
+    pop bc
+    pop hl
+    dec b
+    jr nz, .itick
+    jr .iseg
+.iend:
+    push hl
+    call ReadJoy
+    ld a, [wOutPtr]
+    ld l, a
+    ld a, [wOutPtr + 1]
+    ld h, a
+    ld de, wHoldF
+    ld b, 6
+.icopy:
+    ld a, [de]
+    ld [hl+], a
+    inc de
+    dec b
+    jr nz, .icopy
+    ldh a, [hJoy]
+    ld [hl+], a
+    ld a, l
+    ld [wOutPtr], a
+    ld a, h
+    ld [wOutPtr + 1], a
+    pop hl
+    jr .icase
+
+; pad, ticks ... ; 0, 0 ends a case ; $FF ends the table
+InputCases:
+    db $04, 10, $05, 5, 0, 0               ; forward 15, turn right 5
+    db $2A, 7, 0, 0                        ; B + down + left: back 7, strafe left 7
+    db $03, 3, 0, 0                        ; right and left: both 3
+    db $04, 60, 0, 0                       ; clamped at MAX_HOLD
+    db $10, 1, $00, 2, 0, 0                ; an A tap shorter than the frame still reaches hJoy
+    db $C8, 4, $00, 4, 0, 0                ; Start + Select + down: latched, back 4
+    db $04, 2, 0, 0                        ; counters restart after a snapshot
+    db $FF
 ENDC
 
 IF DEF(WORLDTEST)
@@ -455,6 +515,8 @@ ENDC
     ld [wCamY + 1], a
     ld a, [hl+]
     ld [wYaw], a
+    xor a
+    ld [wTurnFrac], a               ; the spec starts every case with no carried yaw fraction
     ld a, [hl+]
     ld [wFloorY], a
     ld a, [hl+]
@@ -520,6 +582,7 @@ ENDC
     ld [wScriptPtr], a
     ld a, h
     ld [wScriptPtr + 1], a
+    call HoldsFromJoy
     call ApplyMove
     ld a, [wCamX]
     call FletchByte
@@ -845,6 +908,9 @@ RunSmoke::
     ld a, b
     call LoadLevel
     call WpnInit
+    xor a
+    ld [wEmuzSeen], a
+    ld [wEmuzMs], a
     ld a, [wTestRoom]
     call EnterRoom
     ld hl, SmokeScenario + 2
@@ -862,6 +928,8 @@ RunSmoke::
     ld [wCamY + 1], a
     ld a, [hl+]
     ld [wYaw], a
+    xor a
+    ld [wTurnFrac], a               ; the spec starts every case with no carried yaw fraction
     ld a, [hl+]
     ld [wFloorY], a
     ld a, [hl+]
@@ -936,6 +1004,7 @@ IF DEF(SDAPPLY)
     ld a, [wSpin]
     add b
     ld [wSpin], a
+    call HoldsFromJoy
     call ApplyMove
 ELSE
     call UpdateMove
@@ -951,6 +1020,7 @@ ELSE
     ld a, [wSpin]
     add b
     ld [wSpin], a
+    call HoldsFromJoy
     call ApplyMove
     call WpnUpdate
     call PickupScan
@@ -1065,6 +1135,114 @@ ENDC
     ld [hl+], a
     dec b
     jr nz, .ez
+    ld de, wEnFrame                 ; offset 160: A8 en_frame
+    ld b, 24
+.ef:
+    ld a, [de]
+    inc de
+    ld [hl+], a
+    dec b
+    jr nz, .ef
+    ld de, wEnRot                   ; offset 184: A8 en_rot
+    ld b, 24
+.er:
+    ld a, [de]
+    inc de
+    ld [hl+], a
+    dec b
+    jr nz, .er
+    ld de, wEnDir                   ; offset 208: A8 en_dir
+    ld b, 24
+.ed:
+    ld a, [de]
+    inc de
+    ld [hl+], a
+    dec b
+    jr nz, .ed
+    ld de, wEnTimer                 ; offset 232: A8 en_timer (low)
+    ld b, 24
+.et:
+    ld a, [de]
+    inc de
+    ld [hl+], a
+    dec b
+    jr nz, .et
+    ld a, [wGunshotWake]            ; offset 256
+    ld [hl+], a
+    ld de, wPrOn                    ; offset 257: fireball slots on / x / z / life
+    ld b, 4
+.po:
+    ld a, [de]
+    inc de
+    ld [hl+], a
+    dec b
+    jr nz, .po
+    ld de, wPrX
+    ld b, 4
+.px:
+    ld a, [de]
+    inc de
+    ld [hl+], a
+    dec b
+    jr nz, .px
+    ld de, wPrZ
+    ld b, 4
+.pz:
+    ld a, [de]
+    inc de
+    ld [hl+], a
+    dec b
+    jr nz, .pz
+    ld de, wPrLifeH                 ; life ms, high byte
+    ld b, 4
+.pl:
+    ld a, [de]
+    inc de
+    ld [hl+], a
+    dec b
+    jr nz, .pl
+    ld a, [wPrVXL]                  ; offset 273: slot 0 velocity (x lo, x hi, z lo, z hi), wAng
+    ld [hl+], a
+    ld a, [wPrVXH]
+    ld [hl+], a
+    ld a, [wPrVZL]
+    ld [hl+], a
+    ld a, [wPrVZH]
+    ld [hl+], a
+    ld a, [wAng]
+    ld [hl+], a
+    ld a, [wPrXL]
+    ld [hl+], a
+    ld a, [wPrZL]
+    ld [hl+], a
+    ld de, wHudRows                 ; offset 280: HUD rows 14-17 (80 tile ids)
+    ld b, 80
+.hr:
+    ld a, [de]
+    inc de
+    ld [hl+], a
+    dec b
+    jr nz, .hr
+    ld a, [wHurtMs]                 ; offset 360: hurt flash ms left, border colour, status ms, raw dt
+    ld [hl+], a
+    ld a, [wHurtMs + 1]
+    ld [hl+], a
+    ld a, [wPalBorder]
+    ld [hl+], a
+    ld a, [wStatusMs]
+    ld [hl+], a
+    ld a, [wStatusMs + 1]
+    ld [hl+], a
+    ld a, [wRawDt]
+    ld [hl+], a
+    ld a, [wEmuzSeen]               ; offset 366: muzzle starts, last LOD / column / row
+    ld [hl+], a
+    ld a, [wEmuzLod]
+    ld [hl+], a
+    ld a, [wEmuzCol]
+    ld [hl+], a
+    ld a, [wEmuzY]
+    ld [hl+], a
     ret
 ENDC
 
@@ -1109,6 +1287,9 @@ RunPickUnit::
     ld [wScriptPtr + 1], a
     ld a, b
     call ApplyPickup
+    ld a, 0
+    adc 0                           ; 1 = used up
+    ld e, a
     ld a, [wOutPtr]
     ld l, a
     ld a, [wOutPtr + 1]
@@ -1126,6 +1307,14 @@ RunPickUnit::
     ld a, [wHaveWpn]
     ld [hl+], a
     ld a, [wHaveKeys]
+    ld [hl+], a
+    ld a, [wHavePack]
+    ld [hl+], a
+    ld a, [wArmorKind]
+    ld [hl+], a
+    ld a, [wWpnCur]
+    ld [hl+], a
+    ld a, e
     ld [hl+], a
     ld a, l
     ld [wOutPtr], a
@@ -1224,6 +1413,8 @@ RunCombUnit::
     ld [wArmor], a
     ld b, [hl]
     inc hl
+    ld a, [hl+]
+    ld [wArmorKind], a
     ld a, l
     ld [wScriptPtr], a
     ld a, h
@@ -1238,6 +1429,8 @@ RunCombUnit::
     ld [hl+], a
     ld a, [wArmor]
     ld [hl+], a
+    ld a, [wArmorKind]
+    ld [hl+], a
     ld a, l
     ld [wOutPtr], a
     ld a, h
@@ -1246,5 +1439,100 @@ RunCombUnit::
     dec a
     ld [wTestCnt], a
     jr nz, .dmg
+    ret
+ENDC
+
+IF DEF(LOSUNIT)
+; Enemy line of sight (gbc/ai.asm LineSolidsBlocked) against tools/gbc_losunit.py: per LosCases entry
+; (db level, room, ax, ay, az, bx, by, bz) load the level / room, test the segment, store 1 = blocked.
+RunLosUnit::
+    ld hl, wPoseMagic
+    ld a, 'P'
+    ld [hl+], a
+    ld a, 'O'
+    ld [hl+], a
+    ld a, 'S'
+    ld [hl+], a
+    ld a, 'E'
+    ld [hl], a
+    ld hl, LosCases
+    ld a, l
+    ld [wScriptPtr], a
+    ld a, h
+    ld [wScriptPtr + 1], a
+    ld hl, wPoseOut
+    ld a, l
+    ld [wOutPtr], a
+    ld a, h
+    ld [wOutPtr + 1], a
+    ld a, LOW(NumLosCases)
+    ld [wTestCnt], a
+    ld a, HIGH(NumLosCases)
+    ld [wTestCnt + 1], a
+.case:
+    ld a, BANK(LosCases)
+    ld [rROMB0], a
+    ld a, [wScriptPtr]
+    ld l, a
+    ld a, [wScriptPtr + 1]
+    ld h, a
+    ld de, wDbgOut
+    ld b, 8
+.cp:
+    ld a, [hl+]
+    ld [de], a
+    inc de
+    dec b
+    jr nz, .cp
+    ld a, l
+    ld [wScriptPtr], a
+    ld a, h
+    ld [wScriptPtr + 1], a
+    ld a, [wDbgOut]
+    ld b, a
+    ld a, [wLevel]
+    cp b
+    jr z, .same
+    ld a, b
+    call LoadLevel
+.same:
+    ld a, [wDbgOut + 1]
+    ld [wRoom], a
+    call EnterRoom
+    ld hl, wDbgOut + 2
+    ld de, wLnA
+    ld b, 6
+.ab:
+    ld a, [hl+]
+    ld [de], a
+    inc de
+    dec b
+    jr nz, .ab
+    ld a, BANK(LineSolidsBlocked)
+    ld [rROMB0], a
+    call LineSolidsBlocked
+    ld a, 0
+    adc 0                           ; 1 = blocked
+    ld b, a
+    ld a, [wOutPtr]
+    ld l, a
+    ld a, [wOutPtr + 1]
+    ld h, a
+    ld [hl], b
+    inc hl
+    ld a, l
+    ld [wOutPtr], a
+    ld a, h
+    ld [wOutPtr + 1], a
+    ld a, [wTestCnt]
+    sub 1
+    ld [wTestCnt], a
+    ld a, [wTestCnt + 1]
+    sbc 0
+    ld [wTestCnt + 1], a
+    ld b, a
+    ld a, [wTestCnt]
+    or b
+    jp nz, .case
     ret
 ENDC

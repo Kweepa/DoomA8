@@ -33,7 +33,8 @@ class SceneData:
         out = []
         for i in range(L.p[7]):
             out.append(dict(x=L.f("en_x", i), y=L.f("en_y", i), z=L.f("en_z", i), type=L.f("en_type", i),
-                            room=L.f("en_room", i), yaw=(L.f("en_rot", i) * 32) & 255, state=0))
+                            room=L.f("en_room", i), rot=(L.f("en_rot", i) * 32) & 255,
+                            state=8 if L.f("en_tag", i) else 0, frame=0))
         return out
 
 
@@ -58,14 +59,18 @@ def scene_pixels(sd, room, cam_x, cam_z, cam_y, yaw, spin, enemies=None, taken=(
             if t in taken:
                 continue
             m = sd.items[gen.ITEM_ORDER[ty]]
-            draw(x * 256 + 128, y * 256, z * 256 + 128, (spin * 2) & 255, m.verts, m.edges, m.shift, m.radius)
+            # A8 xform_item_spin / fill_item_verts: centre at cell + ITEM_BIAS (1); lightpost (17) and
+            # barrel (18) stay put, pickups take item_spin (spin = its high byte).
+            oyaw = 0 if ty in (17, 18) else spin & 255
+            draw((x + 1) * 256, y * 256, (z + 1) * 256, oyaw, m.verts, m.edges, m.shift, m.radius)
     if "enemies" in parts:
         for e in (enemies if enemies is not None else sd.enemy_list()):
-            if e["room"] != room or e["state"] == 7:
+            if e["room"] != room or e["state"] == 8:     # EN_GONE (tagged, not spawned)
                 continue
             key = ge.ENEMY_FILES[e["type"]][0]
             en = sd.enemies[key]
             start, ln = en["clips"]["stand"]
-            frame = start + ((spin >> 2) % ln)
-            draw(e["x"] * 256 + 128, e["y"] * 256, e["z"] * 256 + 128, e["yaw"], en["frames"][frame], en["edges"], 4, 3)
+            frame = start + e.get("frame", 0)          # idle: A8 enemy_logical_frame
+            # A8: enemies sit at the cell origin; bones are drawn with R(yaw - en_rot)
+            draw(e["x"] * 256, e["y"] * 256, e["z"] * 256, (-e["rot"]) & 255, en["frames"][frame], en["edges"], 4, 3)
     return fb

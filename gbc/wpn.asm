@@ -6,6 +6,7 @@
 
 INCLUDE "hw.inc"
 INCLUDE "wpn_ids.inc"
+INCLUDE "a8const.inc"
 
 DEF WPN_FIST    EQU 0
 DEF WPN_SHOT    EQU 1
@@ -13,6 +14,8 @@ DEF WPN_CHAIN   EQU 2
 DEF WPN_ROCKET  EQU 3
 DEF WPN_PISTOL  EQU 4
 DEF WPN_SAW     EQU 5
+ASSERT WPN_FIST == A8_WPN_FIST && WPN_SHOT == A8_WPN_SHOT && WPN_CHAIN == A8_WPN_CHAIN
+ASSERT WPN_ROCKET == A8_WPN_ROCKET && WPN_PISTOL == A8_WPN_PIST && WPN_SAW == A8_WPN_SAW
 DEF NUM_WPN     EQU 6
 
 DEF AMMO_NONE   EQU 0
@@ -34,10 +37,10 @@ SECTION "wpndef", ROM0
 WpnDef:
     db WF_FIST_HAND,  WF_FIST_PUNCH, $FF,         $FF,         48, 22, AMMO_NONE,   0
     db WF_SHOT,       WF_SHOT_COCK,  WF_MUZZLE,   $FF,         36, 34, AMMO_SHELL,  1
-    db WF_CHAIN_A,    WF_CHAIN_B,    WF_CHAIN_FL, WF_CHAIN_FR,  6,  6, AMMO_BULLET, 1
+    db WF_CHAIN_A,    WF_CHAIN_B,    WF_MUZZLE,   $FF,          6,  6, AMMO_BULLET, 1
     db WF_ROCKET,     WF_ROCKET,     WF_MUZZLE,   $FF,         60,  5, AMMO_ROCKET, 1
     db WF_PISTOL,     WF_PISTOL,     WF_MUZZLE,   $FF,         36, 28, AMMO_BULLET, 1
-    db WF_SAW,        WF_SAW,        WF_AXE_FLASH,$FF,          6,  6, AMMO_NONE,   0
+    db WF_SAW,        WF_SAW,        $FF,         $FF,          6,  6, AMMO_NONE,   0
 
 ; Recoil: (until elapsed VBlanks, dy) pairs, 0 ends (dy 0 afterwards). dy in pixels, down positive.
 ; A8 values (art is native size): shotgun snaps up 10, kicks down 14, settles 6 (16/35/35 ms);
@@ -86,11 +89,21 @@ WpnInit::
     ld [wHaveWpn], a
     ld a, WPN_PISTOL
     ld [wWpnCur], a
-    ld a, 50
+    ld a, A8_START_BUL
     ld [wAmmoBul], a
-    xor a
+    ld a, A8_START_SHL
     ld [wAmmoShl], a
+    xor a
     ld [wAmmoRkt], a
+    ld [wHavePack], a               ; A8 reset_loadout: no backpack, green armour, no powerup
+    ld [wArmorKind], a
+    ld [wPuKind], a
+    ld [wPuMs], a
+    ld [wPuMs + 1], a
+    ld [wPickupMs], a
+    ld [wPickupMs + 1], a
+    ld [wDeadMs], a
+    ld [wDeadMs + 1], a
     ld [wAmmoNone], a
     ld [wKills], a
     ld [wWpnTimer], a
@@ -108,9 +121,9 @@ WpnInit::
     ld [wLoadedFlash], a
     ld [wBodyFrame], a
     ld [wFlashFrame], a
-    ld a, 100
+    ld a, A8_START_HP
     ld [wHP], a
-    xor a
+    ld a, A8_START_ARMOUR
     ld [wArmor], a
     ; OBJ palettes: 0 = ink (white), 1 = flash (yellow)
     ld a, $80
@@ -131,10 +144,14 @@ ObjPalettes:
 ; ---- game-frame update (wMoveDt = VBlanks since the last frame) ---------------------------
 
 WpnUpdate::
+    ld a, [wHP]
+    and a
+    ret z                           ; dead: frozen
+IF DEF(DEBUG)
     ldh a, [hJoy]
     and JOY_START
     jr z, .noCheat
-    ld a, $3F                       ; debug cheat: all weapons, full ammo
+    ld a, $3F                       ; debug cheat (DEBUG builds): all weapons, full ammo
     ld [wHaveWpn], a
     ld a, 99
     ld [wAmmoBul], a
@@ -143,6 +160,7 @@ WpnUpdate::
     ld a, 100
     ld [wHP], a
 .noCheat:
+ENDC
     ldh a, [hJoy]
     and JOY_SELECT
     ld b, a
@@ -242,6 +260,14 @@ WpnUpdate::
     ld [wWpnAnimLen], a
     ld a, 1
     ld [wFireEvent], a
+    ld a, [wWpnCur]                 ; A8 fire_shot: guns (not fist / chainsaw) wake the room
+    cp WPN_FIST
+    jr z, .noWake
+    cp WPN_SAW
+    jr z, .noWake
+    ld a, 1
+    ld [wGunshotWake], a
+.noWake:
     ld a, [wFlashSel]
     xor 1
     ld [wFlashSel], a

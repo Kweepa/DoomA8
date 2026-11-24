@@ -50,10 +50,11 @@ def load_items():
 
 
 def fireball_mesh():
-    """Synthetic octahedron (half a cell across) for imp / baron fireballs."""
-    verts = [(2, 0, 0), (-2, 0, 0), (0, 2, 0), (0, -2, 0), (0, 0, 2), (0, 0, -2)]
-    edges = [(a, b) for a in (0, 1) for b in (2, 3, 4, 5)] + [(a, b) for a in (2, 3) for b in (4, 5)]
-    return Mesh("fireball", verts, edges)
+    """A8 rkt_draw_one: a screen triangle of half-extent RKT_R (0.375 units = 6/16), top (0, +r),
+    left (-r, -r), right (+r, -r). Drawn with yaw = -camera yaw so local x / y are screen x / y."""
+    verts = [(0, 6, 0), (-6, -6, 0), (6, -6, 0)]
+    edges = [(0, 1), (1, 2), (2, 0)]
+    return Mesh("fireball", verts, edges, shift=4)
 
 
 ENEMY_FILES = [("poss", "Possessed"), ("baron", "Baron"), ("pinky", "Pinky"), ("imp", "Imp")]

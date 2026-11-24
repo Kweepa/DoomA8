@@ -57,6 +57,10 @@ if /i "%~1"=="comb" (
   set "DEFS=-D TEST_EXIT=1 -D COMBUNIT=1"
   set "NAME=doomgbc_comb"
 )
+if /i "%~1"=="los" (
+  set "DEFS=-D TEST_EXIT=1 -D LOSUNIT=1"
+  set "NAME=doomgbc_los"
+)
 if /i "%~1"=="pose" (
   set "DEFS=-D TEST_EXIT=1 -D POSETEST=1"
   set "NAME=doomgbc_pose"
@@ -65,6 +69,10 @@ if /i "%~1"=="pose" (
 if defined GBC_DEFS set "DEFS=%DEFS% %GBC_DEFS%"
 if not exist gbc\build mkdir gbc\build
 
+python tools\gbc_a8const.py gbc\build
+if errorlevel 1 exit /b 1
+python tools\gbc_hudfont.py gbc\build
+if errorlevel 1 exit /b 1
 python tools\gbc_font.py gbc\build\font.inc
 if errorlevel 1 exit /b 1
 python tools\gbc_genlines.py gbc\build
@@ -85,7 +93,7 @@ python tools\gbc_game.py gbc\build
 if errorlevel 1 exit /b 1
 
 set "OBJS="
-for %%F in (main vars line fb bench math render posetest data input world collide doors entity objects wpn combat ai) do (
+for %%F in (main vars line fb bench math render posetest data input world collide doors entity objects wpn combat ai hud player) do (
   "%RGBDS%\rgbasm.exe" -Weverything %DEFS% -I gbc\ -I gbc\build\ -o gbc\build\%%F.o gbc\%%F.asm
   if errorlevel 1 exit /b 1
   call set "OBJS=%%OBJS%% gbc\build\%%F.o"

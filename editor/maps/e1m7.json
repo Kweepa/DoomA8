@@ -1135,7 +1135,7 @@
       "axis": "z",
       "dir": 1,
       "roomId": "6f2f8fcd-ab18-4232-a8fb-bc2fef89a706",
-      "pickup": "blue armor"
+      "pickup": "combat armor"
     },
     {
       "id": "969aac51-e34a-4812-8641-08d7888ddef5",
@@ -1376,7 +1376,7 @@
       "axis": "z",
       "dir": 1,
       "roomId": "4d9447f1-5583-4331-9e5a-db56b2724fd6",
-      "pickup": "green armor"
+      "pickup": "security armor"
     },
     {
       "id": "1f2346bc-9c15-44bd-a291-112ecee09702",
@@ -2031,7 +2031,7 @@
       "axis": "z",
       "dir": 1,
       "roomId": "2093c416-dc8b-4ca5-8056-b9f2d920916c",
-      "pickup": "green armor"
+      "pickup": "security armor"
     },
     {
       "id": "98907c2e-a10c-4077-bd69-b5446cff254a",

@@ -1433,6 +1433,168 @@ button:disabled {
   }
 }
 
+/* ---- GB Sprites tab ---- */
+#gbspr-left[hidden],
+.sprites-panel[hidden] {
+  display: none !important;
+}
+
+.spr-group {
+  margin: 0.6rem 0 0.2rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.spr-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 0.5rem;
+}
+
+.spr-item {
+  display: grid;
+  grid-template-columns: 62px 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 3px 6px;
+  text-align: left;
+  background: #0a0a0c;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  min-width: 0;
+}
+
+.spr-item:hover {
+  border-color: var(--btn-hover);
+  background: #14161c;
+}
+
+.spr-item.active {
+  border-color: var(--accent);
+}
+
+.spr-thumb {
+  justify-self: center;
+  image-rendering: pixelated;
+  background: #000;
+  box-sizing: content-box;
+  border: 1px solid #222;
+}
+
+.spr-item-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spr-item-dim {
+  font-size: 0.7rem;
+}
+
+.sprites-panel {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
+}
+
+.spr-title {
+  font-weight: 600;
+}
+
+.spr-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.spr-stage {
+  width: 640px;
+  height: 560px;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #07070a;
+  border: 1px solid var(--border);
+}
+
+.spr-grid {
+  background: #000;
+  image-rendering: pixelated;
+  cursor: crosshair;
+  touch-action: none;
+  max-width: 100%;
+}
+
+.spr-side {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) auto auto;
+  gap: 0.75rem 1.5rem;
+  align-items: start;
+}
+
+.spr-sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.spr-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.spr-slider {
+  display: grid;
+  grid-template-columns: 3.5rem 1fr 2rem;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.spr-slider-val {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.spr-size-note {
+  margin: 0;
+}
+
+.spr-cross {
+  display: grid;
+  grid-template-columns: repeat(3, 3rem);
+  grid-auto-rows: 2.2rem;
+  gap: 4px;
+  align-items: stretch;
+}
+
+.spr-cross-mid {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  color: var(--muted);
+}
+
+.spr-ops {
+  flex-wrap: wrap;
+}
+
+.spr-size-note.error,
+.spr-item-dim.error {
+  color: #e66;
+}
+
   </style>
 </head>
 <body>
@@ -1443,6 +1605,7 @@ button:disabled {
       <button type="button" id="btn-mode-anim">Enemies</button>
       <button type="button" id="btn-mode-weapons">Weapons</button>
       <button type="button" id="btn-mode-items">Items</button>
+      <button type="button" id="btn-mode-gbsprites" title="Game Boy weapon, flash, blood and spark sprites">GB Sprites</button>
       <button type="button" id="btn-mode-build">Build</button>
     </div>
     <div class="toolbar-actions" id="draw-mode-group" role="group" aria-label="Draw mode">
@@ -1507,6 +1670,7 @@ button:disabled {
           <button type="button" id="btn-weapon-export">Export PNGs</button>
         </div>
       </section>
+      <section id="gbspr-left" hidden></section>
       <section id="items-left" hidden>
         <table id="item-budget" class="item-budget">
           <tbody>
@@ -1547,6 +1711,7 @@ button:disabled {
       </div>
       <p class="hint" id="hint"></p>
       <div id="build-panel" class="build-panel" hidden></div>
+      <div id="gbspr-panel" class="sprites-panel" hidden></div>
     </section>
 
     <aside class="right">
@@ -3608,6 +3773,182 @@ function rotateRoom(room, axis, delta) {
 }
 
 
+// ---- js/gbSpriteModel.js ----
+// Game Boy Color sprite art (weapons, flashes, splats; blood vs spark is a colour choice in game). Pure data, no DOM.
+// One bit per pixel, 1:1 with the GBC screen. rows[y] is a string of "." and "#" (w chars).
+// Source of truth for the game is assets/weapons/<id>.png (white = ink, black = clear), read by
+// tools/gbc_genwpn.py; the tab imports / exports exactly those files.
+// OAM is 8x16: the generator slices every frame into 8-wide x 16-tall cells and skips empty ones,
+// so width/height are free (min 8) and the editor draws the 8x16 cell grid.
+
+const GBS_W_MIN = 8;
+const GBS_W_MAX = 64;
+const GBS_H_MIN = 8;
+const GBS_H_MAX = 48;
+const GBS_CELL_W = 8;
+const GBS_CELL_H = 16;
+
+/**
+ * Catalogue. id = PNG basename in assets/weapons. w/h = default and imported size.
+ * cellLimit: gbc_genwpn.py asserts (body frames <= 16 cells, flashes <= 7); null = not wired yet.
+ */
+const GBS_DEFS = [
+  { id: "pistol_lines", name: "Pistol", group: "Weapon", w: 24, h: 32, cellLimit: 16 },
+  { id: "shotgun_lines", name: "Shotgun", group: "Weapon", w: 40, h: 32, cellLimit: 16 },
+  { id: "shotgun_cock_lines", name: "Shotgun (cock)", group: "Weapon", w: 24, h: 42, cellLimit: 16 },
+  { id: "chaingun_a_lines", name: "Chaingun A", group: "Weapon", w: 48, h: 32, cellLimit: 16 },
+  { id: "chaingun_b_lines", name: "Chaingun B", group: "Weapon", w: 48, h: 32, cellLimit: 16 },
+  { id: "rocketlauncher_lines", name: "Rocket launcher", group: "Weapon", w: 48, h: 32, cellLimit: 16 },
+  { id: "chainsaw_lines", name: "Chainsaw", group: "Weapon", w: 64, h: 40, cellLimit: 16 },
+  { id: "fist_righthand_lines", name: "Fist (idle)", group: "Weapon", w: 56, h: 21, cellLimit: 16 },
+  { id: "fist_lefthand_lines", name: "Fist (punch)", group: "Weapon", w: 64, h: 32, cellLimit: 16 },
+  { id: "muzzle_flash", name: "Muzzle flash", group: "Flash", w: 24, h: 21, cellLimit: 7 },
+  { id: "splat_0", name: "Splat 0 (near)", group: "Splat", w: 24, h: 21, cellLimit: null },
+  { id: "splat_1", name: "Splat 1", group: "Splat", w: 24, h: 21, cellLimit: null },
+  { id: "splat_2", name: "Splat 2 (far)", group: "Splat", w: 24, h: 21, cellLimit: null },
+];
+
+function gbsDef(id) {
+  return GBS_DEFS.find((d) => d.id === id) || null;
+}
+
+function gbsBlankRows(w, h) {
+  return Array.from({ length: h }, () => ".".repeat(w));
+}
+
+function gbsBlank(def) {
+  return { id: def.id, w: def.w, h: def.h, rows: gbsBlankRows(def.w, def.h) };
+}
+
+function clampInt(v, min, max, fallback) {
+  const n = Math.round(Number(v));
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.min(max, n));
+}
+
+function cleanRows(raw, w, h) {
+  const out = gbsBlankRows(w, h);
+  if (!Array.isArray(raw)) return out;
+  for (let y = 0; y < h; y++) {
+    const r = typeof raw[y] === "string" ? raw[y] : "";
+    let s = "";
+    for (let x = 0; x < w; x++) s += r[x] === "#" ? "#" : ".";
+    out[y] = s;
+  }
+  return out;
+}
+
+/** Always returns every catalogue sprite, in catalogue order. */
+function normalizeGbSprites(raw) {
+  const list = Array.isArray(raw) ? raw : [];
+  return GBS_DEFS.map((def) => {
+    const r = list.find((s) => s && s.id === def.id);
+    if (!r) return gbsBlank(def);
+    const w = clampInt(r.w, GBS_W_MIN, GBS_W_MAX, def.w);
+    const h = clampInt(r.h, GBS_H_MIN, GBS_H_MAX, def.h);
+    return { id: def.id, w, h, rows: cleanRows(r.rows, w, h) };
+  });
+}
+
+function gbsGet(sp, x, y) {
+  if (x < 0 || y < 0 || x >= sp.w || y >= sp.h) return false;
+  return sp.rows[y][x] === "#";
+}
+
+/** Mutates. Returns true when the pixel changed. */
+function gbsSet(sp, x, y, on) {
+  if (x < 0 || y < 0 || x >= sp.w || y >= sp.h) return false;
+  if (gbsGet(sp, x, y) === on) return false;
+  const r = sp.rows[y];
+  sp.rows[y] = r.slice(0, x) + (on ? "#" : ".") + r.slice(x + 1);
+  return true;
+}
+
+function gbsRowsEqual(a, b) {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
+
+/** Number of non-empty 8x16 OAM cells, exactly as gbc_genwpn.frame_cells counts them. */
+function gbsCellCount(sp) {
+  let n = 0;
+  for (let cy = 0; cy < sp.h; cy += GBS_CELL_H) {
+    for (let cx = 0; cx < sp.w; cx += GBS_CELL_W) {
+      if (gbsCellUsed(sp, cx, cy)) n++;
+    }
+  }
+  return n;
+}
+
+function gbsCellUsed(sp, cx, cy) {
+  for (let y = cy; y < Math.min(sp.h, cy + GBS_CELL_H); y++) {
+    for (let x = cx; x < Math.min(sp.w, cx + GBS_CELL_W); x++) {
+      if (sp.rows[y][x] === "#") return true;
+    }
+  }
+  return false;
+}
+
+/** New rows, content moved by (dx, dy); anything pushed off the edge is lost. */
+function gbsShiftRows(sp, dx, dy) {
+  const out = gbsBlankRows(sp.w, sp.h);
+  for (let y = 0; y < sp.h; y++) {
+    const sy = y - dy;
+    if (sy < 0 || sy >= sp.h) continue;
+    let s = "";
+    for (let x = 0; x < sp.w; x++) {
+      const sx = x - dx;
+      s += sx >= 0 && sx < sp.w ? sp.rows[sy][sx] : ".";
+    }
+    out[y] = s;
+  }
+  return out;
+}
+
+function gbsFlipHRows(sp) {
+  return sp.rows.map((r) => r.split("").reverse().join(""));
+}
+
+function gbsFlipVRows(sp) {
+  return sp.rows.slice().reverse();
+}
+
+function gbsInvertRows(sp) {
+  return sp.rows.map((r) => r.replace(/[.#]/g, (c) => (c === "#" ? "." : "#")));
+}
+
+/**
+ * Resize to (w, h), anchored top-left (the generator and wpn.asm place art from its top-left, so
+ * growing or shrinking never moves existing pixels). Returns a new sprite object.
+ */
+function gbsResize(sp, w, h) {
+  const rows = gbsBlankRows(w, h);
+  for (let y = 0; y < Math.min(h, sp.h); y++) {
+    let s = "";
+    for (let x = 0; x < w; x++) s += x < sp.w ? sp.rows[y][x] : ".";
+    rows[y] = s;
+  }
+  return { id: sp.id, w, h, rows };
+}
+
+/** Sprite from decoded ink bits (array of rows of 0/1), clamped to the editor size limits. */
+function gbsFromBits(id, bits) {
+  const def = gbsDef(id);
+  const sh = bits.length;
+  const sw = sh ? bits[0].length : 0;
+  const w = clampInt(sw, GBS_W_MIN, GBS_W_MAX, def.w);
+  const h = clampInt(sh, GBS_H_MIN, GBS_H_MAX, def.h);
+  const rows = gbsBlankRows(w, h);
+  for (let y = 0; y < h; y++) {
+    let s = "";
+    for (let x = 0; x < w; x++) s += y < sh && x < sw && bits[y][x] ? "#" : ".";
+    rows[y] = s;
+  }
+  return { id, w, h, rows };
+}
+
+
 // ---- js/model.js ----
 function uid() {
   if (globalThis.crypto?.randomUUID) return crypto.randomUUID();
@@ -4151,8 +4492,8 @@ function elevStopBottoms(doc, elev) {
 const PICKUP_TYPES = [
   "small health",
   "large health",
-  "green armor",
-  "blue armor",
+  "security armor",
+  "combat armor",
   "ammo box",
   "shells",
   "box of rockets",
@@ -4173,8 +4514,8 @@ const PICKUP_TYPES = [
 const PICKUP_ICON = {
   "small health": "health",
   "large health": "healthcrate",
-  "green armor": "greenarmor",
-  "blue armor": "bluearmor",
+  "security armor": "greenarmor",
+  "combat armor": "bluearmor",
   "ammo box": "ammobox",
   shells: "shellbox",
   "box of rockets": "boxofrockets",
@@ -4233,8 +4574,8 @@ const BACKPACK_DEPTH = (BACKPACK_SIDE * Math.sqrt(3)) / 2;
 const PICKUP_ALIAS = {
   "health 25%": "small health",
   "health 50%": "large health",
-  armour: "green armor",
-  armor: "green armor",
+  armour: "security armor",
+  armor: "security armor",
   "quad damage": "radsuit",
   "pentagram of protection": "soulsphere",
   "ring of shadows": "radsuit",
@@ -4378,7 +4719,7 @@ function defaultItemMeshes() {
         [0, 3],
       ]
     ),
-    "green armor": meshOf(
+    "security armor": meshOf(
       [
         [-1, 0, -1],
         [1, 0, -1],
@@ -4497,7 +4838,7 @@ function defaultItemMeshes() {
         [6, 8],
       ]
     ),
-    "blue armor": meshOf(
+    "combat armor": meshOf(
       [
         [-1, 0, -1],
         [1, 0, -1],
@@ -4780,7 +5121,7 @@ function parseItemMeshes(raw) {
     if (src[oldKey] != null && src[newKey] == null) src[newKey] = src[oldKey];
   }
   if (src.chaingun != null && src.shotgun == null) src.shotgun = src.chaingun;
-  if (src["green armor"] != null && src["blue armor"] == null) src["blue armor"] = src["green armor"];
+  if (src["security armor"] != null && src["combat armor"] == null) src["combat armor"] = src["security armor"];
   if (src.tech != null && src.Tech == null) src.Tech = src.tech;
   if (src.arch != null && src.Arch == null) src.Arch = src.arch;
   if (src.tri != null && src.Tri == null) src.Tri = src.tri;
@@ -7304,6 +7645,7 @@ function parseEditorState(raw) {
     raw.mode === "layout" ||
     raw.mode === "weapons" ||
     raw.mode === "items" ||
+    raw.mode === "gbsprites" ||
     raw.mode === "build"
   ) {
     d.mode = raw.mode;
@@ -7383,6 +7725,7 @@ function gameDocument(doc) {
     version: doc.version,
     weapons: doc.weapons,
     items: doc.items,
+    gbSprites: doc.gbSprites,
   };
 }
 
@@ -7397,6 +7740,7 @@ function createDefaultDocument() {
     enemies: createAllCreatures(),
     weapons: defaultWeapons(),
     items: defaultItemMeshes(),
+    gbSprites: normalizeGbSprites(null),
   };
 }
 
@@ -7510,6 +7854,7 @@ function normalizeDocument(raw) {
   relinkAllDoors(doc);
   doc.version = DOC_VERSION;
   doc.weapons = parseWeapons(raw.weapons);
+  doc.gbSprites = normalizeGbSprites(raw.gbSprites);
   doc.items = parseItemMeshes(migrateItemMeshes(raw.items, fromVersion));
   doc.editor = parseEditorState(raw.editor);
   doc.enemies = (doc.enemies || []).filter((e) => DOOM_SPRITE_PREFIX[e.name]);
@@ -8494,6 +8839,15 @@ async function writePngFile(dirHandle, filename, blob) {
   const writable = await fh.createWritable();
   await writable.write(blob);
   await writable.close();
+}
+
+async function readPngFile(dirHandle, filename) {
+  try {
+    const fh = await dirHandle.getFileHandle(filename);
+    return await fh.getFile();
+  } catch {
+    return null;
+  }
 }
 
 function downloadJSON(doc, filename = DEFAULT_DOC_PATH) {
@@ -14281,6 +14635,480 @@ class ItemView {
 }
 
 
+// ---- js/gbSpriteView.js ----
+const GBS_INK = "#ffffff";
+const GBS_BG = "#000000";
+const GBS_GRID = "rgba(255, 255, 255, 0.12)";
+const GBS_CELL_LINE = "rgba(255, 200, 80, 0.55)";
+const GBS_CELL_USED = "rgba(80, 160, 255, 0.14)";
+const GBS_MAX_W = 640;
+const GBS_MAX_H = 560;
+
+function gbsEl(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+
+/**
+ * Game Boy sprites tab: sprite list (left), 1-bit pixel painter (centre) with width/height sliders,
+ * shift, flip/invert, copy/paste and PNG import/export. Data lives in doc.gbSprites via opts.getSprites().
+ * opts: left, panel (DOM roots), getSprites, beginUndo, endUndo, markDirty, onChange, onStatus,
+ *       onImport, onExport (async PNG round trip with assets/weapons).
+ */
+class GbSpriteView {
+  constructor(opts) {
+    this.opts = opts;
+    this.enabled = false;
+    this.selId = GBS_DEFS[0].id;
+    this.clip = null;
+    this.stroke = null;
+    this.thumbs = new Map();
+    this.#buildList(opts.left);
+    this.#buildPanel(opts.panel);
+  }
+
+  getState() {
+    return { sel: this.selId };
+  }
+
+  setState(s) {
+    this.selId = gbsDef(s?.sel) ? s.sel : GBS_DEFS[0].id;
+  }
+
+  selected() {
+    return this.opts.getSprites().find((s) => s.id === this.selId) || null;
+  }
+
+  // ---- DOM ----
+
+  #buildList(root) {
+    root.textContent = "";
+    root.append(gbsEl("h2", "", "GB sprites"));
+    const wrap = gbsEl("div", "spr-list");
+    let group = null;
+    for (const def of GBS_DEFS) {
+      if (def.group !== group) {
+        group = def.group;
+        wrap.append(gbsEl("h3", "spr-group", group));
+      }
+      const btn = gbsEl("button", "spr-item");
+      btn.type = "button";
+      const cv = document.createElement("canvas");
+      cv.className = "spr-thumb";
+      const label = gbsEl("span", "spr-item-label", def.name);
+      const dim = gbsEl("span", "spr-item-dim muted");
+      btn.append(cv, label, dim);
+      btn.addEventListener("click", () => this.select(def.id));
+      wrap.append(btn);
+      this.thumbs.set(def.id, { btn, cv, dim });
+    }
+    root.append(wrap);
+    const io = gbsEl("div", "btn-row");
+    io.append(
+      this.#button("Import PNGs", "Read assets/weapons/*.png into every sprite (replaces the tab's data)", () =>
+        this.opts.onImport?.(),
+      ),
+      this.#button("Export PNGs", "Write every sprite to assets/weapons/<id>.png (white on black)", () =>
+        this.opts.onExport?.(),
+      ),
+    );
+    root.append(io);
+    root.append(gbsEl("p", "muted spr-left-hint", "1 px = 1 GBC pixel. White = ink. Build reads assets/weapons/*.png."));
+  }
+
+  #button(label, title, onClick, cls = "") {
+    const b = gbsEl("button", cls, label);
+    b.type = "button";
+    b.title = title;
+    b.addEventListener("click", onClick);
+    return b;
+  }
+
+  #slider(label, min, max, onInput) {
+    const row = gbsEl("label", "spr-slider");
+    const name = gbsEl("span", "spr-slider-name", label);
+    const input = document.createElement("input");
+    input.type = "range";
+    input.min = String(min);
+    input.max = String(max);
+    input.step = "1";
+    const val = gbsEl("span", "spr-slider-val");
+    input.addEventListener("input", () => onInput(Number(input.value), false));
+    input.addEventListener("change", () => {
+      onInput(Number(input.value), true);
+      input.blur(); // a focused range input swallows Ctrl+Z in the window key handler
+    });
+    row.append(name, input, val);
+    return { row, input, val };
+  }
+
+  #cross(label, title, fn) {
+    const cross = gbsEl("div", "spr-cross");
+    cross.append(
+      gbsEl("span"),
+      this.#button("↑", `${title} up`, (e) => fn(0, -(e.shiftKey ? 8 : 1))),
+      gbsEl("span"),
+      this.#button("←", `${title} left`, (e) => fn(-(e.shiftKey ? 8 : 1), 0)),
+      gbsEl("span", "spr-cross-mid", label),
+      this.#button("→", `${title} right`, (e) => fn(e.shiftKey ? 8 : 1, 0)),
+      gbsEl("span"),
+      this.#button("↓", `${title} down`, (e) => fn(0, e.shiftKey ? 8 : 1)),
+      gbsEl("span"),
+    );
+    return cross;
+  }
+
+  #buildPanel(root) {
+    root.textContent = "";
+    this.title = gbsEl("div", "spr-title");
+    root.append(this.title);
+
+    const main = gbsEl("div", "spr-main");
+    const cv = document.createElement("canvas");
+    cv.className = "spr-grid";
+    cv.addEventListener("pointerdown", (e) => this.#onDown(e));
+    cv.addEventListener("pointermove", (e) => this.#onMove(e));
+    cv.addEventListener("pointerup", (e) => this.#endStroke(e));
+    cv.addEventListener("pointercancel", (e) => this.#endStroke(e));
+    cv.addEventListener("lostpointercapture", (e) => this.#endStroke(e));
+    cv.addEventListener("contextmenu", (e) => e.preventDefault());
+    this.grid = cv;
+
+    const side = gbsEl("div", "spr-side");
+    this.wSlider = this.#slider("Width", GBS_W_MIN, GBS_W_MAX, (v, done) => this.#resize(v, null, done));
+    this.hSlider = this.#slider("Height", GBS_H_MIN, GBS_H_MAX, (v, done) => this.#resize(null, v, done));
+    this.sizeNote = gbsEl("p", "muted spr-size-note");
+
+    const ops = gbsEl("div", "btn-row spr-ops");
+    ops.append(
+      this.#button("Clear", "Del", () => this.clear(), "danger"),
+      this.#button("Invert", "I", () => this.invert()),
+      this.#button("Flip H", "H", () => this.flipH()),
+      this.#button("Flip V", "V", () => this.flipV()),
+    );
+    const clip = gbsEl("div", "btn-row spr-ops");
+    this.pasteBtn = this.#button("Paste", "Ctrl+V", () => this.paste());
+    clip.append(this.#button("Copy", "Ctrl+C", () => this.copy()), this.pasteBtn);
+
+    const sliders = gbsEl("div", "spr-sliders");
+    sliders.append(this.wSlider.row, this.hSlider.row, this.sizeNote);
+    const btns = gbsEl("div", "spr-btns");
+    btns.append(ops, clip);
+    side.append(sliders, this.#cross("shift", "Shift (arrows, Shift = 8)", (dx, dy) => this.shift(dx, dy)), btns);
+
+    const stage = gbsEl("div", "spr-stage");
+    stage.append(cv);
+    main.append(stage, side);
+    root.append(main);
+  }
+
+  // ---- drawing ----
+
+  #cell(sp) {
+    const k = Math.max(4, Math.min(24, Math.floor(GBS_MAX_H / sp.h), Math.floor(GBS_MAX_W / sp.w)));
+    return k;
+  }
+
+  refresh() {
+    if (!this.enabled) return;
+    const sp = this.selected();
+    for (const def of GBS_DEFS) this.#drawThumb(def.id);
+    if (!sp) return;
+    const def = gbsDef(sp.id);
+    this.title.textContent = `${def.name} · ${sp.id}.png · ${sp.w}×${sp.h}`;
+    this.wSlider.input.value = String(sp.w);
+    this.wSlider.val.textContent = String(sp.w);
+    this.hSlider.input.value = String(sp.h);
+    this.hSlider.val.textContent = String(sp.h);
+    this.sizeNote.textContent = this.#cellNote(sp, def);
+    this.sizeNote.classList.toggle("error", this.#overLimit(sp, def));
+    this.pasteBtn.disabled = !this.clip;
+    this.#drawGrid(sp);
+  }
+
+  #overLimit(sp, def) {
+    return def.cellLimit != null && gbsCellCount(sp) > def.cellLimit;
+  }
+
+  #cellNote(sp, def) {
+    const n = gbsCellCount(sp);
+    const lim = def.cellLimit == null ? "" : ` / ${def.cellLimit}`;
+    return `${n}${lim} OAM cells (8×16, empty cells skipped)`;
+  }
+
+  #drawGrid(sp) {
+    const k = this.#cell(sp);
+    const cv = this.grid;
+    cv.width = sp.w * k;
+    cv.height = sp.h * k;
+    const ctx = cv.getContext("2d");
+    ctx.fillStyle = GBS_BG;
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.fillStyle = GBS_CELL_USED;
+    for (let cy = 0; cy < sp.h; cy += GBS_CELL_H) {
+      for (let cx = 0; cx < sp.w; cx += GBS_CELL_W) {
+        if (!gbsCellUsed(sp, cx, cy)) continue;
+        ctx.fillRect(cx * k, cy * k, Math.min(GBS_CELL_W, sp.w - cx) * k, Math.min(GBS_CELL_H, sp.h - cy) * k);
+      }
+    }
+    ctx.fillStyle = GBS_INK;
+    for (let y = 0; y < sp.h; y++) {
+      for (let x = 0; x < sp.w; x++) {
+        if (gbsGet(sp, x, y)) ctx.fillRect(x * k + 1, y * k + 1, k - 1, k - 1);
+      }
+    }
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = GBS_GRID;
+    ctx.beginPath();
+    for (let x = 0; x <= sp.w; x++) {
+      const px = Math.min(x * k + 0.5, cv.width - 0.5);
+      ctx.moveTo(px, 0);
+      ctx.lineTo(px, cv.height);
+    }
+    for (let y = 0; y <= sp.h; y++) {
+      const py = Math.min(y * k + 0.5, cv.height - 0.5);
+      ctx.moveTo(0, py);
+      ctx.lineTo(cv.width, py);
+    }
+    ctx.stroke();
+    // OAM cell boundaries: every 8 px across, every 16 px down.
+    ctx.strokeStyle = GBS_CELL_LINE;
+    ctx.beginPath();
+    // The right / bottom edge sits on the canvas border, so pull it half a pixel inside.
+    for (let x = 0; x <= sp.w; x += GBS_CELL_W) {
+      const px = Math.min(x * k + 0.5, cv.width - 0.5);
+      ctx.moveTo(px, 0);
+      ctx.lineTo(px, cv.height);
+    }
+    for (let y = 0; y <= sp.h; y += GBS_CELL_H) {
+      const py = Math.min(y * k + 0.5, cv.height - 0.5);
+      ctx.moveTo(0, py);
+      ctx.lineTo(cv.width, py);
+    }
+    ctx.stroke();
+  }
+
+  #drawThumb(id) {
+    const t = this.thumbs.get(id);
+    const sp = this.opts.getSprites().find((s) => s.id === id);
+    if (!t || !sp) return;
+    t.btn.classList.toggle("active", id === this.selId);
+    const def = gbsDef(id);
+    t.dim.textContent = `${sp.w}×${sp.h}`;
+    t.dim.classList.toggle("error", this.#overLimit(sp, def));
+    const cv = t.cv;
+    cv.width = sp.w;
+    cv.height = sp.h;
+    const k = Math.max(1, Math.min(Math.floor(56 / sp.w), Math.floor(44 / sp.h)));
+    cv.style.width = `${sp.w * k}px`;
+    cv.style.height = `${sp.h * k}px`;
+    const ctx = cv.getContext("2d");
+    ctx.fillStyle = GBS_BG;
+    ctx.fillRect(0, 0, sp.w, sp.h);
+    ctx.fillStyle = GBS_INK;
+    for (let y = 0; y < sp.h; y++) {
+      for (let x = 0; x < sp.w; x++) if (gbsGet(sp, x, y)) ctx.fillRect(x, y, 1, 1);
+    }
+  }
+
+  // ---- selection ----
+
+  select(id) {
+    if (!gbsDef(id) || id === this.selId) return;
+    this.selId = id;
+    this.refresh();
+    this.opts.onChange?.();
+  }
+
+  // ---- painting ----
+
+  #cellAt(e) {
+    const sp = this.selected();
+    const r = this.grid.getBoundingClientRect();
+    return {
+      x: Math.floor(((e.clientX - r.left) / r.width) * sp.w),
+      y: Math.floor(((e.clientY - r.top) / r.height) * sp.h),
+    };
+  }
+
+  #onDown(e) {
+    if (!this.enabled || !this.selected()) return;
+    if (e.button !== 0 && e.button !== 2) return;
+    e.preventDefault();
+    if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+    const c = this.#cellAt(e);
+    this.stroke = { on: e.button === 0, last: c, pid: e.pointerId, began: false };
+    this.grid.setPointerCapture(e.pointerId);
+    this.#paint(c.x, c.y);
+  }
+
+  #onMove(e) {
+    const s = this.stroke;
+    if (!s || e.pointerId !== s.pid) return;
+    const c = this.#cellAt(e);
+    if (c.x === s.last.x && c.y === s.last.y) return;
+    let x0 = s.last.x;
+    let y0 = s.last.y;
+    const dx = Math.abs(c.x - x0);
+    const dy = -Math.abs(c.y - y0);
+    const sx = x0 < c.x ? 1 : -1;
+    const sy = y0 < c.y ? 1 : -1;
+    let err = dx + dy;
+    for (;;) {
+      this.#paint(x0, y0);
+      if (x0 === c.x && y0 === c.y) break;
+      const e2 = 2 * err;
+      if (e2 >= dy) {
+        err += dy;
+        x0 += sx;
+      }
+      if (e2 <= dx) {
+        err += dx;
+        y0 += sy;
+      }
+    }
+    s.last = c;
+  }
+
+  #paint(x, y) {
+    const s = this.stroke;
+    const sp = this.selected();
+    if (!s || !sp || x < 0 || y < 0 || x >= sp.w || y >= sp.h) return;
+    if (gbsGet(sp, x, y) === s.on) return;
+    if (!s.began) {
+      s.began = true;
+      this.opts.beginUndo();
+    }
+    gbsSet(sp, x, y, s.on);
+    this.#drawGrid(sp);
+    this.#drawThumb(sp.id);
+    this.sizeNote.textContent = this.#cellNote(sp, gbsDef(sp.id));
+    this.sizeNote.classList.toggle("error", this.#overLimit(sp, gbsDef(sp.id)));
+  }
+
+  #endStroke(e) {
+    const s = this.stroke;
+    if (!s || (e && e.pointerId !== s.pid)) return;
+    this.stroke = null;
+    if (!s.began) return;
+    this.opts.endUndo();
+    this.opts.markDirty();
+    this.opts.onChange?.();
+  }
+
+  // ---- edits ----
+
+  #edit(fn) {
+    const sp = this.selected();
+    if (!sp) return false;
+    const next = fn(sp);
+    if (!next || gbsRowsEqual(next, sp.rows)) return false;
+    this.opts.beginUndo();
+    sp.rows = next;
+    this.opts.endUndo();
+    this.opts.markDirty();
+    this.refresh();
+    this.opts.onChange?.();
+    return true;
+  }
+
+  shift(dx, dy) {
+    return this.#edit((sp) => gbsShiftRows(sp, dx, dy));
+  }
+  flipH() {
+    return this.#edit(gbsFlipHRows);
+  }
+  flipV() {
+    return this.#edit(gbsFlipVRows);
+  }
+  invert() {
+    return this.#edit(gbsInvertRows);
+  }
+  clear() {
+    return this.#edit((sp) => gbsBlankRows(sp.w, sp.h));
+  }
+
+  copy() {
+    const sp = this.selected();
+    if (!sp) return false;
+    this.clip = { w: sp.w, h: sp.h, rows: sp.rows.slice() };
+    this.opts.onStatus?.(`Copied ${gbsDef(sp.id).name}`);
+    this.refresh();
+    return true;
+  }
+
+  /** Top-left aligned; anything past the current size is cropped. */
+  paste() {
+    const clip = this.clip;
+    if (!clip) return false;
+    return this.#edit((sp) => {
+      const rows = gbsBlankRows(sp.w, sp.h);
+      for (let y = 0; y < Math.min(sp.h, clip.h); y++) {
+        let s = "";
+        for (let x = 0; x < sp.w; x++) s += x < clip.w ? clip.rows[y][x] : ".";
+        rows[y] = s;
+      }
+      return rows;
+    });
+  }
+
+  /** One undo step per slider drag: begins on the first input, ends on change. */
+  #resize(w, h, done) {
+    const sp = this.selected();
+    if (!sp) return;
+    const nw = w ?? sp.w;
+    const nh = h ?? sp.h;
+    if (nw !== sp.w || nh !== sp.h) {
+      this.opts.beginUndo();
+      Object.assign(sp, gbsResize(sp, nw, nh));
+      this.opts.markDirty();
+      this.refresh();
+    }
+    if (done) {
+      this.opts.endUndo();
+      this.opts.onChange?.();
+    }
+  }
+
+  /** Returns true when the key was a sprite shortcut. Caller skips text inputs. */
+  handleKey(e) {
+    if (e.altKey) return false;
+    const mod = e.ctrlKey || e.metaKey;
+    const k = e.key.toLowerCase();
+    if (mod) {
+      if (e.shiftKey) return false;
+      if (k === "c") return this.copy() || true;
+      if (k === "v") return this.paste() || true;
+      return false;
+    }
+    const n = e.shiftKey ? 8 : 1;
+    switch (k) {
+      case "arrowleft":
+        return this.shift(-n, 0) || true;
+      case "arrowright":
+        return this.shift(n, 0) || true;
+      case "arrowup":
+        return this.shift(0, -n) || true;
+      case "arrowdown":
+        return this.shift(0, n) || true;
+      case "h":
+        return this.flipH() || true;
+      case "v":
+        return this.flipV() || true;
+      case "i":
+        return this.invert() || true;
+      case "delete":
+      case "backspace":
+        return this.clear() || true;
+      default:
+        return false;
+    }
+  }
+}
+
+
 // ---- js/buildView.js ----
 const REPORT_NAME = "build-report.json";
 const VARIANT_ORDER = ["a8"];
@@ -15739,6 +16567,106 @@ const itemView = new ItemView(document.getElementById("view-canvas"), {
   onViewChanged: () => markUi(),
 });
 
+const gbSpriteView = new GbSpriteView({
+  left: document.getElementById("gbspr-left"),
+  panel: document.getElementById("gbspr-panel"),
+  getSprites: () => {
+    if (!doc.gbSprites) doc.gbSprites = normalizeGbSprites(null);
+    return doc.gbSprites;
+  },
+  beginUndo,
+  endUndo,
+  markDirty,
+  onChange: () => markUi(),
+  onStatus: (msg, isError) => setStatus(msg, isError),
+  onImport: () => void importGbSpritePngs(),
+  onExport: () => void exportGbSpritePngs(),
+});
+
+function gbSpriteBlob(sp) {
+  const canvas = document.createElement("canvas");
+  canvas.width = sp.w;
+  canvas.height = sp.h;
+  const ctx = canvas.getContext("2d");
+  const img = ctx.createImageData(sp.w, sp.h);
+  for (let y = 0; y < sp.h; y++) {
+    for (let x = 0; x < sp.w; x++) {
+      const o = (y * sp.w + x) * 4;
+      const v = sp.rows[y][x] === "#" ? 255 : 0;
+      img.data[o] = img.data[o + 1] = img.data[o + 2] = v;
+      img.data[o + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  return new Promise((resolve, reject) =>
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("PNG encode failed"))), "image/png"),
+  );
+}
+
+async function gbSpriteBitsFromFile(file) {
+  const bmp = await createImageBitmap(file);
+  const canvas = document.createElement("canvas");
+  canvas.width = bmp.width;
+  canvas.height = bmp.height;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  ctx.drawImage(bmp, 0, 0);
+  const d = ctx.getImageData(0, 0, bmp.width, bmp.height).data;
+  const bits = [];
+  for (let y = 0; y < bmp.height; y++) {
+    const row = [];
+    for (let x = 0; x < bmp.width; x++) {
+      const o = (y * bmp.width + x) * 4;
+      row.push(Math.max(d[o], d[o + 1], d[o + 2]) > 16 ? 1 : 0); // same threshold as gbc_genwpn.py
+    }
+    bits.push(row);
+  }
+  return bits;
+}
+
+async function exportGbSpritePngs() {
+  try {
+    const dir = await ensureWeaponsPngDirectory();
+    if (!dir) return;
+    let n = 0;
+    for (const sp of doc.gbSprites) {
+      await writePngFile(dir, `${sp.id}.png`, await gbSpriteBlob(sp));
+      n++;
+    }
+    setStatus(`Wrote ${n} PNGs to assets/weapons`);
+  } catch (err) {
+    setStatus(String(err.message || err), true);
+  }
+}
+
+async function importGbSpritePngs() {
+  try {
+    const dir = await ensureWeaponsPngDirectory();
+    if (!dir) return;
+    const found = [];
+    const missing = [];
+    for (const def of GBS_DEFS) {
+      const file = await readPngFile(dir, `${def.id}.png`);
+      if (!file) {
+        missing.push(def.id);
+        continue;
+      }
+      found.push(gbsFromBits(def.id, await gbSpriteBitsFromFile(file)));
+    }
+    if (!found.length) {
+      setStatus("No sprite PNGs in that folder (pick assets/weapons)", true);
+      return;
+    }
+    pushUndo();
+    const byId = new Map(found.map((sp) => [sp.id, sp]));
+    doc.gbSprites = doc.gbSprites.map((sp) => byId.get(sp.id) || sp);
+    markDirty();
+    gbSpriteView.refresh();
+    setStatus(`Imported ${found.length} PNGs` + (missing.length ? ` · not found: ${missing.join(", ")}` : ""));
+  } catch (err) {
+    setStatus(String(err.message || err), true);
+  }
+}
+
 function setStatus(msg, isError = false) {
   statusEl.textContent = msg || "";
   statusEl.classList.toggle("error", isError);
@@ -16037,6 +16965,7 @@ function snapshot() {
     enemies: doc.enemies,
     weapons: doc.weapons,
     items: doc.items,
+    gbSprites: doc.gbSprites,
   });
 }
 
@@ -16321,18 +17250,24 @@ function setMode(mode) {
   document.getElementById("btn-mode-anim").classList.toggle("active", mode === "anim");
   document.getElementById("btn-mode-weapons").classList.toggle("active", mode === "weapons");
   document.getElementById("btn-mode-items")?.classList.toggle("active", mode === "items");
+  document.getElementById("btn-mode-gbsprites")?.classList.toggle("active", mode === "gbsprites");
   document.getElementById("btn-mode-build")?.classList.toggle("active", mode === "build");
   document.querySelector(".layout")?.classList.toggle("layout-build", mode === "build");
+  const gbs = mode === "gbsprites";
   const leftAside = document.querySelector(".left");
   if (leftAside) leftAside.hidden = mode === "build";
   const rightAside = document.querySelector(".right");
-  if (rightAside) rightAside.hidden = mode === "build";
+  if (rightAside) rightAside.hidden = mode === "build" || gbs;
   const buildPanel = document.getElementById("build-panel");
   if (buildPanel) buildPanel.hidden = mode !== "build";
+  const gbsPanel = document.getElementById("gbspr-panel");
+  if (gbsPanel) gbsPanel.hidden = !gbs;
+  const gbsLeft = document.getElementById("gbspr-left");
+  if (gbsLeft) gbsLeft.hidden = !gbs;
   const centerHeading = document.querySelector(".center-heading");
-  if (centerHeading) centerHeading.hidden = mode === "build";
+  if (centerHeading) centerHeading.hidden = mode === "build" || gbs;
   const mapStage = document.getElementById("map-stage");
-  if (mapStage) mapStage.hidden = mode === "build";
+  if (mapStage) mapStage.hidden = mode === "build" || gbs;
   const stick = mode === "anim";
   mapStage?.classList.toggle("stick-stage", stick);
   for (const id of ["stick-left", "stick-front"]) {
@@ -16342,7 +17277,7 @@ function setMode(mode) {
   stickLeft.enabled = stick;
   stickFront.enabled = stick;
   const hintEl = document.getElementById("hint");
-  if (hintEl) hintEl.hidden = mode === "build";
+  if (hintEl) hintEl.hidden = mode === "build" || gbs;
   document.getElementById("layout-left").hidden = mode !== "layout";
   document.querySelector(".left")?.classList.toggle("left-map", mode === "layout");
   document.getElementById("anim-left").hidden = mode !== "anim";
@@ -16366,13 +17301,17 @@ function setMode(mode) {
         ? "LMB drag pans · wheel scale"
         : mode === "items"
           ? "LMB box-select verts · click vert/line to select · Shift add · gizmo moves · V add vert · L add line · Ctrl+C/V copy/paste · Del · F focus · MMB pan · Alt+LMB / RMB orbit · Alt+RMB zoom"
-          : mode === "build"
+          : mode === "gbsprites"
+            ? "LMB paint · RMB erase · arrows shift (Shift = 8) · H/V flip · I invert · Del clear · Ctrl+C/V"
+            : mode === "build"
               ? "Open the repo once · Reload after a build"
               : animHintText();
   layoutView.enabled = mode === "layout";
   animView.enabled = mode === "anim";
   weaponView.enabled = mode === "weapons";
   itemView.enabled = mode === "items";
+  gbSpriteView.enabled = gbs;
+  if (gbs) gbSpriteView.refresh();
   if (mode === "layout") layoutView.resize();
   else if (mode === "anim") {
     requestAnimationFrame(() => {
@@ -19156,6 +20095,10 @@ function nudgeVert(axis, delta) {
 }
 
 function refreshPanels() {
+  if (editorMode === "gbsprites") {
+    gbSpriteView.refresh();
+    return;
+  }
   renderLevelList();
   renderObjectList();
   renderEnemyList();
@@ -19170,6 +20113,7 @@ function refreshPanels() {
   if (editorMode === "anim") animView.draw();
   if (editorMode === "weapons") weaponView.draw();
   if (editorMode === "items") itemView.draw();
+  if (editorMode === "gbsprites") gbSpriteView.refresh();
 }
 
 function refreshAll() {
@@ -19178,6 +20122,7 @@ function refreshAll() {
   if (editorMode === "layout") layoutView.draw();
   else if (editorMode === "weapons") weaponView.draw();
   else if (editorMode === "items") itemView.draw();
+  else if (editorMode === "gbsprites") gbSpriteView.refresh();
   else if (editorMode !== "build") animView.draw();
 }
 
@@ -19189,6 +20134,9 @@ document.getElementById("btn-mode-anim").addEventListener("click", () => {
 });
 document.getElementById("btn-mode-weapons").addEventListener("click", () => {
   setMode("weapons");
+});
+document.getElementById("btn-mode-gbsprites")?.addEventListener("click", () => {
+  setMode("gbsprites");
 });
 document.getElementById("btn-mode-items")?.addEventListener("click", () => {
   setMode("items");
@@ -19365,6 +20313,10 @@ window.addEventListener("keydown", (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") {
     e.preventDefault();
     redo();
+    return;
+  }
+  if (editorMode === "gbsprites" && gbSpriteView.handleKey(e)) {
+    e.preventDefault();
     return;
   }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "d" && editorMode === "layout") {

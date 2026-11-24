@@ -5,8 +5,8 @@
 INCLUDE "hw.inc"
 INCLUDE "map_fields.inc"
 
-DEF MOVE_SPEED   EQU 48            ; 8.8 world units per VBlank (0.1875)
-DEF TURN_SPEED   EQU 2             ; yaw units (256 per turn) per VBlank
+DEF MOVE_SPEED   EQU 33            ; 8.8 world units per VBlank = 8.25 per input tick (A8: ~7.75 units/s)
+DEF TURN_TICK    EQU 67            ; 8.8 yaw units per input tick (A8: 1 yaw unit per 16 ms)
 
 SECTION "world", ROM0
 
@@ -385,13 +385,34 @@ UpdateMove::
     ld a, [wSpin]
     add b
     ld [wSpin], a
+    ld a, b                         ; A8 dt_ms (NTSC: VBI ticks * 17)
+    swap a
+    add b
+    ld [wDtMs], a
+    ld l, a                         ; A8 update_item_spin: item_spin += dt_ms << 4 (8.8)
+    ld h, 0
+    add hl, hl
+    add hl, hl
+    add hl, hl
+    add hl, hl
+    ld a, [wItemSpin]
+    add l
+    ld [wItemSpin], a
+    ld a, [wItemSpin + 1]
+    adc h
+    ld [wItemSpin + 1], a
+    ld a, [wHP]                     ; A8 death_restart: no input or movement while dead
+    and a
+    ret z
     call ReadJoy
-    ldh a, [hJoy]                   ; debug cheat until pickups exist: Start = all keys
+IF DEF(DEBUG)
+    ldh a, [hJoy]                   ; debug cheat: Start = all keys
     bit 7, a
     jr z, .noCheat
     ld a, 7
     ld [wHaveKeys], a
 .noCheat:
+ENDC
     ; fall through
 
 ; hJoy and wMoveDt set: input -> turn/wish -> collide -> floor -> gravity.
@@ -402,48 +423,51 @@ ApplyMove::
     call UpdateFloor
     jp UpdateFall
 
-; hJoy and wMoveDt set: turn, then accumulate the movement wish. No collision.
+; wHold* set (ReadJoy, or HoldsFromJoy in the tests): turn, then accumulate the movement wish from
+; the time each direction was held (ticks, 12 world units per tick). No collision.
 ApplyInput::
     xor a
     ld [wWishX], a
     ld [wWishX + 1], a
     ld [wWishZ], a
     ld [wWishZ + 1], a
-    ; distance = dt * MOVE_SPEED
-    ld a, [wMoveDt]
-    ld c, a
-    ld hl, 0
-    ld de, MOVE_SPEED
-.mul:
-    add hl, de
-    dec c
-    jr nz, .mul
-    ld a, l
-    ld [wTa], a
-    ld a, h
-    ld [wTa + 1], a
 
-    ; turn (B not held)
-    ldh a, [hJoy]
-    bit 5, a
-    jr nz, .noTurn
-    ld a, [wMoveDt]
-    add a                           ; TURN_SPEED = 2 per VBlank
+    ; turn: net hold (right - left) ticks * TURN_TICK (67/256 yaw unit) into the 8.8 yaw
+    ; accumulator wTurnFrac:wYaw (A8: 1 yaw unit per 16 ms)
+    ld a, [wHoldTR]
+    ld b, a
+    ld a, [wHoldTL]
     ld c, a
-    ldh a, [hJoy]
-    bit 0, a
-    jr z, .notRight
+    ld a, b
+    sub c                           ; net, -48..48
+    ld e, a
+    add a
+    sbc a
+    ld d, a                         ; DE = net (signed 16)
+    ld h, d
+    ld l, e
+    add hl, hl
+    add hl, de                      ; 3 net
+    ld b, h
+    ld c, l
+    ld h, d
+    ld l, e
+    add hl, hl
+    add hl, hl
+    add hl, hl
+    add hl, hl
+    add hl, hl
+    add hl, hl                      ; 64 net
+    add hl, bc                      ; 67 net
+    ld a, [wTurnFrac]
+    add l
+    ld [wTurnFrac], a
+    ld a, h
+    adc 0
+    ld b, a
     ld a, [wYaw]
-    add c
+    add b
     ld [wYaw], a
-.notRight:
-    ldh a, [hJoy]
-    bit 1, a
-    jr z, .noTurn
-    ld a, [wYaw]
-    sub c
-    ld [wYaw], a
-.noTurn:
     ; sin / cos of the (new) yaw
     ld a, [wYaw]
     ld l, a
@@ -456,18 +480,20 @@ ApplyInput::
     ld a, [hl]
     ld [wCos], a
 
-    ldh a, [hJoy]
-    bit 2, a                        ; up: forward = (sin, cos)
+    ld a, [wHoldF]                  ; forward = (sin, cos)
+    and a
     jr z, .notUp
+    call HoldDist
     ld a, [wSin]
     ld b, a
     ld a, [wCos]
     ld c, a
     call MoveAlong
 .notUp:
-    ldh a, [hJoy]
-    bit 3, a                        ; down: back
+    ld a, [wHoldB]                  ; back
+    and a
     jr z, .notDown
+    call HoldDist
     ld a, [wSin]
     cpl
     inc a
@@ -478,12 +504,10 @@ ApplyInput::
     ld c, a
     call MoveAlong
 .notDown:
-    ldh a, [hJoy]
-    bit 5, a                        ; B held: strafe
-    ret z
-    ldh a, [hJoy]
-    bit 0, a                        ; right = (cos, -sin)
+    ld a, [wHoldSR]                 ; strafe right = (cos, -sin)
+    and a
     jr z, .notSR
+    call HoldDist
     ld a, [wCos]
     ld b, a
     ld a, [wSin]
@@ -492,9 +516,10 @@ ApplyInput::
     ld c, a
     call MoveAlong
 .notSR:
-    ldh a, [hJoy]
-    bit 1, a                        ; left = (-cos, sin)
+    ld a, [wHoldSL]                 ; strafe left = (-cos, sin)
+    and a
     ret z
+    call HoldDist
     ld a, [wCos]
     cpl
     inc a
@@ -502,3 +527,25 @@ ApplyInput::
     ld a, [wSin]
     ld c, a
     jp MoveAlong
+
+; A = ticks held -> wTa = A * 8.25 (8.8 world units; 4 ticks = one VBlank = MOVE_SPEED 33).
+; A8: (sin * ms) >> 6 = 2 units per ms at full sin, a tick is 4.17 ms.
+HoldDist:
+    ld c, a
+    srl a
+    srl a
+    ld b, a                         ; ticks >> 2
+    ld l, c
+    ld h, 0
+    add hl, hl
+    add hl, hl
+    add hl, hl
+    ld a, l
+    add b
+    ld l, a
+    ld a, h
+    adc 0
+    ld [wTa + 1], a
+    ld a, l
+    ld [wTa], a
+    ret

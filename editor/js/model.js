@@ -1,3 +1,4 @@
+import { normalizeGbSprites } from "./gbSpriteModel.js";
 import {
   ROOM_SHAPES,
   clampRoomShape,
@@ -610,8 +611,8 @@ export function elevStopBottoms(doc, elev) {
 export const PICKUP_TYPES = [
   "small health",
   "large health",
-  "green armor",
-  "blue armor",
+  "security armor",
+  "combat armor",
   "ammo box",
   "shells",
   "box of rockets",
@@ -632,8 +633,8 @@ export const PICKUP_TYPES = [
 export const PICKUP_ICON = {
   "small health": "health",
   "large health": "healthcrate",
-  "green armor": "greenarmor",
-  "blue armor": "bluearmor",
+  "security armor": "greenarmor",
+  "combat armor": "bluearmor",
   "ammo box": "ammobox",
   shells: "shellbox",
   "box of rockets": "boxofrockets",
@@ -692,8 +693,8 @@ export const BACKPACK_DEPTH = (BACKPACK_SIDE * Math.sqrt(3)) / 2;
 const PICKUP_ALIAS = {
   "health 25%": "small health",
   "health 50%": "large health",
-  armour: "green armor",
-  armor: "green armor",
+  armour: "security armor",
+  armor: "security armor",
   "quad damage": "radsuit",
   "pentagram of protection": "soulsphere",
   "ring of shadows": "radsuit",
@@ -837,7 +838,7 @@ export function defaultItemMeshes() {
         [0, 3],
       ]
     ),
-    "green armor": meshOf(
+    "security armor": meshOf(
       [
         [-1, 0, -1],
         [1, 0, -1],
@@ -956,7 +957,7 @@ export function defaultItemMeshes() {
         [6, 8],
       ]
     ),
-    "blue armor": meshOf(
+    "combat armor": meshOf(
       [
         [-1, 0, -1],
         [1, 0, -1],
@@ -1239,7 +1240,7 @@ export function parseItemMeshes(raw) {
     if (src[oldKey] != null && src[newKey] == null) src[newKey] = src[oldKey];
   }
   if (src.chaingun != null && src.shotgun == null) src.shotgun = src.chaingun;
-  if (src["green armor"] != null && src["blue armor"] == null) src["blue armor"] = src["green armor"];
+  if (src["security armor"] != null && src["combat armor"] == null) src["combat armor"] = src["security armor"];
   if (src.tech != null && src.Tech == null) src.Tech = src.tech;
   if (src.arch != null && src.Arch == null) src.Arch = src.arch;
   if (src.tri != null && src.Tri == null) src.Tri = src.tri;
@@ -3763,6 +3764,7 @@ export function parseEditorState(raw) {
     raw.mode === "layout" ||
     raw.mode === "weapons" ||
     raw.mode === "items" ||
+    raw.mode === "gbsprites" ||
     raw.mode === "build"
   ) {
     d.mode = raw.mode;
@@ -3842,6 +3844,7 @@ export function gameDocument(doc) {
     version: doc.version,
     weapons: doc.weapons,
     items: doc.items,
+    gbSprites: doc.gbSprites,
   };
 }
 
@@ -3856,6 +3859,7 @@ export function createDefaultDocument() {
     enemies: createAllCreatures(),
     weapons: defaultWeapons(),
     items: defaultItemMeshes(),
+    gbSprites: normalizeGbSprites(null),
   };
 }
 
@@ -3969,6 +3973,7 @@ export function normalizeDocument(raw) {
   relinkAllDoors(doc);
   doc.version = DOC_VERSION;
   doc.weapons = parseWeapons(raw.weapons);
+  doc.gbSprites = normalizeGbSprites(raw.gbSprites);
   doc.items = parseItemMeshes(migrateItemMeshes(raw.items, fromVersion));
   doc.editor = parseEditorState(raw.editor);
   doc.enemies = (doc.enemies || []).filter((e) => DOOM_SPRITE_PREFIX[e.name]);

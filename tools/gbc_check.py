@@ -45,7 +45,7 @@ def main():
     args = [bgb, "-hf", "-nobatt", "-rom", rom, "-br", addr, "-screenonexit", shot]
     if live:
         args += ["-stateonexit", state]
-    subprocess.run(args, timeout=60)
+    subprocess.run(args, timeout=10)
     if live:
         d = open(state, "rb").read()
         i = d.find(b"LIVE")
@@ -56,7 +56,11 @@ def main():
                   "-> ~%.1f fps" % (59.7275 / (sum(diffs) / len(diffs))))
     img = Image.open(shot).convert("RGB")
     print("screenshot", img.size)
-    bg = img.getpixel((0, 0))
+    # Viewport paper (room colour, palette 0) and border colour (palette 1) differ: the paper is the
+    # most common viewport colour, the border is the top-left pixel.
+    from collections import Counter
+    bg = Counter(img.getpixel((VIEW_X0 + x, y)) for y in range(gl.VIEW_H) for x in range(gl.VIEW_W)).most_common(1)[0][0]
+    border = img.getpixel((0, 0))
     if live:
         # E1M1 spawn room: room mesh + objects + things + enemies, camera at the spawn point.
         import gbc_scene as gsc
@@ -65,11 +69,15 @@ def main():
         sx, sy, sz, rot, sroom = payload[17], payload[18], payload[19], payload[20], payload[21]
         yaw = (rot * 32) & 255
         spin = 0
+        ens = sd.enemy_list()
         d = open(state, "rb").read()
         i = d.find(b"LIVE")
         if i >= 0:
-            spin = d[i + 6 + 8]                      # wSpin saved at LiveStop (wPoseOut[8])
-        expect = gsc.scene_pixels(sd, sroom, (sx + 1) * 256, (sz + 1) * 256, (sy + 3) * 256, yaw, spin)
+            spin = d[i + 6 + 8]                      # wItemSpin high byte at LiveStop (wPoseOut[8])
+            frames = d[i + 6 + 16:i + 6 + 40]        # wEnFrame at LiveStop (wPoseOut[16..39])
+            for k, e in enumerate(ens):
+                e["frame"] = frames[k]
+        expect = gsc.scene_pixels(sd, sroom, (sx + 1) * 256, (sz + 1) * 256, (sy + 3) * 256, yaw, spin, enemies=ens)
         print("live: E1M1 spawn room %d, cam (%d,%d,%d) yaw %d spin %d" % (sroom, sx + 1, sy + 3, sz + 1, yaw, spin))
     else:
         expect = gl.reference_frame()
@@ -111,7 +119,7 @@ def main():
         print("extra e.g.", extra[:10])
     # Border columns must be untouched background.
     stray = [(x, y) for y in range(gl.VIEW_H) for x in list(range(0, VIEW_X0)) +
-             list(range(VIEW_X0 + gl.VIEW_W, 160)) if img.getpixel((x, y)) != bg]
+             list(range(VIEW_X0 + gl.VIEW_W, 160)) if img.getpixel((x, y)) != border]
     print("stray border px:", len(stray))
     ok = not missing and not extra and not stray and not (live and wfail)
     print("PASS" if ok else "FAIL")

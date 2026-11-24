@@ -12,6 +12,7 @@ OUT = ROOT / "index.html"
 
 JS_ORDER = [
     "js/roomGeom.js",
+    "js/gbSpriteModel.js",
     "js/model.js",
   "js/math3d.js",
   "js/gizmo.js",
@@ -24,6 +25,7 @@ JS_ORDER = [
     "js/animView.js",
     "js/weaponView.js",
     "js/itemView.js",
+    "js/gbSpriteView.js",
     "js/buildView.js",
     "js/doompic.js",
     "js/stickOrtho.js",
@@ -80,6 +82,7 @@ def main() -> None:
       <button type="button" id="btn-mode-anim">Enemies</button>
       <button type="button" id="btn-mode-weapons">Weapons</button>
       <button type="button" id="btn-mode-items">Items</button>
+      <button type="button" id="btn-mode-gbsprites" title="Game Boy weapon, flash, blood and spark sprites">GB Sprites</button>
       <button type="button" id="btn-mode-build">Build</button>
     </div>
     <div class="toolbar-actions" id="draw-mode-group" role="group" aria-label="Draw mode">
@@ -144,6 +147,7 @@ def main() -> None:
           <button type="button" id="btn-weapon-export">Export PNGs</button>
         </div>
       </section>
+      <section id="gbspr-left" hidden></section>
       <section id="items-left" hidden>
         <table id="item-budget" class="item-budget">
           <tbody>
@@ -184,6 +188,7 @@ def main() -> None:
       </div>
       <p class="hint" id="hint"></p>
       <div id="build-panel" class="build-panel" hidden></div>
+      <div id="gbspr-panel" class="sprites-panel" hidden></div>
     </section>
 
     <aside class="right">

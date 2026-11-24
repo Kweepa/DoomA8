@@ -20,7 +20,7 @@ import gbc_entity as ge  # noqa: E402
 ENT_BANK = 10
 
 # thing type (TH_*) 0..18, then door types 0..3
-ITEM_ORDER = ["small health", "large health", "green armor", "blue armor", "ammo box", "shells",
+ITEM_ORDER = ["small health", "large health", "security armor", "combat armor", "ammo box", "shells",
               "box of rockets", "shotgun", "chaingun", "chainsaw", "rocket launcher", "backpack",
               "red keycard", "yellow keycard", "blue keycard", "soulsphere", "radsuit",
               "lightpost", "barrel", "Tech", "Arch", "Tri", "Crack", "fireball"]
@@ -63,6 +63,24 @@ def main():
         out.append(db(flat(e["edges"])))
         for f in e["frames"]:
             out.append(db(flat(f)))
+    # A8 enemy muzzle (assets/enemies/enemy_muzzle_0..2.png, tools/genenemymuzzle.py): per distance LOD
+    # 21 rows x 3 bytes (24 px, bit 7 = left), stamped in red at tip - (EMUZ_OX, EMUZ_OY).
+    from PIL import Image
+    out.append("EmuzPtr:: dw " + ", ".join("Emuz%d" % i for i in range(3)))
+    for i in range(3):
+        im = Image.open(os.path.join(ge.ROOT, "assets", "enemies", "enemy_muzzle_%d.png" % i)).convert("L")
+        if im.size != (24, 21):
+            raise SystemExit("enemy_muzzle_%d.png is %dx%d, expected 24x21" % ((i,) + im.size))
+        rows = []
+        for y in range(21):
+            for b in range(3):
+                v = 0
+                for x in range(8):
+                    if im.getpixel((b * 8 + x, y)) > 128:
+                        v |= 0x80 >> x
+                rows.append(v)
+        out.append("Emuz%d:" % i)
+        out.append(db(rows))
     out.append('SECTION "ent_index", ROM0')
     out.append("EntBank:: db %d" % ENT_BANK)
     out.append("NumItemMeshes:: db %d" % len(ITEM_ORDER))

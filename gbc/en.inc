@@ -1,11 +1,7 @@
-; Enemy states (wEnState).
-DEF EN_IDLE   EQU 0
-DEF EN_CHASE  EQU 1
-DEF EN_ATTACK EQU 2
-DEF EN_PAIN   EQU 3
-DEF EN_DYING  EQU 4
-DEF EN_ALERT  EQU 5                 ; just woke: stands for a moment (drawn as idle), then chases
-DEF EN_DEAD   EQU 7
+; Enemy states and A8 constants. The values are the A8's (src/mem.asm EN_*), generated into
+; a8const.inc by tools/gbc_a8const.py: EN_IDLE 0, EN_ALERT 2, EN_APPROACH 3, EN_ATTACK 4,
+; EN_PAIN 5, EN_DYING 6, EN_DEAD 7, EN_GONE 8.
+INCLUDE "a8const.inc"
 
 DEF PR_N      EQU 4                 ; fireball slots
 DEF ITEM_FIREBALL EQU 23           ; ItemTab index of the synthetic fireball mesh

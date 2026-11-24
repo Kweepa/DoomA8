@@ -7,24 +7,6 @@ INCLUDE "wpn_ids.inc"
 
 INCLUDE "en.inc"
 
-DEF TH_HEALTH_SM EQU 0
-DEF TH_HEALTH_LG EQU 1
-DEF TH_ARMOR_G   EQU 2
-DEF TH_ARMOR_B   EQU 3
-DEF TH_BULLETS   EQU 4
-DEF TH_SHELLS    EQU 5
-DEF TH_ROCKETS   EQU 6
-DEF TH_SHOTGUN   EQU 7
-DEF TH_CHAINGUN  EQU 8
-DEF TH_CHAINSAW  EQU 9
-DEF TH_RLAUNCHER EQU 10
-DEF TH_BACKPACK  EQU 11
-DEF TH_KEY_RED   EQU 12
-DEF TH_KEY_YEL   EQU 13
-DEF TH_KEY_BLUE  EQU 14
-DEF TH_SOUL      EQU 15
-DEF TH_NTYPES    EQU 19
-
 SECTION "combat", ROM0
 
 ; ---- helpers -----------------------------------------------------------------------------
@@ -39,104 +21,71 @@ Rnd::
     ldh [hRnd], a
     ret
 
-; A = byte -> wDec: hundreds, tens, ones as tile ids (FONT_TILE0 + digit).
-DecimalA::
-    ld b, 0
-.h:
-    cp 100
-    jr c, .hd
-    sub 100
-    inc b
-    jr .h
-.hd:
-    ld c, a
-    ld a, b
-    add FONT_TILE0
-    ld [wDec], a
-    ld b, 0
-    ld a, c
-.t:
-    cp 10
-    jr c, .td
-    sub 10
-    inc b
-    jr .t
-.td:
-    ld c, a
-    ld a, b
-    add FONT_TILE0
-    ld [wDec + 1], a
-    ld a, c
-    add FONT_TILE0
-    ld [wDec + 2], a
-    ret
+; ---- HUD (gbc/hud.asm, ROMX) -------------------------------------------------------------
+; The banked routines map their bank; callers re-map what they were reading. The level bank is
+; restored after the message calls (they run inside movement / pickup code).
 
-; Fill wHud (12 tiles: HP, armor on row 15, ammo, kills on row 16) from the player state.
+HudInit::
+    ld a, BANK(HudInitB)
+    ld [rROMB0], a
+    jp HudInitB
+
 HudUpdate::
-    ld a, [wHP]
-    call DecimalA
-    ld hl, wHud
-    call .put3
-    ld a, [wArmor]
-    call DecimalA
-    ld hl, wHud + 3
-    call .put3
-    ; ammo of the current weapon
-    ld a, [wWpnCur]
-    ld e, a
-    ld d, 0
-    ld hl, HudAmmoSel
-    add hl, de
-    ld a, [hl]
-    ld e, a
-    ld d, 0
-    ld hl, wAmmoNone
-    add hl, de
-    ld a, [hl]
-    call DecimalA
-    ld hl, wHud + 6
-    call .put3
-    ld a, [wKills]
-    call DecimalA
-    ld hl, wHud + 9
-    call .put3
-    ; frame time in ms (VBlank = 16.74 ms: 16.75 * n), 255 max
-    ld a, [wRawDt]
-    cp 16
-    jr c, .msOk
-    ld a, 255
-    jr .msHave
-.msOk:
-    ld b, a
-    swap a
-    add b
-    ld c, a                         ; 17 * n
-    ld a, b
-    srl a
-    srl a
-    ld b, a
-    ld a, c
-    sub b                           ; - n / 4
-.msHave:
-    call DecimalA
-    ld hl, wHud + 12
-.put3:
-    ld a, [wDec]
-    ld [hl+], a
-    ld a, [wDec + 1]
-    ld [hl+], a
-    ld a, [wDec + 2]
-    ld [hl], a
+    ld a, BANK(HudUpdateB)
+    ld [rROMB0], a
+    jp HudUpdateB
+
+; A = TH_* type: "+<name>" on the message row.
+HudGot::
+    push af
+    ld a, BANK(HudGotB)
+    ld [rROMB0], a
+    pop af
+    call HudGotB
+    ld a, [wLevelBank]
+    ld [rROMB0], a
     ret
 
-; Offsets from wAmmoNone: none -> 0 (the zero byte), bullets, shells, rockets.
-HudAmmoSel:
-    db 0, 2, 1, 3, 1, 0              ; fist, shotgun(shells), chaingun, rocket, pistol, saw
+; A = door key: "Need a <key> keycard" / "Opened elsewhere".
+HudKeyReq::
+    push af
+    ld a, BANK(HudKeyReqB)
+    ld [rROMB0], a
+    pop af
+    call HudKeyReqB
+    ld a, [wLevelBank]
+    ld [rROMB0], a
+    ret
 
 ; ---- pickups -----------------------------------------------------------------------------
 
-; Walk-over pickups in the current room: |dx| <= 1, |dz| <= 1 cells and |feet - y| <= 2.
+; A8 try_thing_pickup: walk-over things of the current room. After a grab nothing is taken for
+; PICKUP_HOLD_MS, and the scan ends at the first item used up. Reach: Chebyshev <= TH_GRAB_R from the
+; player's cell to the TH_FOOT_SX square at the thing (A8 near_box_xz), and the player's feet-to-head
+; span overlapping [y, y + TH_FOOT_SX) (player_overlaps_y). Refused items (at the cap, already owned)
+; stay on the floor.
 PickupScan::
+    ld a, [wHP]
+    and a
+    ret z                           ; dead: frozen
+    ld a, [wPickupMs]
+    ld b, a
+    ld a, [wPickupMs + 1]
+    or b
+    jr z, .go
+    ld a, [wDtMs]
+    ld b, a
+    ld a, [wPickupMs]
+    sub b
+    ld [wPickupMs], a
+    ld a, [wPickupMs + 1]
+    sbc 0
+    ld [wPickupMs + 1], a
+    ret nc                          ; still > 0 (or exactly 0: the next frame is free)
+    xor a
+    ld [wPickupMs], a
+    ld [wPickupMs + 1], a
+.go:
     ld a, [wObjBank]
     ld [rROMB0], a
     ld a, [wRoom]
@@ -188,59 +137,60 @@ PickupScan::
     ld a, [hl+]
     ld [wPkType], a
     ld a, [hl+]
-    ld b, a                         ; x
+    ld [wPkX], a
     ld a, [hl+]
-    ld c, a                         ; y
+    ld [wPkY], a
     ld a, [hl+]
-    ld d, a                         ; z
+    ld [wPkZ], a
     inc hl
     push hl
     ld a, [wPkType]
-    cp TH_NTYPES - 2
-    jr nc, .next                    ; props (light post, barrel) are not pickups
+    cp TH_LIGHTPOST
+    jr nc, .next                    ; props (lightpost, barrel) are not pickups
     ld a, [wPkIdx]
     ld e, a
-    push de
     ld d, 0
     ld hl, wThTaken
     add hl, de
     ld a, [hl]
-    pop de
     and a
     jr nz, .next
     ld a, [wCamX + 1]
-    sub b
-    jr nc, .dxp
-    cpl
-    inc a
-.dxp:
-    cp 2
+    ld b, a
+    ld a, [wPkX]
+    ld c, a
+    call NearAxis
+    cp TH_GRAB_R + 1
     jr nc, .next
     ld a, [wCamZ + 1]
-    sub d
-    jr nc, .dzp
-    cpl
-    inc a
-.dzp:
-    cp 2
+    ld b, a
+    ld a, [wPkZ]
+    ld c, a
+    call NearAxis
+    cp TH_GRAB_R + 1
     jr nc, .next
-    ld a, [wCamY + 1]
-    sub EYE_HEIGHT
-    sub c
-    jr nc, .dyp
-    cpl
-    inc a
-.dyp:
-    cp 3
+    ld a, [wPkY]
+    ld [wBoxY], a
+    ld a, TH_FOOT_SX
+    ld [wBoxSY], a
+    call PlayerOverlapsY
     jr nc, .next
+    ld a, [wPkType]
+    call ApplyPickup
+    jr nc, .next                    ; refused: stays on the floor
     ld a, [wPkIdx]
     ld e, a
     ld d, 0
     ld hl, wThTaken
     add hl, de
     ld [hl], 1
-    ld a, [wPkType]
-    call ApplyPickup
+    ld a, LOW(PICKUP_HOLD_MS)
+    ld [wPickupMs], a
+    ld a, HIGH(PICKUP_HOLD_MS)
+    ld [wPickupMs + 1], a
+    pop hl
+    ld a, [wPkType]                 ; A8 hud_got
+    jp HudGot                       ; one grab per hold: the scan ends
 .next:
     pop hl
     ld a, [wPkI]
@@ -249,158 +199,85 @@ PickupScan::
     ld b, a
     ld a, [wPkN]
     cp b
-    jr nz, .loop
+    jp nz, .loop
     ret
 
-; Add A to the byte at HL, capped at B.
-AddCap:
-    add [hl]
-    jr c, .cap
-    cp b
-    jr c, .ok
-.cap:
+; A8 near_box_xz axis: B = player cell, C = box start (size TH_FOOT_SX) -> A = distance to the box
+; (0 inside; beyond the far end it is measured from start + size).
+NearAxis:
     ld a, b
-.ok:
-    ld [hl], a
+    cp c
+    jr c, .lo
+    ld a, c
+    add TH_FOOT_SX
+    ld d, a
+    ld a, b
+    cp d
+    jr nc, .hi
+    xor a
+    ret
+.lo:
+    ld a, c
+    sub b
+    ret
+.hi:
+    ld a, b
+    sub d
     ret
 
-; A = thing type. Applies the pickup.
+; A = thing type -> carry = used up. Banked: gbc/player.asm; the object bank is mapped again for the
+; scan loop.
 ApplyPickup::
-    ld e, a
-    ld d, 0
-    ld hl, .jump
-    add hl, de
-    add hl, de
-    ld a, [hl+]
-    ld h, [hl]
-    ld l, a
-    jp hl
-.jump:
-    dw .hsm, .hlg, .arg, .arb, .bul, .shl, .rkt, .sg, .cg, .saw, .rl, .bp, .kred, .kyel, .kblue, .soul, .none
-.hsm:
-    ld a, 10
-    ld b, 100
-    ld hl, wHP
-    jp AddCap
-.hlg:
-    ld a, 25
-    ld b, 100
-    ld hl, wHP
-    jp AddCap
-.arg:
-    ld a, 100
-    ld b, 100
-    ld hl, wArmor
-    jp AddCap
-.arb:
-    ld a, 200
-    ld b, 200
-    ld hl, wArmor
-    jp AddCap
-.bul:
-    ld a, 10
-    ld b, 200
-    ld hl, wAmmoBul
-    jp AddCap
-.shl:
-    ld a, 4
-    ld b, 50
-    ld hl, wAmmoShl
-    jp AddCap
-.rkt:
-    ld a, 5
-    ld b, 50
-    ld hl, wAmmoRkt
-    jp AddCap
-.sg:
-    ld a, [wHaveWpn]
-    or 1 << 1
-    ld [wHaveWpn], a
-    ld a, 8
-    ld b, 50
-    ld hl, wAmmoShl
-    jp AddCap
-.cg:
-    ld a, [wHaveWpn]
-    or 1 << 2
-    ld [wHaveWpn], a
-    ld a, 20
-    ld b, 200
-    ld hl, wAmmoBul
-    jp AddCap
-.saw:
-    ld a, [wHaveWpn]
-    or 1 << 5
-    ld [wHaveWpn], a
-    ret
-.rl:
-    ld a, [wHaveWpn]
-    or 1 << 3
-    ld [wHaveWpn], a
-    ld a, 2
-    ld b, 50
-    ld hl, wAmmoRkt
-    jp AddCap
-.bp:
-    ld a, 10
-    ld b, 200
-    ld hl, wAmmoBul
-    call AddCap
-    ld a, 4
-    ld b, 50
-    ld hl, wAmmoShl
-    call AddCap
-    ld a, 1
-    ld b, 50
-    ld hl, wAmmoRkt
-    jp AddCap
-.kred:
-    ld a, [wHaveKeys]
-    or 4
-    ld [wHaveKeys], a
-    ret
-.kyel:
-    ld a, [wHaveKeys]
-    or 1
-    ld [wHaveKeys], a
-    ret
-.kblue:
-    ld a, [wHaveKeys]
-    or 2
-    ld [wHaveKeys], a
-    ret
-.soul:
-    ld a, 100
-    ld b, 200
-    ld hl, wHP
-    jp AddCap
-.none:
+    push af
+    ld a, BANK(ApplyPickupB)
+    ld [rROMB0], a
+    pop af
+    call ApplyPickupB
+    push af
+    ld a, [wObjBank]
+    ld [rROMB0], a
+    pop af
     ret
 
 ; ---- HUD ---------------------------------------------------------------------------------
 
-; Call in VBlank: HP / armor on map row 15, ammo / kills on row 16 (3 digit tiles each).
+; VBlank: the four HUD shadow rows (14-17, all 20 columns) into the map, then the staged palettes.
 HudBlit::
-    ld hl, VRAM_MAP0 + 32 * 15 + 2
-    ld de, wHud
-    call .three
-    ld hl, VRAM_MAP0 + 32 * 15 + 7
-    call .three
-    ld hl, VRAM_MAP0 + 32 * 16 + 2
-    call .three
-    ld hl, VRAM_MAP0 + 32 * 16 + 7
-    call .three
-    ld hl, VRAM_MAP0 + 32 * 15 + 12   ; frame time, ms
-.three:
-    ld a, [de]
+    xor a
+    ldh [rVBK], a
+    ld hl, wHudRows
+    ld de, VRAM_MAP0 + 32 * 14
+    ld c, 4
+.row:
+    ld b, 20
+.col:
+    ld a, [hl+]
+    ld [de], a
     inc de
-    ld [hl+], a
-    ld a, [de]
-    inc de
-    ld [hl+], a
-    ld a, [de]
-    inc de
-    ld [hl], a
+    dec b
+    jr nz, .col
+    ld a, e
+    add 32 - 20
+    ld e, a
+    jr nc, .nc
+    inc d
+.nc:
+    dec c
+    jr nz, .row
+    ld a, [wPalDirty]
+    and a
+    ret z
+    xor a
+    ld [wPalDirty], a
+    ld a, $80                       ; BG palette 0, auto-increment
+    ldh [rBCPS], a
+    ld hl, wPalStage
+    ld b, 32
+.pal:
+    ld a, [hl+]
+    ldh [rBCPD], a
+    dec b
+    jr nz, .pal
     ret
 
 ; ---- enemy geometry helpers --------------------------------------------------------------
@@ -471,7 +348,7 @@ DeltaToPlayer::
     ret
 
 ; wDx / wDz = enemy - player (8.8, signed), for shot tests.
-DeltaFromPlayer:
+DeltaFromPlayer::
     ld a, [wExL]
     ld hl, wCamX
     sub [hl]
@@ -631,436 +508,115 @@ AngleTo::
 
 ; ---- damage ------------------------------------------------------------------------------
 
-; A = damage. Armor soaks a third of it (tools/gbc_game.player_damage).
+; A8 take_damage at skill 1 (no scaling, no god mode): A = damage. Armour saves 5/16 (green: /4 + /16)
+; or 1/2 (blue) of the hit; if armour then wraps past 200 it is used up. HP floors at 0 (the death
+; wait is CombatUpdate). Starts the HURT_FLASH_MS red border (gbc/hud.asm PaletteUpdate).
 PlayerDamage::
     ld c, a
+    ld a, [wHP]
+    and a
+    ret z                           ; already dead
     ld a, [wArmor]
     and a
     jr z, .hp
-    ld b, 0
+    ld a, [wArmorKind]
+    and a
+    jr nz, .blue
     ld a, c
-.d3:
-    cp 3
-    jr c, .d3d
-    sub 3
-    inc b
-    jr .d3
-.d3d:
-    ld a, [wArmor]
-    cp b
-    jr nc, .soak
+    srl a
+    srl a                           ; dmg / 4
     ld b, a
-.soak:
+    ld a, c
+    swap a
+    and $0F                         ; dmg / 16
+    add b
+    jr .saved
+.blue:
+    ld a, c
+    srl a                           ; dmg / 2
+.saved:
+    and a
+    jr z, .hp                       ; tiny hit: nothing absorbed
+    ld b, a
+    ld a, c
+    sub b
+    ld c, a
+    ld a, [wArmor]
     sub b
     ld [wArmor], a
-    ld a, c
-    sub b
-    ld c, a
+    cp 201
+    jr c, .hp                       ; (A8: > 200 means it underflowed)
+    xor a
+    ld [wArmor], a
+    ld [wArmorKind], a
 .hp:
+    ld a, LOW(HURT_FLASH_MS)
+    ld [wHurtMs], a
+    ld a, HIGH(HURT_FLASH_MS)
+    ld [wHurtMs + 1], a
     ld a, [wHP]
-    cp c
-    jr c, .dead
-    jr z, .dead
     sub c
-    ld [wHP], a
-    ret
-.dead:
+    jr nc, .st
     xor a
+.st:
     ld [wHP], a
     ret
 
-; Enemy wObjI takes A damage: death, or a pain flinch by chance; idle enemies wake.
+; Enemy wObjI takes A damage: the A8 damage_enemy port (gbc/ai.asm AiDamageEnemy, bank 31).
 DamageEnemy:
-    ld [wDmg], a
-    ld a, [wObjI]
-    ld e, a
-    ld d, 0
-    ld hl, wEnState
-    add hl, de
-    ld a, [hl]
-    cp EN_DYING
-    ret nc
-    ld hl, wEnHp
-    add hl, de
-    ld a, [wDmg]
-    ld b, a
-    ld a, [hl]
-    cp b
-    jr c, .kill
-    jr z, .kill
-    sub b
-    ld [hl], a
-    ; still alive: wake / pain
-    ld hl, wEnState
-    add hl, de
-    ld a, [hl]
-    and a
-    jr nz, .pain
-    ld [hl], EN_CHASE
-    ld hl, wEnTimer
-    add hl, de
-    ld [hl], 0
-.pain:
-    ld hl, wEnType
-    add hl, de
-    ld a, [hl]
-    swap a
-    ld c, a
-    ld b, 0
-    ld hl, EnemyParams + 7
-    add hl, bc
-    ld a, [hl]
-    ld b, a
-    call Rnd
-    cp b
-    ret nc
-    ld a, [wObjI]
-    ld e, a
-    ld d, 0
-    ld hl, wEnState
-    add hl, de
-    ld [hl], EN_PAIN
-    ld hl, wEnTimer
-    add hl, de
-    ld [hl], 0
-    ld hl, wEnFrame
-    add hl, de
-    ld [hl], 0
-    ret
-.kill:
-    xor a
-    ld [hl], a
-    ld hl, wEnState
-    add hl, de
-    ld [hl], EN_DYING
-    ld hl, wEnTimer
-    add hl, de
-    ld [hl], 0
-    ld a, [wKills]
-    inc a
-    ld [wKills], a
-    ret
+    push af
+    ld a, BANK(AiDamageEnemy)
+    ld [rROMB0], a
+    pop af
+    jp AiDamageEnemy
 
-; ---- player shots ------------------------------------------------------------------------
+; ---- player shots ----------------------------------------------------------------------
 
-; Consumes wFireEvent: a ray along the view direction hits the nearest live enemy in the room
-; within weapon range and hitbox width. Rockets also splash enemies near the target.
+; Consumes wFireEvent: the shot code is in bank 31 (gbc/ai.asm PlayerShotB, next to line of sight and
+; AiDamageEnemy).
 PlayerShot::
     ld a, [wFireEvent]
     and a
     ret z
     xor a
     ld [wFireEvent], a
-    ld a, [wEnN]
-    and a
-    ret z
-    ; weapon shot params
-    ld a, [wWpnCur]
-    add a
-    add a
-    ld e, a
-    ld d, 0
-    ld hl, WeaponShot
-    add hl, de
-    ld a, [hl+]
-    ld [wShRange], a
-    ld a, [hl+]
-    ld [wShMin], a
-    ld a, [hl+]
-    ld [wShMask], a
-    ld a, [hl]
-    ld [wShSplash], a
-    ; view direction (forward = sin, cos of yaw)
-    ld a, [wYaw]
-    ld l, a
-    ld h, HIGH(SinTab)
-    ld a, [hl]
-    ld [wSin], a
-    ld a, [wYaw]
-    add 64
-    ld l, a
-    ld a, [hl]
-    ld [wCos], a
-    ld a, $FF
-    ld [wBestI], a
-    ld a, $FF
-    ld [wBestF], a
-    ld a, $7F
-    ld [wBestF + 1], a
-    xor a
-    ld [wObjI], a
-.loop:
-    ld a, [wObjI]
-    ld e, a
-    ld d, 0
-    ld hl, wEnRoom
-    add hl, de
-    ld a, [wRoom]
-    cp [hl]
-    jp nz, .next
-    ld hl, wEnState
-    add hl, de
-    ld a, [hl]
-    cp EN_DYING
-    jp nc, .next
-    call LoadEnPos
-    call DeltaFromPlayer
-    ; f = dx*sin + dz*cos ; l = dx*cos - dz*sin
-    ld a, [wDx]
-    ld e, a
-    ld a, [wDx + 1]
-    ld d, a
-    ld a, [wSin]
-    ld c, a
-    call SMul16
-    ld a, e
-    ld [wTa], a
-    ld a, d
-    ld [wTa + 1], a
-    ld a, [wDz]
-    ld e, a
-    ld a, [wDz + 1]
-    ld d, a
-    ld a, [wCos]
-    ld c, a
-    call SMul16
-    ld a, [wTa]
-    add e
-    ld [wTa], a
-    ld a, [wTa + 1]
-    adc d
-    ld [wTa + 1], a                 ; forward distance (8.8)
-    ld a, [wDx]
-    ld e, a
-    ld a, [wDx + 1]
-    ld d, a
-    ld a, [wCos]
-    ld c, a
-    call SMul16
-    ld a, e
-    ld [wTb], a
-    ld a, d
-    ld [wTb + 1], a
-    ld a, [wDz]
-    ld e, a
-    ld a, [wDz + 1]
-    ld d, a
-    ld a, [wSin]
-    ld c, a
-    call SMul16
-    ld a, [wTb]
-    sub e
-    ld [wTb], a
-    ld a, [wTb + 1]
-    sbc d
-    ld [wTb + 1], a                 ; lateral offset (8.8)
-    ld a, [wTa + 1]
-    bit 7, a
-    jp nz, .next                    ; behind
-    ld b, a
-    ld a, [wTa]
-    or b
-    jp z, .next
-    ld a, [wShRange]
-    cp b
-    jp c, .next                     ; farther than range
-    ; |lateral| < hitbox width = (wid / 2) units
-    ld a, [wTb]
-    ld c, a
-    ld a, [wTb + 1]
-    ld b, a
-    bit 7, b
-    jr z, .lp
-    xor a
-    sub c
-    ld c, a
-    ld a, 0
-    sbc b
-    ld b, a
-.lp:
-    ld a, [wObjI]
-    ld e, a
-    ld d, 0
-    ld hl, wEnType
-    add hl, de
-    ld a, [hl]
-    swap a
-    ld e, a
-    ld d, 0
-    ld hl, EnemyParams + 8
-    add hl, de
-    ld a, [hl]                      ; wid
-    srl a
-    ld d, a                         ; width high byte (units)
-    ld a, [hl]
-    and 1
-    rrca
-    ld e, a                         ; width low byte (0 or 128)
-    ld a, c
-    sub e
-    ld a, b
-    sbc d
-    jp nc, .next                    ; |lateral| >= width
-    ; nearest so far?
-    ld a, [wTa]
-    ld c, a
-    ld a, [wTa + 1]
-    ld b, a
-    ld a, [wBestF + 1]
-    cp b
-    jr c, .next
-    jr nz, .better
-    ld a, [wBestF]
-    cp c
-    jr c, .next
-    jr z, .next
-.better:
-    ld a, c
-    ld [wBestF], a
-    ld a, b
-    ld [wBestF + 1], a
-    ld a, [wObjI]
-    ld [wBestI], a
-.next:
-    ld a, [wObjI]
-    inc a
-    ld [wObjI], a
-    ld b, a
-    ld a, [wEnN]
-    cp b
-    jp nz, .loop
-    ; wake every idle enemy in the room (gunfire)
-    xor a
-    ld [wObjI], a
-.wake:
-    ld a, [wObjI]
-    ld e, a
-    ld d, 0
-    ld hl, wEnRoom
-    add hl, de
-    ld a, [wRoom]
-    cp [hl]
-    jr nz, .wnext
-    ld hl, wEnState
-    add hl, de
-    ld a, [hl]
-    and a
-    jr nz, .wnext
-    ld [hl], EN_ALERT
-.wnext:
-    ld a, [wObjI]
-    inc a
-    ld [wObjI], a
-    ld b, a
-    ld a, [wEnN]
-    cp b
-    jr nz, .wake
-    ld a, [wBestI]
-    cp $FF
-    ret z
-    ld [wObjI], a
-    call Rnd
-    ld hl, wShMask
-    and [hl]
-    ld hl, wShMin
-    add [hl]
-    ld [wShDmg], a
-    ld a, [wBestI]
-    ld [wObjI], a
-    ld a, [wShDmg]
-    call DamageEnemy
-    ld a, [wShSplash]
-    and a
-    ret z
-    ; splash: other live enemies within the radius of the target take half
-    ld a, [wBestI]
-    ld [wTgtI], a
-    ld [wObjI], a
-    call LoadEnPos
-    ld a, [wEx]
-    ld [wTgtX], a
-    ld a, [wEz]
-    ld [wTgtZ], a
-    xor a
-    ld [wObjI], a
-.splash:
-    ld a, [wObjI]
-    ld b, a
-    ld a, [wTgtI]
-    cp b
-    jr z, .snext
-    ld e, b
-    ld d, 0
-    ld hl, wEnRoom
-    add hl, de
-    ld a, [wRoom]
-    cp [hl]
-    jr nz, .snext
-    ld hl, wEnState
-    add hl, de
-    ld a, [hl]
-    cp EN_DYING
-    jr nc, .snext
-    ld hl, wEnX
-    add hl, de
-    ld a, [wTgtX]
-    sub [hl]
-    jr nc, .sx
-    cpl
-    inc a
-.sx:
-    ld b, a
-    ld a, [wShSplash]
-    cp b
-    jr c, .snext
-    ld hl, wEnZ
-    add hl, de
-    ld a, [wTgtZ]
-    sub [hl]
-    jr nc, .sz
-    cpl
-    inc a
-.sz:
-    ld b, a
-    ld a, [wShSplash]
-    cp b
-    jr c, .snext
-    ld a, [wShDmg]
-    srl a
-    call DamageEnemy
-.snext:
-    ld a, [wObjI]
-    inc a
-    ld [wObjI], a
-    ld b, a
-    ld a, [wEnN]
-    cp b
-    jr nz, .splash
+    ld a, BANK(PlayerShotB)
+    ld [rROMB0], a
+    call PlayerShotB
+    ld a, [wLevelBank]
+    ld [rROMB0], a
     ret
 
 ; ---- per-frame combat update ---------------------------------------------------------------
 
 ; Player shots, enemy AI, player death (the world reloads after a short freeze).
 CombatUpdate::
+    ld a, [wHP]
+    and a
+    jr z, .dead
     call Rnd
     call PlayerShot
     ld a, BANK(AiTick)
     ld [rROMB0], a
-    call AiTick
-    ld a, [wHP]
-    and a
-    ret nz
-    ; dead: count the freeze, then reload the level
-    ld a, [wMoveDt]
+    jp AiTick
+.dead:                              ; A8 death_restart: the game is frozen; scream + PL_DEATH_WAIT_MS
+    ld a, [wDtMs]
     ld b, a
-    ld a, [wDeadTimer]
+    ld a, [wDeadMs]
     add b
-    ld [wDeadTimer], a
-    cp 90
+    ld [wDeadMs], a
+    ld a, [wDeadMs + 1]
+    adc 0
+    ld [wDeadMs + 1], a
+    cp HIGH(PL_DEATH_WAIT_MS)
     ret c
+    jr nz, .go
+    ld a, [wDeadMs]
+    cp LOW(PL_DEATH_WAIT_MS)
+    ret c
+.go:
     xor a
-    ld [wDeadTimer], a
     ld [wHaveKeys], a
     ld a, [wLevel]
     call LoadLevel
-    jp WpnInit
+    jp WpnInit                      ; reset_loadout (also clears wDeadMs)

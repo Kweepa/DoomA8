@@ -8,10 +8,9 @@
 INCLUDE "hw.inc"
 INCLUDE "map_fields.inc"
 
-DEF PLAYER_H     EQU 4
+INCLUDE "en.inc"                    ; A8 PLAYER_H, STEP_UP, FALL_LEDGE, EN_*
+
 DEF PLAYER_R     EQU 1
-DEF STEP_UP      EQU 2
-DEF FALL_LEDGE   EQU 1
 DEF FALL_ACCEL   EQU $10
 DEF FALL_TICK_MS EQU 32
 
@@ -454,6 +453,12 @@ SolidAt::
 PosOk::
     call InRoomInset
     ret nc
+    ld a, BANK(EnemiesBlockPlayer)  ; A8 pos_ok: enemies_block_player (gbc/ai.asm)
+    ld [rROMB0], a
+    call EnemiesBlockPlayer
+    ld a, [wLevelBank]              ; the level bank stays mapped (LoadLevel)
+    ld [rROMB0], a
+    ret nc
     call SolidAt
     jr c, .no
     jp StepUpOk
@@ -470,6 +475,10 @@ ApplyWish::
     ld a, [wFalling]
     and a
     ret nz
+    ld a, [wCamX + 1]               ; A8 save_xh / save_zh for enemies_block_player
+    ld [wPreX], a
+    ld a, [wCamZ + 1]
+    ld [wPreZ], a
     ld a, [wWishX]
     ld b, a
     ld a, [wWishX + 1]
@@ -503,6 +512,8 @@ ApplyWish::
     or 1
     ld [wDoorBlk], a
 .z:
+    ld a, [wCamX + 1]
+    ld [wPreX], a
     ld a, [wWishZ]
     ld b, a
     ld a, [wWishZ + 1]
@@ -559,7 +570,7 @@ AdoptTest:
     ret
 
 ; C = slope index. wSlYv = integer surface, wFrac = fraction.
-SlopeHeight:
+SlopeHeight::
     ld a, c
     ld [wSlI], a
     ld b, 0
@@ -1074,4 +1085,13 @@ UpdateFall::
     ld [wFallVL], a
     ld [wFallVH], a
     ld [wFallAcc], a
-    ret
+    ld a, [wFallY0]                 ; A8: eye drop over FALL_SAFE hurts FALL_DAMAGE
+    ld b, a
+    ld a, [wCamY + 1]
+    ld c, a
+    ld a, b
+    sub c
+    cp FALL_SAFE + 1
+    ret c
+    ld a, FALL_DAMAGE
+    jp PlayerDamage

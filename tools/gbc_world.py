@@ -31,6 +31,12 @@ class Level:
         self.o = {f: o for (f, o, _) in offs}
         self.nrooms, self.ncrates, self.nslopes, self.nplats = payload[0], payload[2], payload[3], payload[4]
         self.spawn = payload[17:23]
+        # Enemies as LoadEnemies leaves them (A8 init_enemies): idle at their map cells, tagged = gone.
+        import gbc_a8const as ac
+        block_r = [row[33] for (_, row) in ac.enemy_rows()]
+        self.enemies = [dict(x=self.f("en_x", i), y=self.f("en_y", i), z=self.f("en_z", i),
+                             room=self.f("en_room", i), r=block_r[self.f("en_type", i)])
+                        for i in range(payload[7]) if not self.f("en_tag", i)]
 
     def f(self, name, i):
         return self.p[self.o[name] + i]
@@ -42,6 +48,7 @@ class Player:
         self.room = room
         self.cam_x, self.cam_z, self.cam_y = x16, z16, y16
         self.yaw = yaw
+        self.turn_frac = 0
         self.floor_y = floor_y
         self.floor_yl = 0
         self.floor_slope = 0
@@ -374,8 +381,27 @@ def try_door_wish(P, joy_up, wx, wz, blk):
     return False
 
 
-def pos_ok(P, col_x, col_z):
+ENEMY_CULL_H = 6
+
+
+def enemies_block_player(P, col_x, col_z, pre):
+    """A8 enemies_block_player: newly overlapping a live enemy of this room (Chebyshev < block_r + 1,
+    overlapping in Y) blocks; a body already overlapped at the pre-move cell does not."""
+    def near(e, x, z, lim):
+        return abs(e["x"] - x) < lim and abs(e["z"] - z) < lim      # unsigned byte difference, as on the 6502
+    for e in P.lv.enemies:
+        if e["room"] != P.room or not overlaps_y(P, e["y"], ENEMY_CULL_H):
+            continue
+        lim = e["r"] + 1
+        if near(e, col_x, col_z, lim) and not near(e, pre[0], pre[1], lim):
+            return True
+    return False
+
+
+def pos_ok(P, col_x, col_z, pre=None):
     if not in_room_inset(P, col_x, col_z):
+        return False
+    if pre is not None and enemies_block_player(P, col_x, col_z, pre):
         return False
     if solid_at(P, col_x, col_z):
         return False
@@ -542,14 +568,10 @@ def land(P):
     P.fall_acc = 0
 
 
-def wish_of(yaw, joy, dt):
-    """Turn (mutates nothing) -> (new_yaw, wish_dx, wish_dz) as signed ints (summed SMul16)."""
-    dist = dt * gr.MOVE_SPEED
-    if not (joy & 0x20):
-        if joy & 1:
-            yaw = (yaw + 2 * dt) & 255
-        if joy & 2:
-            yaw = (yaw - 2 * dt) & 255
+def wish_of(yaw, frac, joy, dt):
+    """Turn -> (new_yaw, new_frac, wish_dx, wish_dz) as signed ints (summed SMul16)."""
+    dist = gr.hold_dist(4 * dt)
+    yaw, frac = gr.turn_step(yaw, frac, joy, dt)
     sn, cs = gr.sin_of(yaw), gr.cos_of(yaw)
     wx = wz = 0
 
@@ -567,7 +589,7 @@ def wish_of(yaw, joy, dt):
             along(cs, -sn)
         if joy & 2:
             along(-cs, sn)
-    return yaw, wx & 0xFFFF, wz & 0xFFFF
+    return yaw, frac, wx & 0xFFFF, wz & 0xFFFF
 
 
 def apply_wish(P, wx, wz):
@@ -575,23 +597,25 @@ def apply_wish(P, wx, wz):
     blk = 0
     if P.falling:
         return blk
+    pre = [P.xh, P.zh]                  # A8 save_xh / save_zh
     if wx:
         save = P.cam_x
         P.cam_x = (P.cam_x + wx) & 0xFFFF
-        if not pos_ok(P, P.xh, P.zh):
+        if not pos_ok(P, P.xh, P.zh, pre):
             P.cam_x = save
             blk |= 1
+    pre[0] = P.xh
     if wz:
         save = P.cam_z
         P.cam_z = (P.cam_z + wz) & 0xFFFF
-        if not pos_ok(P, P.xh, P.zh):
+        if not pos_ok(P, P.xh, P.zh, pre):
             P.cam_z = save
             blk |= 2
     return blk
 
 
 def step(P, joy, dt):
-    P.yaw, wx, wz = wish_of(P.yaw, joy, dt)
+    P.yaw, P.turn_frac, wx, wz = wish_of(P.yaw, P.turn_frac, joy, dt)
     blk = apply_wish(P, wx, wz)
     try_door_wish(P, bool(joy & 4), wx, wz, blk)
     update_floor(P)

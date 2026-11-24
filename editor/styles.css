@@ -1424,3 +1424,165 @@ button:disabled {
     border-bottom: 1px solid var(--border);
   }
 }
+
+/* ---- GB Sprites tab ---- */
+#gbspr-left[hidden],
+.sprites-panel[hidden] {
+  display: none !important;
+}
+
+.spr-group {
+  margin: 0.6rem 0 0.2rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.spr-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 0.5rem;
+}
+
+.spr-item {
+  display: grid;
+  grid-template-columns: 62px 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 3px 6px;
+  text-align: left;
+  background: #0a0a0c;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  min-width: 0;
+}
+
+.spr-item:hover {
+  border-color: var(--btn-hover);
+  background: #14161c;
+}
+
+.spr-item.active {
+  border-color: var(--accent);
+}
+
+.spr-thumb {
+  justify-self: center;
+  image-rendering: pixelated;
+  background: #000;
+  box-sizing: content-box;
+  border: 1px solid #222;
+}
+
+.spr-item-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spr-item-dim {
+  font-size: 0.7rem;
+}
+
+.sprites-panel {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
+}
+
+.spr-title {
+  font-weight: 600;
+}
+
+.spr-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.spr-stage {
+  width: 640px;
+  height: 560px;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #07070a;
+  border: 1px solid var(--border);
+}
+
+.spr-grid {
+  background: #000;
+  image-rendering: pixelated;
+  cursor: crosshair;
+  touch-action: none;
+  max-width: 100%;
+}
+
+.spr-side {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) auto auto;
+  gap: 0.75rem 1.5rem;
+  align-items: start;
+}
+
+.spr-sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.spr-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.spr-slider {
+  display: grid;
+  grid-template-columns: 3.5rem 1fr 2rem;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.spr-slider-val {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.spr-size-note {
+  margin: 0;
+}
+
+.spr-cross {
+  display: grid;
+  grid-template-columns: repeat(3, 3rem);
+  grid-auto-rows: 2.2rem;
+  gap: 4px;
+  align-items: stretch;
+}
+
+.spr-cross-mid {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  color: var(--muted);
+}
+
+.spr-ops {
+  flex-wrap: wrap;
+}
+
+.spr-size-note.error,
+.spr-item-dim.error {
+  color: #e66;
+}

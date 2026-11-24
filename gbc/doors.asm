@@ -364,7 +364,7 @@ TryDoorWish::
     add hl, de
     ld a, [hl]
     call DoorUnlocked
-    jr nc, .miss                    ; locked: key HUD (later), nothing else
+    jr nc, .locked
     ld a, [wDoorI]
     ld e, a
     ld d, 0
@@ -400,3 +400,14 @@ TryDoorWish::
     ld [wCamZ + 1], a
     and a
     ret
+.locked:                            ; A8 door.asm .tdw_lock: hud_key_req, then the miss path
+    ld a, [wDoorI]
+    ld e, a
+    ld d, 0
+    ld hl, wDrIdx
+    add hl, de
+    ld c, [hl]
+    ld a, F_DOOR_KEY
+    call MapGet
+    call HudKeyReq
+    jr .miss

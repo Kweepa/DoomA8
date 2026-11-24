@@ -479,8 +479,8 @@ def cook_one(level: dict, map_key: str) -> bytes:
     TH_TYPE = {
         "small health": 0,
         "large health": 1,
-        "green armor": 2,
-        "blue armor": 3,
+        "security armor": 2,
+        "combat armor": 3,
         "ammo box": 4,
         "shells": 5,
         "box of rockets": 6,

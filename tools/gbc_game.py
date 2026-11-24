@@ -5,68 +5,103 @@ TH_NAMES = ["health_sm", "health_lg", "armor_g", "armor_b", "bullets", "shells",
             "chaingun", "chainsaw", "rlauncher", "backpack", "key_red", "key_yel", "key_blue", "soul", "radsuit"]
 
 
+import os  # noqa: E402
+import sys  # noqa: E402
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import gbc_a8const as a8  # noqa: E402
+
+_DEFS = a8.read_defs()
+A8C = lambda name: a8.evaluate(name, _DEFS)  # noqa: E731
+A8_TABLES = a8.pick_tables(_DEFS)           # gb_mode / gb_add / gb_max / gb_dbl / gb_bits / gb_wpn (src/world.asm)
+
+TH_LIGHTPOST = A8C("TH_LIGHTPOST")
+# A8 gb_ptr_*: the player variable each add-type thing fills
+GB_PTR = {0: "hp", 1: "hp", 4: "bul", 5: "shl", 6: "rkt", 7: "shl", 8: "bul", 10: "rkt", 15: "hp"}
+
+
 class PlayerState:
+    """Player inventory as src/weapon.asm reset_loadout leaves it (fist + pistol)."""
+
     def __init__(self):
-        self.hp = 100
-        self.armor = 0
-        self.bul = 50
-        self.shl = 0
+        self.hp = A8C("PLAYER_HP_START")
+        self.armor = A8C("PLAYER_ARMOUR_START")
+        self.akind = 0                  # A8 combat_armor: 1 blue (saves 1/2), 0 green
+        self.bul = A8C("AMMO_BULLETS_START")
+        self.shl = A8C("AMMO_SHELLS_START")
         self.rkt = 0
-        self.have = 0b010001            # fist + pistol
+        self.have = (1 << A8C("WPN_FIST")) | A8C("HAVE_START")      # fist is always owned
         self.keys = 0
+        self.pack = 0
+        self.cur = A8C("WPN_PIST")
+        self.pu = 0
 
     def tup(self):
-        return (self.hp, self.armor, self.bul, self.shl, self.rkt, self.have, self.keys)
+        return (self.hp, self.armor, self.bul, self.shl, self.rkt, self.have, self.keys, self.pack, self.akind, self.cur)
 
 
-def add_cap(v, a, cap):
-    t = v + a
-    return cap if (t > 255 or t >= cap) else t
+def switch_weapon(P, w):
+    """A8 switch_weapon."""
+    if w != A8C("WPN_FIST") and not (P.have & (1 << w)):
+        return
+    if w != P.cur:
+        P.cur = w
+
+
+def gb_add_amt(P, ty, force):
+    """A8 gb_add_amt: add, clamp to the (backpack-doubled) cap; refuse at the cap unless forced."""
+    cap = A8_TABLES["gb_max"][ty]
+    if P.pack and A8_TABLES["gb_dbl"][ty]:
+        cap = min(cap * 2, 255)
+    v = getattr(P, GB_PTR[ty])
+    if not force and v >= cap:
+        return False
+    t = v + A8_TABLES["gb_add"][ty]
+    setattr(P, GB_PTR[ty], cap if (t > 255 or t > cap) else t)
+    return True
 
 
 def apply_pickup(P, ty):
-    if ty == 0:
-        P.hp = add_cap(P.hp, 10, 100)
-    elif ty == 1:
-        P.hp = add_cap(P.hp, 25, 100)
-    elif ty == 2:
-        P.armor = add_cap(P.armor, 100, 100)
-    elif ty == 3:
-        P.armor = add_cap(P.armor, 200, 200)
-    elif ty == 4:
-        P.bul = add_cap(P.bul, 10, 200)
-    elif ty == 5:
-        P.shl = add_cap(P.shl, 4, 50)
-    elif ty == 6:
-        P.rkt = add_cap(P.rkt, 5, 50)
-    elif ty == 7:
-        P.have |= 1 << 1
-        P.shl = add_cap(P.shl, 8, 50)
-    elif ty == 8:
-        P.have |= 1 << 2
-        P.bul = add_cap(P.bul, 20, 200)
-    elif ty == 9:
-        P.have |= 1 << 5
-    elif ty == 10:
-        P.have |= 1 << 3
-        P.rkt = add_cap(P.rkt, 2, 50)
-    elif ty == 11:
-        P.bul = add_cap(P.bul, 10, 200)
-        P.shl = add_cap(P.shl, 4, 50)
-        P.rkt = add_cap(P.rkt, 1, 50)
-    elif ty == 12:
-        P.keys |= 4
-    elif ty == 13:
-        P.keys |= 1
-    elif ty == 14:
-        P.keys |= 2
-    elif ty == 15:
-        P.hp = add_cap(P.hp, 100, 200)
+    """A8 grant_th_type. True when the item is used up (taken); a refused one stays on the floor."""
+    if ty >= TH_LIGHTPOST:
+        return False
+    mode = A8_TABLES["gb_mode"][ty]
+    bits = A8_TABLES["gb_bits"][ty]
+    if mode == A8C("GB_ADD"):
+        return gb_add_amt(P, ty, False)
+    if mode == A8C("GB_GUN"):
+        if P.have & bits:
+            return A8_TABLES["gb_add"][ty] != 0 and gb_add_amt(P, ty, False)
+        P.have |= bits
+        if A8_TABLES["gb_add"][ty]:
+            gb_add_amt(P, ty, True)
+        switch_weapon(P, A8_TABLES["gb_wpn"][ty])
+        return True
+    if mode == A8C("GB_ARM"):
+        if P.armor >= A8_TABLES["gb_max"][ty]:
+            return False
+        P.armor = A8_TABLES["gb_max"][ty]
+        P.akind = 1 if ty == A8C("TH_ARMOR_B") else 0
+        return True
+    if mode == A8C("GB_PU"):
+        P.pu = ty
+        return True
+    if mode == A8C("GB_KEY"):
+        if P.keys & bits:
+            return False
+        P.keys |= bits
+        return True
+    if mode == A8C("GB_PACK"):
+        if P.pack:
+            return False
+        P.pack = 1
+        return True
+    return False
 
 
 def pickup_unit_sequence():
     """Types applied by the PICKUNIT ROM: every type, then repeats to hit the caps."""
-    seq = list(range(17)) + [3, 3, 15, 15, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 11, 11, 5, 6, 0, 1, 2]
+    seq = list(range(19)) + [3, 3, 2, 15, 15] + [4] * 20 + [11, 11, 5, 5, 5, 5, 5, 5, 6, 0, 1, 2, 12, 12, 13, 14, 7, 7, 8, 9, 10, 10, 16, 16]
     return seq
 
 
@@ -106,38 +141,21 @@ def angle_to(dx, dz):
     return (128 - a) & 255 if dx >= 0 else (128 + a) & 255
 
 
-def player_damage(hp, armor, dmg):
-    """Armor soaks a third of the hit; returns (hp, armor)."""
+def player_damage(hp, armor, dmg, kind=0):
+    """A8 take_damage (skill 1: no scaling, no god mode). Armour saves 5/16 (green) or 1/2 (blue) of the
+    hit; the 8-bit wrap in the armour test is the A8's (> 200 after the subtraction = used up).
+    Returns (hp, armor, kind)."""
+    if hp == 0:
+        return hp, armor, kind
     if armor:
-        soak = dmg // 3
-        if soak > armor:
-            soak = armor
-        armor -= soak
-        dmg -= soak
+        saved = (dmg >> 1) if kind else (dmg >> 2) + (dmg >> 4)
+        if saved:
+            dmg -= saved
+            armor = (armor - saved) & 255
+            if armor > 200:
+                armor, kind = 0, 0
     hp = hp - dmg if hp > dmg else 0
-    return hp, armor
-
-
-# Enemy params per type (poss, baron, pinky, imp): hp comes from the entity data.
-#   speed (8.8 units per VBlank: one cell per 300 ms), sight (cells), range (cells: attack
-#   reach for poss / imp / baron, bite reach for pinky), dmin, dmask, hit chance, cooldown, pain chance
-#   (0..255) and wid (hitbox width for the player's shots). Attack rules live in gbc/ai.asm.
-ENEMY_PARAMS = [
-    dict(speed=14, sight=32, range=28, dmin=3, dmask=15, hit=130, cool=70, pain=160, wid=3),   # poss
-    dict(speed=14, sight=32, range=24, dmin=8, dmask=63, hit=200, cool=60, pain=0, wid=4),     # baron
-    dict(speed=14, sight=32, range=3, dmin=4, dmask=31, hit=220, cool=40, pain=64, wid=4),     # pinky
-    dict(speed=14, sight=32, range=24, dmin=3, dmask=31, hit=110, cool=80, pain=128, wid=3),   # imp
-]
-
-# Player weapons: range (units), dmg_min, dmg_mask, splash radius (units, 0 none)
-WEAPON_SHOT = [
-    dict(range=3, dmin=5, dmask=15, splash=0),      # fist
-    dict(range=24, dmin=15, dmask=31, splash=0),    # shotgun
-    dict(range=36, dmin=5, dmask=7, splash=0),      # chaingun
-    dict(range=36, dmin=30, dmask=63, splash=4),    # rocket launcher
-    dict(range=36, dmin=5, dmask=7, splash=0),      # pistol
-    dict(range=3, dmin=2, dmask=7, splash=0),       # chainsaw
-]
+    return hp, armor, kind
 
 
 def gen_ai_tables(outdir):
@@ -145,15 +163,6 @@ def gen_ai_tables(outdir):
     with open(os.path.join(outdir, "aitab.inc"), "w", newline="\n") as f:
         f.write("; Generated by tools/gbc_game.py - do not edit.\n")
         f.write("AtanTab::\n    db " + ",".join(str(v) for v in ATAN) + "\n")
-        f.write("EnemyParams::  ; 16-byte rows: speed, sight, range, dmin, dmask, hit, cool, pain, wid\n")
-        for p in ENEMY_PARAMS:
-            f.write("    db %d, %d, %d, %d, %d, %d, %d, %d, %d, 0, 0, 0, 0, 0, 0, 0\n" % (
-                p["speed"], p["sight"], p["range"], p["dmin"], p["dmask"], p["hit"], p["cool"], p["pain"],
-                p["wid"]))
-        f.write("WeaponShot::  ; range, dmin, dmask, splash\n")
-        for w in WEAPON_SHOT:
-            f.write("    db %d, %d, %d, %d\n" % (w["range"], w["dmin"], w["dmask"], w["splash"]))
-
 
 
 def comb_unit_cases():
@@ -164,9 +173,10 @@ def comb_unit_cases():
            (20000, 3), (3, 20000), (-20000, 5), (5, -20000), (1000, 1000), (7, 700)]
     while len(ang) < 300:
         ang.append((r.randint(-9000, 9000), r.randint(-9000, 9000)))
-    dmg = [(100, 0, 0), (100, 0, 100), (50, 0, 60), (100, 30, 90), (100, 5, 90), (10, 200, 255), (1, 0, 1), (0, 0, 5)]
+    dmg = [(100, 0, 0, 0), (100, 0, 100, 0), (50, 0, 60, 1), (100, 30, 90, 0), (100, 5, 90, 1), (10, 200, 255, 1),
+           (1, 0, 1, 0), (0, 0, 5, 0), (100, 30, 255, 1), (100, 200, 30, 0), (100, 2, 15, 0)]
     while len(dmg) < 100:
-        dmg.append((r.randint(0, 200), r.randint(0, 200), r.randint(0, 80)))
+        dmg.append((r.randint(0, 200), r.randint(0, 200), r.randint(0, 80), r.randint(0, 1)))
     return ang, dmg
 
 
@@ -180,8 +190,8 @@ def gen_comb_unit(outdir):
         for dx, dz in ang:
             f.write("    dw %d, %d\n" % (dx & 0xFFFF, dz & 0xFFFF))
         f.write("DmgCases::\n")
-        for hp, ar, d in dmg:
-            f.write("    db %d, %d, %d\n" % (hp, ar, d))
+        for hp, ar, d, k in dmg:
+            f.write("    db %d, %d, %d, %d\n" % (hp, ar, d, k))
 
 
 if __name__ == "__main__":

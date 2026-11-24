@@ -24,7 +24,7 @@ def main():
             addr = line.split()[0].split(":")[1]
     if os.path.exists(state):
         os.remove(state)
-    subprocess.run([bgb, "-hf", "-nobatt", "-rom", rom, "-br", addr, "-stateonexit", state], timeout=200)
+    subprocess.run([bgb, "-hf", "-nobatt", "-rom", rom, "-br", addr, "-stateonexit", state], timeout=10)
     data = open(state, "rb").read()
     i = data.find(b"POSE")
     if i < 0:

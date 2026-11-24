@@ -5,6 +5,7 @@ DEF rDIV    EQU $FF04
 DEF rTIMA   EQU $FF05
 DEF rTMA    EQU $FF06
 DEF rTAC    EQU $FF07
+DEF INPUT_DIV EQU 34               ; TIMA reload: 8192 Hz / 34 = 241 ticks/s, ~4 per VBlank
 DEF rIF     EQU $FF0F
 DEF rLCDC   EQU $FF40
 DEF rSTAT   EQU $FF41

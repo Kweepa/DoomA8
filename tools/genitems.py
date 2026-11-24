@@ -24,8 +24,8 @@ ITEM_MAX_UNIQUE = 6
 BP_MESH_KEY = [
     "small health",
     "large health",
-    "green armor",
-    "blue armor",
+    "security armor",
+    "combat armor",
     "ammo box",
     "shells",
     "box of rockets",
@@ -103,7 +103,7 @@ DEFAULT_MESHES = {
             [0, 3],
         ],
     },
-    "green armor": {
+    "security armor": {
         "verts": [v(-1, 0, -1), v(1, 0, -1), v(1, 0, 1), v(-1, 0, 1), v(0, 3, 0)],
         "lines": [[0, 1], [1, 2], [2, 3], [3, 0], [4, 0], [4, 1], [4, 2], [4, 3]],
     },

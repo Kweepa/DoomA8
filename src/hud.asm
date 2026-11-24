@@ -824,8 +824,8 @@ hud_str_red_req	!text "You need a "
 hud_str_remote_req	!text "This door is opened elsewhere",0
 thn_hsm	!text "stimpack",0
 thn_hlg	!text "medikit",0
-thn_ag	!text "green armor",0
-thn_ab	!text "blue armor",0
+thn_ag	!text "security armor",0
+thn_ab	!text "combat armor",0
 thn_bullets	!text "ammo box",0
 thn_shells	!text "shells",0
 thn_rockets	!text "box of rockets",0
