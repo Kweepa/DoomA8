@@ -2,7 +2,7 @@
 """Weapon view-model sprites for the GBC: PNG line art -> scaled 8x16 OAM cells.
 
 Source art: assets/weapons/*_lines.png (white = ink, black = clear). It is authored for the A8's
-192-wide hires view, so it is scaled to the 128 x 112 GBC viewport (x 2/3, y 7/8).
+192-wide hires view and is used at native size (1:1) in the 128 x 112 GBC viewport.
 
 Writes <outdir>/wpn.inc:
   bank WPN_BANK: for every frame  db ncells, w, h ; ncells * (db dx, dy ; 32 bytes of tile data)
@@ -21,7 +21,7 @@ ROOT = os.path.dirname(HERE)
 PNG = os.path.join(ROOT, "assets", "weapons")
 WPN_BANK = 30
 
-SX, SY = 2.0 / 3.0, 7.0 / 8.0
+SX, SY = 1.0, 1.0       # native size, as on the A8 (scale() is a no-op copy at 1:1)
 
 # (id, png) in WF_* order. Body frames first (<= 16 cells), then flashes (<= 7 cells).
 BODY = [

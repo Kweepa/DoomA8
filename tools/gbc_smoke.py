@@ -110,7 +110,7 @@ def run_rom():
     d = data[base:base + 160]
     return dict(hp=d[0], armor=d[1], kills=d[2], bul=d[3], shl=d[4], rkt=d[5], have=d[6], keys=d[7], wcur=d[8],
                 room=d[9], camx=d[10] | d[11] << 8, camz=d[12] | d[13] << 8, camy=d[14] | d[15] << 8,
-                floor=d[16], falling=d[17], level=d[18], nen=d[19], th=list(d[32:64]),
+                floor=d[16], falling=d[17], level=d[18], nen=d[19], wdy=d[26] - (256 if d[26] > 127 else 0), th=list(d[32:64]),
                 en_state=list(d[64:88]), en_hp=list(d[88:112]), en_x=list(d[112:136]), en_z=list(d[136:160]))
 
 
@@ -151,7 +151,7 @@ def scenario_shoot(li, etype=0):
         print("  skip: no placeable enemy of type %d in level %d" % (etype, li))
         return True
     px, pz, yaw = spot
-    pack(L, li, e["room"], px, pz, yaw, e["y"], wcur=4, hp=100, bul=200, frames=200, script=[0x10] * 200)
+    pack(L, li, e["room"], px, pz, yaw, e["y"], wmask=0b010101, wcur=2, hp=100, bul=200, frames=200, script=[0x10] * 200)   # chaingun: the pistol now fires every 600 ms
     r = run_rom()
     ok = check("enemy dead or dying", r["en_state"][e["idx"]] in (4, 7), "state %d hp %d" % (r["en_state"][e["idx"]], r["en_hp"][e["idx"]]))
     ok &= check("kill counted", r["kills"] >= 1, "kills %d" % r["kills"])
@@ -221,7 +221,42 @@ def scenario_chase(li, etype=0, closes=True):
     return ok
 
 
+def kick_expect(wid, e):
+    """Weapon dy (px, down positive) e VBlanks after a shot: A8 recoil (native art) plus rest overhang."""
+    def look(tab):
+        for lim, dy in tab:
+            if e < lim:
+                return dy
+        return 0
+    if wid == 1:
+        if 19 <= e < 34:
+            return 5 if 21 <= e < 24 else 0
+        return look([(1, -10), (3, 14), (5, 6)]) + 10
+    if wid == 3:
+        return look([(1, 24), (3, 16), (5, 8)])
+    if wid == 4:
+        return look([(18, -4), (28, -6)]) + 6
+    return None
+
+
+def scenario_recoil(wid):
+    """Fire once, stop n frames later: the weapon offset follows the A8 recoil steps."""
+    L = level(0)
+    ok = True
+    sx, sy, sz, _, sroom, _ = L.spawn
+    for n in (1, 2, 4, 6, 12, 20, 22, 25, 30, 36, 40):
+        pack(L, 0, sroom, sx, sz, 0, sy, wmask=0b111111, wcur=wid, hp=100, bul=50, shl=50, rkt=50,
+             frames=n, dt=1, script=[0x10] + [0] * (n - 1))
+        r = run_rom()
+        want = kick_expect(wid, n - 1)
+        ok &= check("dy at e=%d" % (n - 1), r["wdy"] == want, "got %d want %d" % (r["wdy"], want))
+    return ok
+
+
 SCENARIOS = {
+    "recoil_shotgun": lambda: scenario_recoil(1),
+    "recoil_rocket": lambda: scenario_recoil(3),
+    "recoil_pistol": lambda: scenario_recoil(4),
     "pickups_e1m1": lambda: scenario_pickups(0),
     "pickups_e1m2": lambda: scenario_pickups(1),
     "pickups_e1m5": lambda: scenario_pickups(4),

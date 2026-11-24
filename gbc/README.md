@@ -23,6 +23,11 @@ CGB-only MBC5+RAM+battery, RGBDS 1.0.4.
     Pinky: bite within 3 cells, 3-24. Imp / baron: claw within 3 cells, otherwise one fireball at a time
     (more likely the farther away), 10 + rnd(16) / 30 + rnd(16), quarter cell per VBlank, cleared by walls.
   - Game time runs on real VBlanks (dt clamp 12), not a fixed 4.
+- Weapon animation follows the A8 build: shotgun snaps up / kicks down / settles then cocks, rocket snaps down, pistol rises
+  4 then 6 for 300 / 160 ms, fist swaps to the punch frame, chaingun alternates frames per shot, chainsaw shakes;
+  walk bob is down-only (0..4 px, 512 ms per dip, no side sway); fire periods match (pistol 600 ms, rocket 1000 ms,
+  fist 800 ms). Art and offsets are the A8's native size (1:1). A STAT (LY = 111) interrupt switches sprites off
+  below the viewport, so recoil can push art past the bottom edge exactly as the A8 bitmap clip does.
 - Switches are drawn as the A8 up-pointing triangle on their face.
 
 ## Test ROMs (all spec-based, headless BGB; Python spec in tools/gbc_*.py)
@@ -45,5 +50,5 @@ ROM0 (16 KB) is nearly full in the test builds, which is why the map/world tests
   overlap game update with DMA, back-face edge culling.
 - Not implemented: rocket projectiles/explosions, enemy muzzle flash, infighting, elevators/switches/triggers, door animation and key prompts,
   HUD labels/key icons, sound/music, menu, SRAM save, enemy line of sight.
-- Enemy facing (yaw = -heading) and weapon sprite scale are not checked visually in-game.
+- Enemy facing (yaw = -heading) is not checked visually in-game.
 - Enemy scale: pose data is in stick units (editor `LAYOUT_ENEMY_SCALE` = 1/4), so enemies use shift 4 / radius 3.

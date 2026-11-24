@@ -1017,8 +1017,8 @@ ENDC
     ld [hl+], a
     ld a, [wLevelBank]
     ld [hl+], a
-    xor a
-    ld [hl+], a
+    ld a, [wWpnDy]
+    ld [hl+], a                     ; offset 26: weapon dy (recoil test)
     ld [hl+], a
     ld [hl+], a
     ld [hl+], a

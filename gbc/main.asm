@@ -11,6 +11,9 @@ INCLUDE "hw.inc"
 SECTION "vblank_vec", ROM0[$0040]
     jp VBlankISR
 
+SECTION "stat_vec", ROM0[$0048]
+    jp StatISR
+
 SECTION "timer_vec", ROM0[$0050]
     jp TimerISR
 
@@ -92,7 +95,11 @@ Start:
     xor a
     call CopyFBGeneral
 
-    ld a, IEF_VBLANK
+    ld a, 111
+    ldh [rLYC], a
+    ld a, $40                       ; STAT interrupt on LY = LYC
+    ldh [rSTAT], a
+    ld a, IEF_VBLANK | IEF_STAT
     ldh [rIE], a
     ld a, LCDCF_ON | LCDCF_BGON | LCDCF_BG8000 | LCDCF_OBJON | LCDCF_OBJ16
     ldh [rLCDC], a
@@ -255,8 +262,25 @@ TimerISR:
     pop af
     reti
 
+; LY = 111 (LYC): at the end of that line switch sprites off, so the weapon is clipped at the
+; viewport bottom like the A8 build (rows >= 128 are never drawn). VBlankISR switches them back on.
+StatISR:
+    push af
+.hblank:
+    ldh a, [rSTAT]
+    and 3
+    jr nz, .hblank
+    ldh a, [rLCDC]
+    and $FF - LCDCF_OBJON
+    ldh [rLCDC], a
+    pop af
+    reti
+
 VBlankISR:
     push af
+    ldh a, [rLCDC]
+    or LCDCF_OBJON
+    ldh [rLCDC], a
     ld a, 1
     ldh [hVBlank], a
     ldh a, [hFrame]

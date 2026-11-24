@@ -86,9 +86,9 @@ def main():
     if live:
         import gbc_genwpn as gw
         name = "PISTOL"                             # WpnInit selects the pistol; no input in the test
-        bits = gw.scale(gw.load_ink(dict(gw.BODY)["pistol_lines.png" if False else "PISTOL"] if False else "pistol_lines.png"))
+        bits = gw.scale(gw.load_ink("pistol_lines.png"))
         h, w = len(bits), len(bits[0])
-        ox, oy = (128 - w) // 2, 112 - h
+        ox, oy = (128 - w) // 2, 112 - h + 6      # pistol rests 6 rows past the bottom (OVERHANG_PISTOL); STAT clips at 112
         weapon_exp = {(ox + x, oy + y) for y in range(h) for x in range(w) if bits[y][x]}
         weapon_exp = {(x, y) for (x, y) in weapon_exp if 0 <= x < 128 and 0 <= y < 112}
         wmiss, wextra = sorted(weapon_exp - weapon_got), sorted(weapon_got - weapon_exp)

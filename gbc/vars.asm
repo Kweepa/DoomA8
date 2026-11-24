@@ -315,6 +315,8 @@ wFlashPlace:: ds 16
 wBobX::       ds 1
 wBobY::       ds 1
 wKick::       ds 1
+wWpnDy::      ds 1                  ; signed: overhang + bob + recoil
+wSawFlip::    ds 1
 wOx::         ds 1
 wOy::         ds 1
 wFx::         ds 1
