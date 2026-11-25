@@ -20,7 +20,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 DOC = os.path.join(ROOT, "editor", "doom64.json")
-WPN_BANK = 30
+WPN_BANK = 12
 
 # Must match gbc/wpn.asm: art is centred in the 128 px viewport that starts at screen x VIEW_X0; OAM x
 # carries +8. Body cells use tiles BODY_TILE0 + 2k (VRAM bank 1), flash cells FLASH_TILE0 + 2k (bank 0).

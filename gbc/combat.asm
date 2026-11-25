@@ -599,7 +599,7 @@ PlayerDamage::
 .snd:
     jp PlaySound
 
-; Enemy wObjI takes A damage: the A8 damage_enemy port (gbc/ai.asm AiDamageEnemy, bank 31).
+; Enemy wObjI takes A damage: the A8 damage_enemy port (gbc/ai.asm AiDamageEnemy, bank 11).
 DamageEnemy:
     push af
     ld a, BANK(AiDamageEnemy)
@@ -612,6 +612,15 @@ DamageEnemy:
 ; Once per game frame after the player has moved: switch bumps, triggers, unhide timers. A level
 ; change asked for by the banked code (end trigger / switch) is done here: keys are per level, the
 ; loadout stays (A8 next_level); after the last level the episode starts over.
+; try_proximity + elevator motion, between the move and UpdateFloor (A8 frame order).
+ElevPre::
+    ld a, BANK(ElevPreB)
+    ld [rROMB0], a
+    call ElevPreB
+    ld a, [wLevelBank]
+    ld [rROMB0], a
+    ret
+
 LevelUpdate::
     ld a, [wHP]
     and a
@@ -762,7 +771,7 @@ CardText:
 
 ; ---- player shots ----------------------------------------------------------------------
 
-; Consumes wFireEvent: the shot code is in bank 31 (gbc/ai.asm PlayerShotB, next to line of sight and
+; Consumes wFireEvent: the shot code is in bank 11 (gbc/ai.asm PlayerShotB, next to line of sight and
 ; AiDamageEnemy).
 PlayerShot::
     ld a, [wFireEvent]

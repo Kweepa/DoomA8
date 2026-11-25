@@ -34,11 +34,16 @@ MapPut:
     ldh [rSVBK], a
     ret
 
-LevelUpdateB::
+; A8 order: apply_move_world, try_proximity, proc_update (cars move), update_floor, update_fall (eye
+; snaps to the car top). Called from ApplyMove (ROM0 stub ElevPre) before UpdateFloor so the eye and
+; the car it draws agree.
+ElevPreB::
     call TryProximity
+    jp ElevTick
+
+LevelUpdateB::
     call CrackClearBorn
     call UpdateTriggers
-    call ElevTick
     jp DoorUnhideTick
 
 ; ---- doors by tag ---------------------------------------------------------------------------------

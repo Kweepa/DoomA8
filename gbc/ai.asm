@@ -1,4 +1,4 @@
-; Enemy AI, in ROM bank 31 (called through AiTick from CombatUpdate). The state machine and the
+; Enemy AI, in ROM bank 11 (called through AiTick from CombatUpdate). The state machine and the
 ; per-type AI are a translation of the A8 build (src/enemy.asm enemies_update / enemy_anim_step /
 ; eu_idle / eu_approach / select_dodge_dir / damage_enemy, src/ai_poss|pinky|imp|baron.asm); the
 ; A8 constants and per-type tables come from tools/gbc_a8const.py. Line of sight is the A8 segment
@@ -12,7 +12,7 @@ INCLUDE "en.inc"
 INCLUDE "a8enmeta.inc"
 
 
-SECTION "ai", ROMX, BANK[31]
+SECTION "ai", ROMX, BANK[11]
 
 ; Carry = the enemy (wObjI) may stand at cell (wColX, wColZ): inside its room's colliders and
 ; not blocked by crates / platforms / locked doors. The collision tests use the player's feet,

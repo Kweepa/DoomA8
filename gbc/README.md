@@ -113,7 +113,7 @@ CGB-only MBC5+RAM+battery, RGBDS 1.0.4.
   fire rattle, bite re-pitched every tick from the A8 LFSR; `hSawBite` is set by `MeleeShot`) and the elevator rumble
   (`a8_noise`, while `ElevTick` has a car moving and no world effect plays; the saw wins while it is out). POKEY AUDF
   becomes NR43 by nearest LFSR clock; volumes are the A8's scaled 12/15 like the pulses.
-- Enemy AI (`ai.asm`, ROM bank 31) is a translation of the A8 code, routine by routine: `enemies_update`,
+- Enemy AI (`ai.asm`, ROM bank 11) is a translation of the A8 code, routine by routine: `enemies_update`,
   `enemy_anim_step`, `eu_idle`, `eu_approach`, `enemy_enter_approach`, `select_dodge_dir`, `enemy_try_step`,
   `damage_enemy` (src/enemy.asm) and the per-type entries of src/ai_poss|pinky|imp|baron.asm. Labels in the
   comments name the A8 source. A8 constants (`ANIM_MS`, `DOOM_STEP_MS`, `EN_*`, ...) and the per-type tables

@@ -613,7 +613,7 @@ DrawProjectiles:
     ret
 
 ; C = enemy type, A = pose frame, B = vertex -> D = lx, B = ly, E = lz (signed pose bytes).
-; Called from bank 31 (gbc/ai.asm EnVertWorld): maps the entity bank, then the AI bank back.
+; Called from bank 11 (gbc/ai.asm EnVertWorld): maps the entity bank, then the AI bank back.
 EnVertLocal::
     push bc
     push af

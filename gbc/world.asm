@@ -432,6 +432,7 @@ ApplyMove::
     and a
     call z, CrackClearHold          ; contact ended
 .moved:
+    call ElevPre
     call UpdateFloor
     jp UpdateFall
 

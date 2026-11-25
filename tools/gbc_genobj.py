@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Per-level static object meshes and per-room instance lists (ROM bank OBJ_BANK0 + level).
+"""Per-level static object meshes and per-room instance lists (ROM bank OBJ_BANK0 + level, i.e. the level's map bank).
 
 Static objects are entity instances (gbc_entity format, quarter-unit local verts, origin in 8.8):
 crates, platforms, slopes, switches, elevators (at their home height) and doors.
@@ -23,7 +23,7 @@ import gbc_entity as ge  # noqa: E402
 import gbc_genmap as gmap  # noqa: E402
 import gbc_world as gw  # noqa: E402
 
-OBJ_BANK0 = 11
+OBJ_BANK0 = gmap.FIRST_MAP_BANK      # shares each level's map bank
 
 BOX_EDGES = [(0, 1), (1, 2), (2, 3), (3, 0), (4, 5), (5, 6), (6, 7), (7, 4), (0, 4), (1, 5), (2, 6), (3, 7)]
 FACE_YAW = [0, 128, 192, 64]          # PZ, MZ, PX, MX: local +Z points out of the face
