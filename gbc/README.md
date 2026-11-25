@@ -1,6 +1,6 @@
 # Doom GBC (port of the A8 build)
 
-Build: `build-gbc.bat` -> `gbc\build\doomgbc.gbc`. Run: `run-gbc.bat` (BGB). A8 build untouched.
+Build: `build-gbc.bat` -> `doomgbc.gbc` (project root, committed). Run: `run-gbc.bat` (BGB). A8 build untouched.
 CGB-only MBC5+RAM+battery, RGBDS 1.0.4.
 
 ## Controls
