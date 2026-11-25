@@ -792,8 +792,7 @@ SwPush:
 ; ---- elevators (A8 src/elevator.asm) ---------------------------------------------------------------
 ; Per car: wElevY (current height), wElevTgt ($FF idle, else the stop it is moving to), wElevAcc (ms
 ; toward the next one-unit step: ELEV_STEP_MS, or 4x for elev_flags bit 0). The A8 runs these as process
-; slots; the free-slot limit is not modelled. Things on a car are not carried (the GBC object lists are
-; ROM); enemies and the player ride.
+; slots; the free-slot limit is not modelled. Enemies, things (their map F_TH_Y) and the player ride.
 
 ; C = car -> A = F_ELEV field value via MapGet (index in C kept).
 
@@ -1030,9 +1029,6 @@ ElevOne:
 ; C = car, wLvMask = dy: live enemies of the car's room standing on its top (en_y == y + sy) inside
 ; its footprint move with it.
 ElevCarry:
-    ld a, [wEnN]
-    and a
-    ret z
     ld a, F_ELEV_ROOM
     call MapGet
     ld [wLvEnd], a
@@ -1058,7 +1054,60 @@ ElevCarry:
     inc a
     dec b
     jr nz, .box
+    ; things (pickups, props) of the room on the top ride too: their live height is the map field
+    ; (PickupScan / the object drawing read it with MapGet)
+    ld a, [wMapHdr + H_NTHINGS]
+    and a
+    jr z, .enemies
+    ld [wLvN2], a
+    ld e, 0
+.th:
+    ld d, 0
+    ld hl, wThTaken
+    add hl, de
+    ld a, [hl]
+    and a
+    jr nz, .thNx
+    push bc
+    ld c, e
+    ld a, F_TH_ROOM
+    call MapGet
+    ld hl, wLvEnd
+    cp [hl]
+    jr nz, .thPop
+    ld a, F_TH_Y
+    call MapGet
+    ld hl, wLvPur
+    cp [hl]
+    jr nz, .thPop
+    ld a, F_TH_X
+    call MapGet
+    ld [wColX], a
+    ld a, F_TH_Z
+    call MapGet
+    ld [wColZ], a
+    push de
+    call PointInFloorXZ
+    pop de
+    jr nc, .thPop
+    ld a, F_TH_Y
+    call MapGet
+    ld hl, wLvMask
+    add [hl]
+    ld b, a
+    ld a, F_TH_Y
+    call MapPut
+.thPop:
+    pop bc
+.thNx:
+    inc e
+    ld a, [wLvN2]
+    cp e
+    jr nz, .th
+.enemies:
     ld a, [wEnN]
+    and a
+    ret z
     ld [wLvN2], a
     ld e, 0
 .en:

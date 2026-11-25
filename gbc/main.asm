@@ -425,7 +425,13 @@ StatISR:
     push bc                                 ; sound effects, one envelope step per frame (gbc/sound.asm).
     push de                                 ; Here and not in VBlankISR: the VBlank budget is spent on the
     push hl                                 ; flip, weapon OAM and HudBlit (the palette upload is last).
+    ldh a, [rSVBK]                          ; the interrupted code may be inside a MapGet / MapPut / LoadLevel
+    push af                                 ; window (SVBK = 2): ISR code reads WRAMX variables, so bank 1
+    ld a, 1                                 ; for the duration and the interrupted bank back after
+    ldh [rSVBK], a
     call SndTick
+    pop af
+    ldh [rSVBK], a
     pop hl
     pop de
     pop bc
@@ -451,7 +457,13 @@ VBlankISR:
     push bc
     push de
     push hl
+    ldh a, [rSVBK]                          ; WpnTick reads / writes WRAMX variables (wApFlashN is a loop
+    push af                                 ; bound into OAM): with SVBK = 2 from an interrupted MapGet it
+    ld a, 1                                 ; read map bytes and ran off the end of OAM into the IO registers
+    ldh [rSVBK], a                          ; (LCDC = $63: LCD off, HDMA never finishes, white screen)
     call WpnTick                            ; weapon recoil / flash at VBlank rate (gbc/wpn.asm)
+    pop af
+    ldh [rSVBK], a
     pop hl
     pop de
     pop bc

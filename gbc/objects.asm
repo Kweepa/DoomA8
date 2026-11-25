@@ -303,6 +303,13 @@ DrawWorldObjects::
     pop de
     and a
     jr nz, .nextT
+    push bc                         ; live height (a car carries it): the map field, not the ROM entry
+    ld a, [wTmpAux]
+    ld c, a
+    ld a, F_TH_Y
+    call MapGet
+    pop bc
+    ld c, a
     ; A8 xform_item_spin: world centre = box + ITEM_BIAS (1) on X and Z.
     xor a
     ld [wEntOX], a
@@ -548,10 +555,8 @@ DrawCrack:
 CrackYaw:                           ; door_face_rot: local +Z points out of the face (PZ, MZ, PX, MX)
     db 0, 128, 192, 64
 
-; A8 draw_rockets / rkt_draw_one: every fireball in flight as a screen triangle of half-extent
-; RKT_R (0.375 units) at its depth, in red. The triangle is the fireball item mesh turned to face the
-; camera (yaw = -camera yaw), so the entity projection and clipping draw it; hPlane = 1 puts its
-; lines in bitplane 1 (colour 2 = A8 red $46).
+; A8 draw_rockets / rkt_draw_one: every rocket and fireball in flight as a red circle of world radius
+; RKT_R (0.375 units) at its projected centre (DrawCircle, entity bank: A8 sph_draw / sph_bres).
 DrawProjectiles:
     xor a
     ld [wObjI], a
@@ -564,46 +569,9 @@ DrawProjectiles:
     ld a, [hl]
     and a
     jr z, .np
-    ld hl, wPrXL
-    add hl, de
-    ld a, [hl]
-    ld [wEntOX], a
-    ld hl, wPrX
-    add hl, de
-    ld a, [hl]
-    ld [wEntOX + 1], a
-    ld hl, wPrYL
-    add hl, de
-    ld a, [hl]
-    ld [wEntOY], a
-    ld hl, wPrY
-    add hl, de
-    ld a, [hl]
-    ld [wEntOY + 1], a
-    ld hl, wPrZL
-    add hl, de
-    ld a, [hl]
-    ld [wEntOZ], a
-    ld hl, wPrZ
-    add hl, de
-    ld a, [hl]
-    ld [wEntOZ + 1], a
-    ld a, [wYaw]
-    cpl
-    inc a
-    ld [wEntYaw], a
     ld a, [EntBank]
     ld [rROMB0], a
-    ld hl, ItemTab + 2 * ITEM_FIREBALL
-    ld a, [hl+]
-    ld h, [hl]
-    ld l, a
-    call EntSetMesh
-    ld a, 1
-    ldh [hPlane], a
-    call DrawEntity
-    xor a
-    ldh [hPlane], a
+    call DrawCircle
 .np:
     ld a, [wObjI]
     inc a
@@ -1799,3 +1767,237 @@ PlotInk:
     or [hl]
     ld [hl], a
     ret
+
+; ---- projectile circle (A8 rkt_draw_one / sph_draw / sph_bres) --------------------------------------------
+; Slot wObjI of wPr* as a red circle (bitplane 1) of world radius RKT_R. Centre and radius are projected as
+; DrawExplosion does (root 64 / 56, FOCAL scale). A far projectile stays a 1 px ring. Entity bank mapped.
+; FxView reads wFxOrg, so the blast origin is saved around it (as DrawSplat does).
+DrawCircle:
+    ld hl, wFxOrg
+    ld b, 6
+.sv:
+    ld a, [hl+]
+    push af
+    dec b
+    jr nz, .sv
+    ld a, [wObjI]
+    add LOW(wPrXL)                   ; the wPr* arrays share one page ($CE00)
+    ld l, a
+    ld h, HIGH(wPrXL)
+    ld de, wFxOrg
+    ld b, 6
+.cp:                                 ; xl, x, yl, y, zl, z: six arrays of RKT_MAX bytes, back to back
+    ld a, [hl]
+    ld [de], a
+    inc de
+    ld a, l
+    add RKT_MAX
+    ld l, a
+    dec b
+    jr nz, .cp
+    call FxView                      ; HL = X, DE = Y, wFxA = Z
+    ld a, l
+    ld [wCirCX], a
+    ld a, h
+    ld [wCirCX + 1], a
+    ld a, e
+    ld [wCirCY], a
+    ld a, d
+    ld [wCirCY + 1], a
+    ld hl, wFxOrg + 5                ; give wFxOrg back
+    ld b, 6
+.rs:
+    pop af
+    ld [hl-], a
+    dec b
+    jr nz, .rs
+    ld a, [wFxA + 1]
+    dec a
+    cp 127
+    ret nc                           ; not in front by a cell
+    ld a, [wFxA]
+    ld e, a
+    ld a, [wFxA + 1]
+    ld d, a
+    call SetRecip
+    ld a, [wCirCX]
+    ld e, a
+    ld a, [wCirCX + 1]
+    ld d, a
+    call ProjectMul
+    ld hl, 64
+    add hl, de
+    ld a, l
+    ld [wCirCX], a
+    ld a, h
+    ld [wCirCX + 1], a
+    ld a, [wCirCY]
+    ld e, a
+    ld a, [wCirCY + 1]
+    ld d, a
+    call ProjectMul
+    ld hl, 56
+    ld a, l
+    sub e
+    ld l, a
+    ld a, h
+    sbc d
+    ld h, a
+    ld a, l
+    ld [wCirCY], a
+    ld a, h
+    ld [wCirCY + 1], a
+    ld de, RKT_R
+    call ProjectMul
+    ld a, e
+    and a
+    jr nz, .r
+    inc a                            ; sub-pixel: a 1 px ring
+.r:
+    ld [wCirR], a
+    ld c, a                          ; C = R (R <= 30 at one cell)
+    ; bounding box: skip when no part of the circle is in 0..127 x 0..111
+    ld a, [wCirCX]
+    add c
+    ld a, [wCirCX + 1]
+    adc 0
+    ret nz                           ; cx + R < 0 (high byte $FF) or far right
+    ld a, [wCirCX + 1]
+    ld h, a
+    ld a, [wCirCX]
+    sub c
+    ld l, a
+    ld a, h
+    sbc 0
+    jr z, .xlo
+    bit 7, a
+    ret z                            ; cx - R >= 256
+    jr .xok                          ; cx - R < 0: left edge off-screen only
+.xlo:
+    ld a, l
+    cp 128
+    ret nc                           ; cx - R > 127
+.xok:
+    ld a, [wCirCY]
+    add c
+    ld a, [wCirCY + 1]
+    adc 0
+    ret nz
+    ld a, [wCirCY + 1]
+    ld h, a
+    ld a, [wCirCY]
+    sub c
+    ld l, a
+    ld a, h
+    sbc 0
+    jr z, .ylo
+    bit 7, a
+    ret z
+    jr .yok
+.ylo:
+    ld a, l
+    cp VIEW_ROWS * 8
+    ret nc
+.yok:
+    ; midpoint circle: x = R, y = 0, d = 1 - R
+    ld a, c
+    ld [wCirA], a
+    xor a
+    ld [wCirB], a
+    ld a, 1
+    sub c
+    ld [wCirD], a
+    sbc a                            ; sign of 1 - R (R >= 1: <= 0)
+    ld [wCirD + 1], a
+.loop:
+    call CirPlot8
+    ld hl, wCirB
+    inc [hl]                         ; y++
+    ld a, [wCirD + 1]
+    bit 7, a
+    jr nz, .in
+    ld hl, wCirA
+    dec [hl]                         ; d >= 0: x--, d += 2 (y - x) + 1
+    ld a, [wCirB]
+    sub [hl]
+    ld l, a
+    sbc a
+    ld h, a                          ; HL = y - x (sign-extended; |y - x| small)
+    jr .add
+.in:
+    ld a, [wCirB]                    ; d < 0: d += 2 y + 1
+    ld l, a
+    ld h, 0
+.add:
+    add hl, hl
+    inc hl
+    ld a, [wCirD]
+    add l
+    ld [wCirD], a
+    ld a, [wCirD + 1]
+    adc h
+    ld [wCirD + 1], a
+    ld a, [wCirB]
+    ld b, a
+    ld a, [wCirA]
+    cp b
+    jr nc, .loop                     ; while x >= y
+    ret
+
+; The 8 mirrors of (x, y) about the centre.
+CirPlot8:
+    ld a, [wCirA]
+    cpl
+    inc a
+    ld [wCirNA], a
+    ld a, [wCirB]
+    cpl
+    inc a
+    ld [wCirNB], a
+MACRO CIRPT                          ; \1 = dx byte, \2 = dy byte (signed)
+    ld a, [\1]
+    ld e, a
+    ld a, [\2]
+    call CirPt
+ENDM
+    CIRPT wCirA, wCirB
+    CIRPT wCirNA, wCirB
+    CIRPT wCirA, wCirNB
+    CIRPT wCirNA, wCirNB
+    CIRPT wCirB, wCirA
+    CIRPT wCirNB, wCirA
+    CIRPT wCirB, wCirNA
+    CIRPT wCirNB, wCirNA
+    ret
+
+; E = dx, A = dy (signed): plot (cx + dx, cy + dy) if it is inside the viewport.
+CirPt:
+    ld d, a
+    ld a, e
+    add a
+    sbc a
+    ld c, a                          ; sign extension of dx
+    ld a, [wCirCX]
+    add e
+    ld b, a                          ; px lo
+    ld a, [wCirCX + 1]
+    adc c
+    ret nz
+    ld a, b
+    cp 128
+    ret nc
+    ld a, d
+    add a
+    sbc a
+    ld c, a
+    ld a, [wCirCY]
+    add d
+    ld l, a                          ; py lo
+    ld a, [wCirCY + 1]
+    adc c
+    ret nz
+    ld a, l
+    cp VIEW_ROWS * 8
+    ret nc
+    ld c, a
+    jp PlotInk                       ; B = x, C = y

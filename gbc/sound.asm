@@ -371,8 +371,9 @@ SndTick::
 
 ; CH4 noise filler, once per tick after the channels (A8 a8_noise / a8_saw). Chainsaw out: A held = the
 ; bite (a hit, pitch re-rolled from the saw LFSR every tick, full volume) or the fire rattle (every other
-; tick, vol >> 2); not held = the idle rattle (two on, two off, vol >> 3). Otherwise the elevator rumble
-; while a car moves and no world effect is playing. The A8 pitches are POKEY AUDF; NR43 / volumes are
+; tick, vol >> 2); not held = the idle rattle (two on, two off, vol >> 3). The elevator rumble (a car moves)
+; overrides the idle and fire rattle; only the bite overrides the rumble. World effects are on CH3, so they
+; never gate CH4 (the A8 shares one POKEY voice there). The A8 pitches are POKEY AUDF; NR43 / volumes are
 ; derived in tools/gbc_gensound.py.
 SndNoise:
     ldh a, [hSndTick]
@@ -384,10 +385,17 @@ SndNoise:
     jr nz, .elev
     ld a, [wPadLive]
     and JOY_A
-    jr z, .idle
+    jr z, .sawq
     ldh a, [hSawBite]
     and a
-    jr nz, .bite
+    jr nz, .bite                     ; only the bite overrides the elevator rumble
+.sawq:
+    ldh a, [hElevMov]
+    and a
+    jr nz, .elev                     ; idle / fire rattle yield to a moving car
+    ld a, [wPadLive]
+    and JOY_A
+    jr z, .idle
     ld a, b
     and 1
     jr z, .off
@@ -427,9 +435,6 @@ SndNoise:
     ldh a, [hElevMov]
     and a
     jr z, .off
-    ldh a, [hSndN + 2]
-    and a
-    jr nz, .off                      ; a world effect owns the world voice
     ldh a, [hNzVBite]
     ld b, a
     ld c, NZ_ELEV

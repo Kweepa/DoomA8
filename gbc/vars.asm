@@ -273,6 +273,15 @@ wTmpAux::     ds 1
 wTmpFrame::   ds 1
 wSpin::       ds 1                  ; VBlank counter (demo / tests)
 wItemSpin::   ds 2                  ; A8 item_spin (8.8 yaw): += dt_ms << 4, ~1 rev / 4.1 s
+; Projectile circle (DrawCircle): centre in viewport pixels (s16), radius, octant point, decision variable.
+wCirCX::      ds 2
+wCirCY::      ds 2
+wCirR::       ds 1
+wCirA::       ds 1                  ; octant x (R down to y)
+wCirB::       ds 1                  ; octant y (0 up)
+wCirNA::      ds 1                  ; -x, -y
+wCirNB::      ds 1
+wCirD::       ds 2                  ; s16 decision variable
 wEdgeN::      ds 1                  ; edge list for DrawEdges
 wEdgePtr::    ds 2
 wThTaken::    ds 32

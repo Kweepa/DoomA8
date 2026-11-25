@@ -46,6 +46,9 @@ CGB-only MBC5+RAM+battery, RGBDS 1.0.4.
     while inside, none under the radsuit), end of level, elevator (every car of the group; two or more latch the
     gate) and summon. Message triggers are not ported (the map text is not in the GBC payload and every shipped
     message trigger is empty). The map payload is written in place (WRAM bank 2) and reloads with the level.
+    SVBK is 2 only inside `MapGet` / `MapPut` / the `LoadLevel` copy; the VBlank and STAT interrupts switch to bank 1 around
+    `WpnTick` / `SndTick` and restore the interrupted bank (a frame is 5-7 VBlanks, so they land in those windows all the time;
+    unprotected, `WpnTick` read map bytes as OAM loop bounds and ran into the IO registers: LCD off, HDMA wait forever).
   - Level change: the keys are cleared and the loadout kept; after E1M8 the menu (ending pages first). Banked code only sets `wNextLevelReq`; the ROM0 stub `LevelUpdate` calls `LoadLevel`.
   - Elevators: per car current height, target and step timer; one unit per `ELEV_STEP_MS` (x4 for slow cars);
     the player boards the car top (`elev_update_floor`, always snaps while riding), enemies on the top ride, the
@@ -96,7 +99,7 @@ CGB-only MBC5+RAM+battery, RGBDS 1.0.4.
   black, rebuilt when the room changes; palette 1 = border, black or COL_HURT_A8 for HURT_FLASH_MS after damage;
   palettes 2 / 3 = HUD stats / message (A8 text mode: hue of HUD_PF2_STAT, lum HUD_PF1_STAT / HUD_PF1_MSG).
   A8 bytes map to BGR555 through the editor's A8_HEX table. Walls, enemies and pickups are all ink, as on the A8;
-  red is reserved for blood splats and the fireball triangle (not drawn yet).
+  red is reserved for blood splats, explosion pixels and the projectile circles.
 - Sound (`sound.asm`, ROM0; port of A8 playsound.asm): the A8's 28 PC-speaker effects (`tools/gbc_gensound.py` -> `sound.inc`,
   same ids, voices, priorities and DP* lumps as `tools/gensounds.py`). Three channels as on the A8: player = CH1 pulse,
   enemy = CH2 pulse, world = CH3 (32-sample square wave); a higher or equal priority preempts on a channel, one envelope
@@ -136,7 +139,8 @@ CGB-only MBC5+RAM+battery, RGBDS 1.0.4.
   - Fireballs: the A8 rocket slots (RKT_MAX). Spawn at the higher wrist joint of the attack pose, aimed in 3D at
     the eye (A8 .z_aim, ~15.6 cells/s), stepped every RKT_TICK_MS (x, z, y) as a point against the player's
     room colliders, solids, ceiling and floor; 10 / 30 + rnd(16) on a hit; RKT_LIFE_MS; drawn as the A8 red
-    screen triangle (half-extent 0.375) in bitplane 1.
+    Bresenham circle (`DrawCircle`, entity bank; A8 `sph_bres`, world radius `RKT_R` = 0.375, min 1 px) in bitplane 1,
+    player rockets too (same slots).
   - Muzzle: on the fire frame (possessed, imp / baron throwing) the A8 enemy_muzzle image (3 distance LODs) is
     stamped in red at the projected weapon vertex for EMUZ_MS, byte-snapped and kept inside the viewport.
   - Steps need a floor within STEP_UP of the enemy's feet at the destination (collider floor, crate top, solid

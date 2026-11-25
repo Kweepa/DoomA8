@@ -170,7 +170,10 @@ PickupScan::
     call NearAxis
     cp TH_GRAB_R + 1
     jr nc, .next
-    ld a, [wPkY]
+    ld a, [wPkIdx]                  ; live height: a car carries it (gbc/level.asm ElevCarry)
+    ld c, a
+    ld a, F_TH_Y
+    call MapGet
     ld [wBoxY], a
     ld a, TH_FOOT_SX
     ld [wBoxSY], a
