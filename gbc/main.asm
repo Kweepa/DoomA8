@@ -64,6 +64,7 @@ Start:
     ldh [hVBlank], a
     ldh [hShow], a
     ldh [hPlane], a
+    ldh [hCard], a
 
     ldh a, [rKEY1]
     and $80
@@ -167,6 +168,10 @@ ELSE
     dec b
     jr nz, .testWait
 ENDC
+ENDC
+
+IF !DEF(TEST_EXIT) && !DEF(LIVETEST)
+    call EnterCard                  ; A8 enter_card after the first load
 ENDC
 
 MainLoop:
@@ -369,8 +374,13 @@ StatISR:
 
 VBlankISR:
     push af
+    ldh a, [hCard]                          ; card up: sprites stay off (flags survive ldh)
+    and a
     ldh a, [rLCDC]
-    or LCDCF_OBJON | LCDCF_BG8000           ; viewport: sprites on, $8000 tiles
+    jr nz, .noObj
+    or LCDCF_OBJON                          ; viewport: sprites on
+.noObj:
+    or LCDCF_BG8000                         ; $8000 tiles
     ldh [rLCDC], a
     ldh a, [hFrame]
     inc a

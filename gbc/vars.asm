@@ -15,6 +15,7 @@ hSpeed::     ds 1
 hSavedSP::   ds 2
 hShow::      ds 1                   ; VRAM bank currently displayed
 hLastFrame:: ds 1                   ; hFrame at the end of the previous game frame
+hCard::      ds 1                   ; 1 while the "entering" card is up: VBlank keeps sprites off
 
 ; DrawLine scratch
 hPhase::     ds 1

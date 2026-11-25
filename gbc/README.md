@@ -36,7 +36,11 @@ CGB-only MBC5+RAM+battery, RGBDS 1.0.4.
     +- `PLAYER_R` (a crate: its face, raised to the crate bottom), drawn from the outward side in that room only. An
     enemy, platform, door or step-up arms none; a live mark or `CRACK_HOLD` skips the probe; a switch fire or door
     transit on the same frame drops it.
-  - Not ported: the "entering <map>" card.
+  - "entering" card (A8 `enter_card`, `EnterCard` in combat.asm): after the first load and each level change (not
+    after death) the viewport is black (palette 0 = black / white), the weapon sprites are off (`hCard`), and
+    "entering" / the map name are centred on tile rows 6 / 7 as HUD-font tiles copied into the framebuffer
+    (`HudCardTextB`, hud.asm; name max 16 columns) for `ENTER_HOLD_FRAMES` (2000 ms). Input counters and the frame
+    clock restart afterwards.
 - Player rules are the A8's (`player.asm`, gbc/ai.asm shots; constants and the `gb_*` pickup tables generated from
   src/ by `tools/gbc_a8const.py`):
   - Pickups: a thing at the cap, an owned key / chainsaw, a second backpack, armour that is not better stays on the

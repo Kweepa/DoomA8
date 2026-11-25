@@ -596,7 +596,126 @@ LevelUpdate::
     jr c, .go
     xor a
 .go:
-    jp LoadLevel
+    call LoadLevel
+    jp EnterCard
+
+; ---- "entering" card (A8 loader.asm enter_card) -----------------------------------------------
+
+DEF ENTER_HOLD_FRAMES EQU 118            ; ENTER_HOLD_MS (2000) / 17 ms per VBlank
+DEF CARD_ROW          EQU 6              ; viewport tile row of "entering"; the map name is the next row
+
+; After the first load and after a level change (not after death): the viewport is black, the weapon
+; sprites are off (hCard), "entering" and the map name (payload header + 23, NUL-terminated) are
+; centred as font tiles drawn into the framebuffer (hud.asm HudCardTextB), held ENTER_HOLD_FRAMES
+; VBlanks. Input counters and the frame clock restart afterwards.
+EnterCard::
+    ld a, 1
+    ldh [hCard], a
+    ld hl, wHudRows                 ; HUD rows blank during the card
+    ld b, 4 * 20
+    xor a
+.clr:
+    ld [hl+], a
+    dec b
+    jr nz, .clr
+    call ClearFBLive
+    ld hl, wMsgTmp
+    ld de, .entering
+.en:
+    ld a, [de]
+    inc de
+    ld [hl+], a
+    and a
+    jr nz, .en
+    ld c, CARD_ROW
+    call CardText
+    ld c, 0                         ; map name -> wMsgTmp (max 16 columns)
+.nm:
+    ld hl, wMap + 23
+    ld b, 0
+    add hl, bc
+    ld a, 2
+    ldh [rSVBK], a
+    ld d, [hl]
+    ld a, 1
+    ldh [rSVBK], a
+    ld hl, wMsgTmp
+    add hl, bc
+    ld [hl], d
+    ld a, d
+    and a
+    jr z, .nmDone
+    inc c
+    ld a, c
+    cp 16
+    jr c, .nm
+    ld hl, wMsgTmp + 16
+    ld [hl], 0
+.nmDone:
+    ld c, CARD_ROW + 1
+    call CardText
+    ld a, BANK(HudCardPalB)
+    ld [rROMB0], a
+    call HudCardPalB
+    ld a, [wLevelBank]
+    ld [rROMB0], a
+    ldh a, [hShow]                  ; text frame into the hidden bank, then flip
+    xor 1
+    call CopyFBHBlank
+    call WaitVBlank
+    ldh a, [hShow]
+    xor 1
+    ldh [hShow], a
+    call ShowBank
+    call HudBlit                    ; black / white palette 0
+    ld b, ENTER_HOLD_FRAMES
+.hold:
+    call WaitVBlank
+    dec b
+    jr nz, .hold
+    ld hl, wHudRows
+    ld b, 4 * 20
+    xor a
+.clr2:
+    ld [hl+], a
+    dec b
+    jr nz, .clr2
+    ld [wStatusMs], a
+    ld [wStatusMs + 1], a
+    ld [wFireEvent], a
+    ld a, $FE                       ; room palette is rebuilt by HudUpdate (paper back from black)
+    ld [wPalRoom], a
+    call HudUpdate
+    ld a, [wLevelBank]
+    ld [rROMB0], a
+    call WaitVBlank
+    call HudBlit
+    di                              ; no input or time carried over from the hold
+    xor a
+    ld [wPadLatch], a
+    ld [wAccF], a
+    ld [wAccB], a
+    ld [wAccTR], a
+    ld [wAccTL], a
+    ld [wAccSR], a
+    ld [wAccSL], a
+    ldh a, [hFrame]
+    ldh [hLastFrame], a
+    ei
+    xor a
+    ldh [hCard], a
+    ret
+.entering:
+    db "entering", 0
+
+; C = tile row, text in wMsgTmp.
+CardText:
+    ld a, BANK(HudCardTextB)
+    ld [rROMB0], a
+    call HudCardTextB
+    ld a, [wLevelBank]
+    ld [rROMB0], a
+    ret
 
 ; ---- player shots ----------------------------------------------------------------------
 
