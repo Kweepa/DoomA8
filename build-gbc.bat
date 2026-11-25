@@ -6,6 +6,7 @@ REM build-gbc.bat        -> doomgbc.gbc (project root, committed)
 REM build-gbc.bat test   -> gbc\build\doomgbc_test.gbc (headless screenshot check)
 REM build-gbc.bat bench  -> gbc\build\doomgbc_bench.gbc (timing run, see tools\gbc_bench.py)
 REM build-gbc.bat live   -> gbc\build\doomgbc_live.gbc (demo that stops after 3 frames; tools\gbc_check.py --live)
+REM build-gbc.bat inter -> gbc\build\doomgbc_inter.gbc (intermission screenshots, tools\gbc_intercheck.py)
 REM build-gbc.bat pose   -> gbc\build\doomgbc_pose.gbc (render checksums, see tools\gbc_posetest.py)
 
 if exist "%~dp0setup-env.bat" call "%~dp0setup-env.bat"
@@ -61,6 +62,10 @@ if /i "%~1"=="los" (
   set "DEFS=-D TEST_EXIT=1 -D LOSUNIT=1"
   set "NAME=doomgbc_los"
 )
+if /i "%~1"=="inter" (
+  set "DEFS=-D INTERTEST=1"
+  set "NAME=doomgbc_inter"
+)
 if /i "%~1"=="pose" (
   set "DEFS=-D TEST_EXIT=1 -D POSETEST=1"
   set "NAME=doomgbc_pose"
@@ -101,11 +106,13 @@ python tools\gbc_game.py gbc\build
 if errorlevel 1 exit /b 1
 python tools\gbc_genmenu.py gbc\build
 if errorlevel 1 exit /b 1
+python tools\gbc_genintermission.py gbc\build
+if errorlevel 1 exit /b 1
 python tools\gbc_genmusic.py gbc\build
 if errorlevel 1 exit /b 1
 
 set "OBJS="
-for %%F in (main vars line fb bench math render posetest data input world collide doors entity objects wpn combat ai hud player level sound menu music) do (
+for %%F in (main vars line fb bench math render posetest data input world collide doors entity objects wpn combat ai hud player level sound menu music intermission) do (
   "%RGBDS%\rgbasm.exe" -Weverything %DEFS% -I gbc\ -I gbc\build\ -o gbc\build\%%F.o gbc\%%F.asm
   if errorlevel 1 exit /b 1
   call set "OBJS=%%OBJS%% gbc\build\%%F.o"

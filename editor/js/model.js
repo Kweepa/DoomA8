@@ -367,7 +367,7 @@ export function usesLinkTag(kind) {
 }
 
 /** Trigger purposes. Tag is used for elevator / summon / unlock / unhide. */
-export const TRIGGER_PURPOSES = ["message", "end_level", "hurt", "hurt_small", "elevator", "summon", "unlock", "unhide", "spawn"];
+export const TRIGGER_PURPOSES = ["message", "end_level", "hurt", "hurt_small", "elevator", "summon", "unlock", "unhide", "spawn", "secret"];
 export const TRIGGER_PURPOSE_LABELS = {
   message: "Display message",
   end_level: "End of level",
@@ -378,6 +378,7 @@ export const TRIGGER_PURPOSE_LABELS = {
   unlock: "Unlock door",
   unhide: "Unhide door for 30s",
   spawn: "Spawn tagged enemies (once)",
+  secret: "Secret area (counts once)",
 };
 
 export function clampTriggerPurpose(s) {

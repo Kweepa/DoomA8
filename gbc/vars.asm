@@ -15,7 +15,6 @@ hSpeed::     ds 1
 hSavedSP::   ds 2
 hShow::      ds 1                   ; VRAM bank currently displayed
 hLastFrame:: ds 1                   ; hFrame at the end of the previous game frame
-hCard::      ds 1                   ; 1 while the "entering" card is up: VBlank keeps sprites off
 
 ; DrawLine scratch
 hPhase::     ds 1
@@ -355,7 +354,11 @@ wEmuzSeen::   ds 1                   ; smoke builds: muzzle starts
 SECTION "wpnvars", WRAMX, BANK[1]
 wHP::         ds 1
 wArmor::      ds 1
-wKills::      ds 1
+wKills::      ds 1                  ; kills this level (LoadLevel clears; intermission)
+wStItems::    ds 1                  ; pickups taken this level
+wStMs::       ds 2                  ; level time: ms inside the second (0..999)
+wStSec::      ds 2                  ; seconds, saturates at 5999 (99:59)
+wStSecrets::  ds 1                  ; secret triggers entered this level
 wHaveWpn::    ds 1                  ; bit per weapon id
 wWpnCur::     ds 1
 wAmmoNone::   ds 1                  ; always 0 (ammo slot of weapons that need none)

@@ -78,6 +78,8 @@ LoadRoomMesh::
 ; A = room. Makes it the current room: mesh for the renderer, collision cache.
 EnterRoom::
     ld b, a
+    xor a
+    ld [wTrigInside], a             ; bits are room-local: a stale one would block the same-numbered trigger here
     ld a, [wLevelBank]
     ld [rROMB0], a
     ld a, b
@@ -248,6 +250,14 @@ LoadLevel::
     ld [hl+], a
     dec b
     jr nz, .clrTh
+    ld hl, wKills                   ; level statistics for the intermission (a death reload starts them over)
+    ld [hl+], a                     ; wKills, wStItems, wStMs (2), wStSec (2), wStSecrets are contiguous
+    ld [hl+], a
+    ld [hl+], a
+    ld [hl+], a
+    ld [hl+], a
+    ld [hl+], a
+    ld [hl], a
     call LoadEnemies
     ld a, [wMapHdr + H_SPAWN_ROOM]
     jp EnterRoom

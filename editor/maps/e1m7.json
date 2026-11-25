@@ -2462,6 +2462,57 @@
       "dir": 1,
       "roomId": "ac0ed201-5e8c-4f2f-8dbb-680bda281dc9",
       "pickup": "lightpost"
+    },
+    {
+      "id": "db26cfc8-dec4-46ed-b6f3-8593ca039243",
+      "kind": "trigger",
+      "x": 109,
+      "y": 48,
+      "z": 141,
+      "sx": 5,
+      "sy": 4,
+      "sz": 6,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "purpose": "secret",
+      "text": "",
+      "tag": "",
+      "roomId": "31f5d0ed-e012-4513-b71f-5be99ed61d07"
+    },
+    {
+      "id": "f25c9e23-10f7-45e6-a205-9b66f9398f0d",
+      "kind": "trigger",
+      "x": 92,
+      "y": 46,
+      "z": 177,
+      "sx": 4,
+      "sy": 4,
+      "sz": 7,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "purpose": "secret",
+      "text": "",
+      "tag": "",
+      "roomId": "6f2f8fcd-ab18-4232-a8fb-bc2fef89a706"
+    },
+    {
+      "id": "003ace54-ee78-4f1f-a256-d719310a95e2",
+      "kind": "trigger",
+      "x": 78,
+      "y": 55,
+      "z": 115,
+      "sx": 4,
+      "sy": 4,
+      "sz": 4,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "purpose": "secret",
+      "text": "",
+      "tag": "",
+      "roomId": "35988490-eb92-4465-be84-0273cac1b624"
     }
   ]
 }

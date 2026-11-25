@@ -56,7 +56,7 @@ Start:
 
 ; LCD off, interrupts off. The menu (gbc/menu.asm) runs first, then the game is set up from scratch.
 Reboot:
-IF !DEF(TEST_EXIT) && !DEF(LIVETEST)
+IF !DEF(TEST_EXIT) && !DEF(LIVETEST) && !DEF(INTERTEST)
     ld a, BANK(MenuRunB)
     ld [rROMB0], a
     call MenuRunB
@@ -79,7 +79,6 @@ ENDC
     ldh [hVBlank], a
     ldh [hShow], a
     ldh [hPlane], a
-    ldh [hCard], a
 
     ldh a, [rKEY1]
     and $80
@@ -186,8 +185,20 @@ ELSE
 ENDC
 ENDC
 
-IF !DEF(TEST_EXIT) && !DEF(LIVETEST)
-    call EnterCard                  ; A8 enter_card after the first load
+IF DEF(INTERTEST)
+    ; build-gbc.bat inter (tools/gbc_intercheck.py): fake an exit from the third level with some statistics.
+    ld a, 2
+    ld [wLevel], a
+    ld a, 7
+    ld [wKills], a
+    ld a, 12
+    ld [wStItems], a
+    ld a, 1
+    ld [wStSecrets], a              ; 1 of the 3 secret triggers of the loaded map (E1M1)
+    ld a, LOW(95)
+    ld [wStSec], a
+    ld a, 1
+    ld [wNextLevelReq], a
 ENDC
 
 MainLoop:
@@ -201,6 +212,16 @@ ENDC
 
 ; ---- demo: spinning room, double buffered ---------------------------------
 Demo:
+IF DEF(INTERTEST)
+    ld a, [wImDone]                 ; screenshot the game 30 frames after the intermission
+    and a
+    jr z, .imd
+    inc a
+    ld [wImDone], a
+    cp 30
+    call z, ImDbgGame
+.imd:
+ENDC
     call ClearFBLive                ; interrupts stay on (VBlank / STAT must not run late)
     ei
     call RenderScene
@@ -303,6 +324,12 @@ MusTick::
 MenuBank:
     ld a, BANK(MenuRunB)
     ld [rROMB0], a
+    ret
+ENDC
+
+IF DEF(INTERTEST)
+ImDbgGame::
+    nop
     ret
 ENDC
 
@@ -440,13 +467,8 @@ StatISR:
 
 VBlankISR:
     push af
-    ldh a, [hCard]                          ; card up: sprites stay off (flags survive ldh)
-    and a
     ldh a, [rLCDC]
-    jr nz, .noObj
-    or LCDCF_OBJON                          ; viewport: sprites on
-.noObj:
-    or LCDCF_BG8000                         ; $8000 tiles
+    or LCDCF_OBJON | LCDCF_BG8000           ; viewport: sprites on, $8000 tiles
     ldh [rLCDC], a
     ldh a, [hFrame]
     inc a

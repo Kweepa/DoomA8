@@ -1,5 +1,5 @@
 {
-  "name": "Main Processing",
+  "name": "Central Processing",
   "objects": [
     {
       "id": "534c60db-2c9b-47f4-9432-3e09383a1490",
@@ -3044,6 +3044,57 @@
       "dir": 1,
       "roomId": "bb06c96d-d2d2-449c-a9a1-628d4a804d6a",
       "pickup": "box of rockets"
+    },
+    {
+      "id": "3af06806-56d1-4d4d-b2aa-12017cab793c",
+      "kind": "trigger",
+      "x": 28,
+      "y": 47,
+      "z": 21,
+      "sx": 8,
+      "sy": 4,
+      "sz": 6,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "purpose": "secret",
+      "text": "",
+      "tag": "",
+      "roomId": "ec10afd8-a48b-49e1-9edc-9e94d57ec2df"
+    },
+    {
+      "id": "e42a432e-0625-4f0a-a4ce-db0ffe879c5e",
+      "kind": "trigger",
+      "x": 57,
+      "y": 47,
+      "z": 8,
+      "sx": 8,
+      "sy": 4,
+      "sz": 6,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "purpose": "secret",
+      "text": "",
+      "tag": "",
+      "roomId": "b5b6f86c-d9ea-4433-a749-2ffabc6e83c2"
+    },
+    {
+      "id": "d099d914-5cd2-4443-b2ce-16e7f5ffe675",
+      "kind": "trigger",
+      "x": 167,
+      "y": 59,
+      "z": 93,
+      "sx": 8,
+      "sy": 4,
+      "sz": 8,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "purpose": "secret",
+      "text": "",
+      "tag": "",
+      "roomId": "fe1775a2-c898-49be-b24a-fa1c139c9dc6"
     }
   ]
 }

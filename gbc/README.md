@@ -49,7 +49,7 @@ CGB-only MBC5+RAM+battery, RGBDS 1.0.4.
     SVBK is 2 only inside `MapGet` / `MapPut` / the `LoadLevel` copy; the VBlank and STAT interrupts switch to bank 1 around
     `WpnTick` / `SndTick` and restore the interrupted bank (a frame is 5-7 VBlanks, so they land in those windows all the time;
     unprotected, `WpnTick` read map bytes as OAM loop bounds and ran into the IO registers: LCD off, HDMA wait forever).
-  - Level change: the keys are cleared and the loadout kept; after E1M8 the menu (ending pages first). Banked code only sets `wNextLevelReq`; the ROM0 stub `LevelUpdate` calls `LoadLevel`.
+  - Level change: the keys are cleared and the loadout kept; after E1M8 the menu (ending pages first). Banked code only sets `wNextLevelReq`; the ROM0 stub `LevelUpdate` calls `LoadLevel` and the intermission.
   - Elevators: per car current height, target and step timer; one unit per `ELEV_STEP_MS` (x4 for slow cars);
     the player boards the car top (`elev_update_floor`, always snaps while riding), enemies on the top ride, the
     top plate is drawn at the current height, and enemy floor probes / line of sight see the car. Things on a car are
@@ -61,11 +61,26 @@ CGB-only MBC5+RAM+battery, RGBDS 1.0.4.
     +- `PLAYER_R` (a crate: its face, raised to the crate bottom), drawn from the outward side in that room only. An
     enemy, platform, door or step-up arms none; a live mark or `CRACK_HOLD` skips the probe; a switch fire or door
     transit on the same frame drops it.
-  - "entering" card (A8 `enter_card`, `EnterCard` in combat.asm): after the first load and each level change (not
-    after death) the viewport is black (palette 0 = black / white), the weapon sprites are off (`hCard`), and
-    "entering" / the map name are centred on tile rows 6 / 7 as HUD-font tiles copied into the framebuffer
-    (`HudCardTextB`, hud.asm; name max 16 columns) for `ENTER_HOLD_FRAMES` (2000 ms). Input counters and the frame
-    clock restart afterwards.
+  - Intermission (Doom `wi_stuff.c` single-player screens; the A8 has none, so this is a Doom-parity addition;
+    `gbc/intermission.asm`, ROMX bank 13, hooked in `LevelUpdate`; data from `tools/gbc_genintermission.py`). After
+    E1M1..E1M7 (E1M8 goes straight to the ending pages as in Doom; test builds skip it) the screen is taken over (LCD off,
+    STAT interrupt off, own VRAM) for three screens, A advancing each:
+    1. stats: level name (white) / "Finished" (red), then Kills, Items, Secret count up one after the other in red
+       (+2 % per tick, `SND_PISTOL` every 4th tick, `SND_RXPLOD` at the end of each, 1 s between), then Time and Par
+       (+3 s per tick). A before the end jumps to the final numbers.
+    2. map: `ui/intermission/WIMAP0_160.png` (quantised to BG palettes 0-5, palettes 6 / 7 are the white / A8 red text)
+       with a splat OBJ on every finished level, name / "Finished" above. Up to 20 building overlay sprites (`InterBld`, OBJ palettes 3-7, bank 1 tiles after the map's overflow) are cut from the original image where the 4-colour tiles lost detail (windows around the nodes; `NBLD_MAX = 0` in the generator turns them off).
+    3. entering: the same map, "Entering" (red) / next name (white); the arrow + "you are here" sprites blink on the
+       next level (Doom: on while tick & 31 < 20). A starts the level (`SND_SGCOCK` on each accept).
+    A tick is 2 VBlanks (~30 Hz, Doom 35 Hz). Node positions are Doom's `lnodes[0]` scaled 0.5 x 0.64 with the lump
+    offsets, the arrow side follows Doom's fit rule (WIURH0 text right, WIURH1 left). Counters: `wKills`, `wStItems`
+    (pickups taken), `wStSec` / `wStMs` (time, accumulated in `LevelTimeTick` while the player lives); `LoadLevel` clears
+    them (a death reload starts over). Totals and par come from `InterStats` (generator: enemies, pickups with
+    `type < TH_LIGHTPOST`, Doom E1 pars); percentage = found * 100 / total (100 when the total is 0). Secrets: `wStSecrets` (entered
+    "Secret area" triggers, one-shot via gate 15) / the map's secret triggers (counted at snapshot, 100% when none); par will move into the editor data. On return `LevelUpdate` rebuilds the
+    game video (`ImExit` wipes VRAM and rebuilds the view map, then `HudInit`, `WpnVideoInit`, interrupts, LCDC).
+    The old "entering" card is gone (also at game start). `build-gbc.bat inter` + `tools/gbc_intercheck.py` take
+    headless screenshots of every screen (and the game after it) from a fake exit with 7 kills, 12 items, 95 s.
 - Player rules are the A8's (`player.asm`, gbc/ai.asm shots; constants and the `gb_*` pickup tables generated from
   src/ by `tools/gbc_a8const.py`):
   - Pickups: a thing at the cap, an owned key / chainsaw, a second backpack, armour that is not better stays on the

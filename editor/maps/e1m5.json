@@ -2489,6 +2489,40 @@
       "dir": 1,
       "flags": 3,
       "roomId": "b0bd609c-c09c-458a-bed8-bdcdea00052d"
+    },
+    {
+      "id": "0f6952cd-ea9e-4099-ad54-f5d15a516037",
+      "kind": "trigger",
+      "x": 182,
+      "y": 69,
+      "z": 39,
+      "sx": 8,
+      "sy": 4,
+      "sz": 8,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "purpose": "secret",
+      "text": "",
+      "tag": "",
+      "roomId": "48afef2d-41c1-4069-9ad4-87a0a99eabd0"
+    },
+    {
+      "id": "ca5ce1ae-3088-47e6-9ba1-3c8390b7bd34",
+      "kind": "trigger",
+      "x": 104,
+      "y": 75,
+      "z": 127,
+      "sx": 12,
+      "sy": 4,
+      "sz": 15,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "purpose": "secret",
+      "text": "",
+      "tag": "",
+      "roomId": "768b54c9-6b30-4047-b73f-776e4d394965"
     }
   ]
 }

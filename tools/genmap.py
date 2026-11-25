@@ -33,7 +33,7 @@ PLAT_MAX = 20
 SWITCH_MAX = 16
 ELEV_MAX = 8
 ENEMY_MAX = 24  # keep in sync with src/mem.asm and editor/js/model.js
-TRIG_MAX = 16
+TRIG_MAX = 20
 TRIG_ROOM_MAX = 8
 TH_MAX = 32
 FACE = {"+z": 0, "-z": 1, "+x": 2, "-x": 3}
@@ -534,6 +534,7 @@ def cook_one(level: dict, map_key: str) -> bytes:
     TRIG_UNLOCK = 6
     TRIG_UNHIDE = 7
     TRIG_HURT_SM = 9
+    TRIG_SECRET = 10  # GBC: counts toward the intermission secrets
     TRIG_PURPOSE = {
         "message": TRIG_MSG,
         "end_level": TRIG_END,
@@ -544,6 +545,7 @@ def cook_one(level: dict, map_key: str) -> bytes:
         "unlock": TRIG_UNLOCK,
         "unhide": TRIG_UNHIDE,
         "spawn": TRIG_SPAWN,
+        "secret": TRIG_SECRET,
     }
     SW_DEST_DOOR = 0
     SW_DEST_ELEV = 1
@@ -1352,7 +1354,7 @@ SLOPE_MAX	= 16
 PLAT_MAX	= 20
 SWITCH_MAX	= 16
 ELEV_MAX	= 8
-TRIG_MAX	= 16
+TRIG_MAX	= 20
 TRIG_ROOM_MAX	= 8
 ROOM_MAX_TYPES	= 2
 MAP_MAX_BYTES	= 4096
@@ -1368,6 +1370,7 @@ TRIG_SUMMON	= 5
 TRIG_UNLOCK	= 6
 TRIG_UNHIDE	= 7
 TRIG_HURT_SM	= 9
+TRIG_SECRET	= 10
 TRIG_PURPOSE_MASK	= $0F
 TRIG_GATED_MASK	= $F0
 SW_DEST_DOOR	= 0

@@ -42,9 +42,60 @@ ElevPreB::
     jp ElevTick
 
 LevelUpdateB::
+    call LevelTimeTick
     call CrackClearBorn
     call UpdateTriggers
     jp DoorUnhideTick
+
+; Level time for the intermission: wStMs += wDtMs; every 1000 ms one second (wStSec, saturating at 5999 = 99:59).
+LevelTimeTick:
+    ld a, [wDtMs]
+    ld b, a
+    ld a, [wStMs]
+    add b
+    ld l, a
+    ld a, [wStMs + 1]
+    adc 0
+    ld h, a
+    cp HIGH(1000)
+    jr c, .keep
+    jr nz, .sec
+    ld a, l
+    cp LOW(1000)
+    jr c, .keep
+.sec:
+    ld a, l
+    sub LOW(1000)
+    ld l, a
+    ld a, h
+    sbc HIGH(1000)
+    ld h, a
+    ld a, [wStSec]
+    add 1
+    ld c, a
+    ld a, [wStSec + 1]
+    adc 0
+    ld d, a
+    cp HIGH(6000)
+    jr c, .set
+    jr nz, .sat
+    ld a, c
+    cp LOW(6000)
+    jr c, .set
+.sat:
+    ld c, LOW(5999)
+    ld d, HIGH(5999)
+.set:
+    ld a, c
+    ld [wStSec], a
+    ld a, d
+    ld [wStSec + 1], a
+.keep:
+    ld a, l
+    ld [wStMs], a
+    ld a, h
+    ld [wStMs + 1], a
+    ret
 
 ; ---- doors by tag ---------------------------------------------------------------------------------
 
@@ -395,6 +446,8 @@ TrigEnter:
     jr z, .unhide
     cp TRIG_SPAWN
     jr z, .spawn
+    cp TRIG_SECRET
+    jp z, .secret
     cp TRIG_ELEV
     jr z, .elev
     cp TRIG_SUMMON
@@ -493,6 +546,17 @@ TrigEnter:
     cp c
     jr nz, .sp
     ret
+
+.secret:                             ; one-shot: latch gate 15, count it for the intermission
+    ld hl, wStSecrets
+    inc [hl]
+    ld a, [wLvI]
+    ld c, a
+    ld a, [wLvPur]
+    or $F0
+    ld b, a
+    ld a, F_TR_PURPOSE
+    jp MapPut
 
 ; -> A = tr_arg of trigger wLvI.
 TrigArg:

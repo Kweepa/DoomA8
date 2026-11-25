@@ -96,6 +96,16 @@ WpnInit::
     ld [wWpnDy], a
     ld [wSawFlip], a
     ld [wFireEvent], a
+    ld a, A8_START_HP
+    ld [wHP], a
+    ld a, A8_START_ARMOUR
+    ld [wArmor], a
+    ; falls into WpnVideoInit
+
+; Weapon video state: OAM bookkeeping, tile reload flags, OBJ palettes. Also used after the intermission has
+; wiped VRAM (combat.asm LevelUpdate).
+WpnVideoInit::
+    xor a
     ld [wOamUsed], a
     ld [wApOk], a
     ld [wInPose], a
@@ -109,10 +119,6 @@ WpnInit::
     ld [wLoadedFlash], a
     ld [wBodyFrame], a
     ld [wFlashFrame], a
-    ld a, A8_START_HP
-    ld [wHP], a
-    ld a, A8_START_ARMOUR
-    ld [wArmor], a
     ; OBJ palettes: 0 = ink (white), 1 = flash (yellow)
     ld a, $80
     ldh [rOCPS], a

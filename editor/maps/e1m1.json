@@ -1284,6 +1284,57 @@
       "dir": 1,
       "roomId": "00aeb867-15d6-47b6-b4b4-a470a4532db4",
       "pickup": "small health"
+    },
+    {
+      "id": "904dd8c4-4081-4dcc-af03-524f2eb99ece",
+      "kind": "trigger",
+      "x": 129,
+      "y": 65,
+      "z": 95,
+      "sx": 8,
+      "sy": 4,
+      "sz": 6,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "purpose": "secret",
+      "text": "",
+      "tag": "",
+      "roomId": "00aeb867-15d6-47b6-b4b4-a470a4532db4"
+    },
+    {
+      "id": "b4d8726f-f23e-49dc-a354-0a20cd6b74a8",
+      "kind": "trigger",
+      "x": 109,
+      "y": 58,
+      "z": 96,
+      "sx": 7,
+      "sy": 4,
+      "sz": 6,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "purpose": "secret",
+      "text": "",
+      "tag": "",
+      "roomId": "4b34c033-cb5a-48bd-b984-2d5ddc1c9a30"
+    },
+    {
+      "id": "aaacafb2-a22f-4b6b-80f5-9a4d723033c0",
+      "kind": "trigger",
+      "x": 130,
+      "y": 65,
+      "z": 102,
+      "sx": 8,
+      "sy": 4,
+      "sz": 6,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "purpose": "secret",
+      "text": "",
+      "tag": "",
+      "roomId": "7829dd75-fb2b-45f0-8433-12f03dd4f80f"
     }
   ]
 }

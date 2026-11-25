@@ -1685,7 +1685,7 @@
       "cuts": [
         {
           "su": 18,
-          "sv": 29
+          "sv": 30
         }
       ]
     },
@@ -2250,6 +2250,57 @@
       "dir": 1,
       "roomId": "00621e67-a631-474a-bcf6-45495285c4ba",
       "pickup": "shells"
+    },
+    {
+      "id": "cab9a0ce-9503-4161-a766-204af50b96ff",
+      "kind": "trigger",
+      "x": 157,
+      "y": 47,
+      "z": 17,
+      "sx": 8,
+      "sy": 4,
+      "sz": 6,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "purpose": "secret",
+      "text": "",
+      "tag": "",
+      "roomId": "976a9a0d-ea99-48c3-be01-cce2fd50aafd"
+    },
+    {
+      "id": "081c8ac0-6c8b-4ef3-af52-ba2686415cee",
+      "kind": "trigger",
+      "x": 63,
+      "y": 47,
+      "z": 46,
+      "sx": 8,
+      "sy": 4,
+      "sz": 6,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "purpose": "secret",
+      "text": "",
+      "tag": "",
+      "roomId": "00621e67-a631-474a-bcf6-45495285c4ba"
+    },
+    {
+      "id": "97aaabf1-8db1-4579-ab52-48954816ea8f",
+      "kind": "trigger",
+      "x": 56,
+      "y": 53,
+      "z": 150,
+      "sx": 6,
+      "sy": 4,
+      "sz": 8,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "purpose": "secret",
+      "text": "",
+      "tag": "",
+      "roomId": "696dc7f8-5e98-4133-bcef-b36c07998f99"
     }
   ]
 }

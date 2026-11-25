@@ -6,7 +6,7 @@
 - [x] Ogre behaviour
 - [x] Knight behaviour
 - [x] Scrag behaviour (flying)
-- [ ] Proper map complete screen/message (without going overboard)
+- [x] Proper map complete screen/message (GBC: Doom-style intermission, gbc/intermission.asm). Secret triggers done (editor purpose "secret"). Still to do: par times in the editor data
 - [x] Decide what to do when you die in the game
 - [x] Player rocket launcher should launch a rocket projectile
 - [x] When producing splat on the center of the screen, the sprite setup delays the screen flip by a raster line. Move the flip earlier so it doesn't have this problem. We can debug this by changing the border colour first thing and seeing where it is happening, so we can tweak its movement.

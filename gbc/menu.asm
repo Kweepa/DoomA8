@@ -70,7 +70,6 @@ ENDM
 MenuRunB::
     xor a
     ld [wApOk], a                   ; VBlankISR's WpnTick stays out of OAM
-    ldh [hCard], a
     ldh [rSCX], a
     ldh [rSCY], a
     ld [wMenuId], a

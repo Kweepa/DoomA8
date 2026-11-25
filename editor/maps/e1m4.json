@@ -2511,6 +2511,57 @@
       "dir": 1,
       "roomId": "e948e468-b963-4ab5-bfc0-7badb1d401d6",
       "pickup": "large health"
+    },
+    {
+      "id": "65783283-badc-4a35-ac7a-9438078a0e14",
+      "kind": "trigger",
+      "x": 245,
+      "y": 79,
+      "z": 181,
+      "sx": 5,
+      "sy": 4,
+      "sz": 12,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "purpose": "secret",
+      "text": "",
+      "tag": "",
+      "roomId": "43cf1c5b-f7d4-4310-b7d5-319d2e021291"
+    },
+    {
+      "id": "a171d801-2d8a-44ad-b803-567df85a3687",
+      "kind": "trigger",
+      "x": 208,
+      "y": 73,
+      "z": 93,
+      "sx": 18,
+      "sy": 4,
+      "sz": 8,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "purpose": "secret",
+      "text": "",
+      "tag": "",
+      "roomId": "1dea66ce-89f4-4972-848e-3c1439671f36"
+    },
+    {
+      "id": "e3cebcbc-c360-4ca2-b775-59046bc4d681",
+      "kind": "trigger",
+      "x": 213,
+      "y": 86,
+      "z": 109,
+      "sx": 8,
+      "sy": 4,
+      "sz": 2,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "purpose": "secret",
+      "text": "",
+      "tag": "",
+      "roomId": "1dea66ce-89f4-4972-848e-3c1439671f36"
     }
   ]
 }

@@ -1246,6 +1246,23 @@
       "tag": "raisestairs",
       "enableTag": "raisestairswitch",
       "roomId": "6c2145f7-e041-4793-885e-8aa933e23a95"
+    },
+    {
+      "id": "845af2a2-e228-4679-adca-f883606f3b84",
+      "kind": "trigger",
+      "x": 132,
+      "y": 15,
+      "z": 54,
+      "sx": 8,
+      "sy": 4,
+      "sz": 6,
+      "face": "+z",
+      "axis": "z",
+      "dir": 1,
+      "purpose": "secret",
+      "text": "",
+      "tag": "",
+      "roomId": "e17caaf0-323a-4968-a289-3e1289854fc8"
     }
   ]
 }
