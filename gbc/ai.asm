@@ -3627,9 +3627,19 @@ EnemyAnimStep:
     ld a, EN_DEAD
     jp EnSetStateA
 
-; A8 damage_enemy (difficulty 1: no scaling). wObjI = enemy, A = damage. Idle / alert enemies
-; wake into approach; survivors flinch on rnd8 < pain_chance; at 0 hp the dying clip starts.
+; A8 damage_enemy. wObjI = enemy, A = damage (x 3/2, at most 255, on I'm too young to die). Idle / alert
+; enemies wake into approach; survivors flinch on rnd8 < pain_chance; at 0 hp the dying clip starts.
 AiDamageEnemy::
+    ld b, a
+    ld a, [wDifficulty]
+    and a
+    ld a, b
+    jr nz, .dmg
+    srl b
+    add b
+    jr nc, .dmg
+    ld a, 255
+.dmg:
     ld [wDmg], a
     ENPTR wEnState
     ld a, [hl]

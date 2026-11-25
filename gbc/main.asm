@@ -47,6 +47,21 @@ Start:
     ldh [rKEY1], a
     stop
 
+    ld a, 1                         ; menu choices before the first menu (test builds keep these)
+    ld [wDifficulty], a
+    ld a, 15
+    ld [wEffectsVol], a
+    xor a
+    ld [wGameDone], a
+
+; LCD off, interrupts off. The menu (gbc/menu.asm) runs first, then the game is set up from scratch.
+Reboot:
+IF !DEF(TEST_EXIT) && !DEF(LIVETEST)
+    ld a, BANK(MenuRunB)
+    ld [rROMB0], a
+    call MenuRunB
+ENDC
+
     ; VRAM: clear both banks, hex font, map.
     ld a, 1
     ldh [rVBK], a
@@ -253,6 +268,43 @@ ENDC
     call CombatUpdate
     call HudUpdate
     jp Demo
+
+IF !DEF(TEST_EXIT) && !DEF(LIVETEST)
+; After E1M8 (LevelUpdate): back to the menu, which shows the ending pages (A8 episode_done -> game_complete).
+Restart::
+    di
+    ld sp, STACK_TOP
+.w:
+    ldh a, [rLY]
+    cp 144
+    jr c, .w
+    xor a
+    ldh [rLCDC], a
+    ldh [rIE], a
+    ldh [rIF], a
+    ldh [rSTAT], a
+    jp Reboot
+
+; Menu music (gbc/music.asm, own ROM bank), called from the menu bank.
+MusStart::
+    ld a, BANK(MusStartB)
+    ld [rROMB0], a
+    call MusStartB
+    jr MenuBank
+MusStop::
+    ld a, BANK(MusStopB)
+    ld [rROMB0], a
+    call MusStopB
+    jr MenuBank
+MusTick::
+    ld a, BANK(MusTickB)
+    ld [rROMB0], a
+    call MusTickB
+MenuBank:
+    ld a, BANK(MenuRunB)
+    ld [rROMB0], a
+    ret
+ENDC
 
 IF DEF(LIVETEST)
 LiveStop::                           ; headless test breakpoint (tools/gbc_check.py --live)

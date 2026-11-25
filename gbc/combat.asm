@@ -519,7 +519,8 @@ AngleTo::
 
 ; ---- damage ------------------------------------------------------------------------------
 
-; A8 take_damage at skill 1 (no scaling, no god mode): A = damage. Armour saves 5/16 (green: /4 + /16)
+; A8 take_damage (no god mode): A = damage, scaled by the skill first (wDifficulty 0: / 2, at least 1;
+; 2: x 3/2, at most 255). Armour saves 5/16 (green: /4 + /16)
 ; or 1/2 (blue) of the hit; if armour then wraps past 200 it is used up. HP floors at 0 (the death
 ; wait is CombatUpdate). Starts the HURT_FLASH_MS red border (gbc/hud.asm PaletteUpdate).
 PlayerDamage::
@@ -527,6 +528,27 @@ PlayerDamage::
     ld a, [wHP]
     and a
     ret z                           ; already dead
+    ld a, [wDifficulty]
+    dec a
+    jr z, .skill
+    ld b, c
+    srl b                           ; dmg / 2
+    inc a
+    jr nz, .uv
+    ld c, b                         ; too young to die
+    inc b
+    dec b
+    jr nz, .skill
+    inc c                           ; at least 1
+    jr .skill
+.uv:
+    ld a, c                         ; ultra-violence
+    add b
+    jr nc, .cap
+    ld a, 255
+.cap:
+    ld c, a
+.skill:
     ld a, [wArmor]
     and a
     jr z, .hp
@@ -609,7 +631,13 @@ LevelUpdate::
     inc a
     cp MAP_NLEVELS
     jr c, .go
+IF !DEF(TEST_EXIT) && !DEF(LIVETEST)
+    ld a, 1                         ; episode done: the menu, ending pages first (A8 episode_done)
+    ld [wGameDone], a
+    jp Restart
+ELSE
     xor a
+ENDC
 .go:
     call LoadLevel
     jp EnterCard

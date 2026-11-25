@@ -4,11 +4,34 @@ Build: `build-gbc.bat` -> `gbc\build\doomgbc.gbc`. Run: `run-gbc.bat` (BGB). A8 
 CGB-only MBC5+RAM+battery, RGBDS 1.0.4.
 
 ## Controls
+- Menu: up/down move the skull, A / Start select, B back, left/right change the volume; any button turns a text page.
 - D-pad: up/down move, left/right turn. B + left/right: strafe.
 - A: fire. Select: cycle weapon.
 - Start: debug cheat (all keys, weapons, ammo, full HP), only in builds with `GBC_DEFS=-D DEBUG=1` (A8 has none in play).
 
 ## What's in
+- Menu (`menu.asm`, ROMX; port of A8 src/menu.asm): the A8 tree without Quit and Mouse. Main: New game, Options,
+  Controls, Read this!, Credits. New game -> episode (Knee deep in dead -> skill; Shores of hell / Inferno -> the
+  order pages) -> skill (cursor on Hurt me plenty) -> E1M1. Options: Volume 0..15 (A8 effects_vol: the effects and
+  the menu music). Labels shortened so the skull and the text fit 20 columns.
+  - Screen: 128x64 logo on tile rows 0-7 (`ui/hiresdoomlogo.png` point-sampled, 8x8 tiles of 4 colours,
+    `tools/gbc_genmenu.py` clusters the tiles onto the 8 BG palettes, colour 0 black in all; palette 7 also holds
+    the text yellow / white; preview in `gbc/build/menu_logo_preview.png`), black below, items every other row from
+    row 8 (title on row 8 in the submenus), HUD font in yellow, the selected row white (a bank 1 copy of the font).
+  - Skull cursor: `ui/m_skull_c64.png` / `m_skull2_c64.png` as 8x16 OBJ, two layers of 3x2 sprites (3 colours each),
+    eyes blink every 24 VBlanks (A8 20 VBIs).
+  - Text pages: `gbc/text/{controls,order,readthis,credits,ending}.txt`, pages split on `^` lines, at most 20 x 9
+    (the generator stops on a longer line / page or a character the font lacks); logo on top, row 8 blank, text on
+    rows 9-17 centred. Any button turns the page.
+  - Music (`music.asm`, ROMX; port of src/a8music.asm): `tools/gbc_genmusic.py` runs the A8 converter
+    (`tools/genpokey.py`: SID emulation, pitch grid, envelopes, LZ) and maps SID voice 1 -> CH3 (square wave),
+    2 -> CH1, 3 -> CH2, any noise voice -> CH4; the A8 per-frame envelope from (AD, SR), ring in WRAM bank 3, a
+    phase accumulator for the 50.12 Hz tune on 59.73 Hz frames. GB volume needs a retrigger, so a pulse / noise
+    channel retriggers when its volume changes. Plays only in the menu (as on the A8).
+  - Skill: `wDifficulty` scales `PlayerDamage` (A8 take_damage: / 2 at least 1, x 3/2 at most 255) and
+    `AiDamageEnemy` (A8 damage_enemy: x 3/2 on I'm too young to die).
+  - After E1M8 the game goes back to the menu, which shows the ending pages first (A8 episode_done /
+    game_complete). Test builds (`TEST_EXIT`, `LIVETEST`) skip the menu and keep wrapping to E1M1.
 - Wireframe room renderer (128x112 viewport, WRAM framebuffer, double-buffered VRAM, HDMA).
 - All 8 levels cooked from the editor data; room-hull collision, floor/slope/fall, doors (passage only, no animation), key bits.
 - Static objects, pickups/props and the four enemy types drawn as wireframe meshes (poses by AI state). Pickups sit at
@@ -23,8 +46,7 @@ CGB-only MBC5+RAM+battery, RGBDS 1.0.4.
     while inside, none under the radsuit), end of level, elevator (every car of the group; two or more latch the
     gate) and summon. Message triggers are not ported (the map text is not in the GBC payload and every shipped
     message trigger is empty). The map payload is written in place (WRAM bank 2) and reloads with the level.
-  - Level change: the keys are cleared and the loadout kept; after E1M8 the episode starts over at E1M1 (there is
-    no menu yet). Banked code only sets `wNextLevelReq`; the ROM0 stub `LevelUpdate` calls `LoadLevel`.
+  - Level change: the keys are cleared and the loadout kept; after E1M8 the menu (ending pages first). Banked code only sets `wNextLevelReq`; the ROM0 stub `LevelUpdate` calls `LoadLevel`.
   - Elevators: per car current height, target and step timer; one unit per `ELEV_STEP_MS` (x4 for slow cars);
     the player boards the car top (`elev_update_floor`, always snaps while riding), enemies on the top ride, the
     top plate is drawn at the current height, and enemy floor probes / line of sight see the car. Things on a car are
@@ -48,7 +70,7 @@ CGB-only MBC5+RAM+battery, RGBDS 1.0.4.
     saves 5/16, blue 1/2); a new gun is selected; one grab per `PICKUP_HOLD_MS`; reach is `near_box_xz` (Chebyshev
     `TH_GRAB_R` from the `TH_FOOT_SX` square) plus the Y overlap; the radsuit starts `POWERUP_MS` (green border).
   - Start loadout 50 bullets / 25 shells, pistol. Falling more than `FALL_SAFE` cells costs `FALL_DAMAGE`. Dead = the
-    game freezes for `PL_DEATH_WAIT_MS`, then the starting loadout and a level reload. `take_damage` at skill 1.
+    game freezes for `PL_DEATH_WAIT_MS`, then the starting loadout and a level reload. `take_damage` scaled by the menu skill.
   - Guns: pistol / chaingun one bullet, 1..16, nearest body in a +-12 / +-6 px cone; shotgun `SHOT_PELLETS` pellets,
     each a random column +-32 px and the body half-width `block_r`, 2..6 each; range `SHOT_Z_MAX` cells, clear line
     from the eye. Fist / chainsaw: first live enemy within `PUNCH_HIT_R` cells in any direction, 1..16. The A8 tests in
@@ -78,7 +100,7 @@ CGB-only MBC5+RAM+battery, RGBDS 1.0.4.
 - Sound (`sound.asm`, ROM0; port of A8 playsound.asm): the A8's 28 PC-speaker effects (`tools/gbc_gensound.py` -> `sound.inc`,
   same ids, voices, priorities and DP* lumps as `tools/gensounds.py`). Three channels as on the A8: player = CH1 pulse,
   enemy = CH2 pulse, world = CH3 (32-sample square wave); a higher or equal priority preempts on a channel, one envelope
-  byte per tick, a tick per frame (`SndTick` from the LY 111 `StatISR`, not `VBlankISR`: its budget is the flip, weapon OAM and the HudBlit palette upload), every tone full volume. The PC byte is the timer divisor,
+  byte per tick, a tick per frame (`SndTick` from the LY 111 `StatISR`, not `VBlankISR`: its budget is the flip, weapon OAM and the HudBlit palette upload), every tone at the Options volume (A8 effects_vol, 12 / 15 scaled; the chainsaw idle / fire rattles at >> 3 / >> 2 of it). The PC byte is the timer divisor,
   so pitch = 1193181 / (byte * 60) Hz, period = byte * 105 / 16 pulse clocks. State is in HRAM; `PlaySound` only stages a
   request (callable anywhere), `LoadLevel` stops only the enemy channel (A8 `stop_streamed_sfx`). Cues follow the A8 sites: weapon fire (`SndWpn`, A8
   `wpn_sound`; fist / saw play PUNCH on a hit), shotgun pump (`SGCOCK` when the pose table reaches its first alt frame,
@@ -86,8 +108,8 @@ CGB-only MBC5+RAM+battery, RGBDS 1.0.4.
   (`SndAtkFrame` / `SndAtkId`, from the editor clips), `RLAUNC_E` as the enemy muzzle starts, player pain / death,
   pickups (`SndPick`: ammo WPNUP, the rest ITEMUP), switches (DOROPN if a door unlocked, else SWTCHN), door unhide /
   re-hide (DOROPN / DORCLS), walking through a door (DOROPN; the A8 is silent there), rocket and barrel blasts (RXPLOD), step-up of exactly `STEP_UP` (OOF). Test builds
-  (`TEST_EXIT`) stub the driver and carry no sound data to keep ROM0 free. Not ported: the menu music (the A8 plays it
-  in the menu only; there is no GBC menu), cheat sounds. CH4 (noise) carries the A8 chainsaw motor (`a8_saw`: idle rattle,
+  (`TEST_EXIT`) stub the driver and carry no sound data to keep ROM0 free. Not ported: cheat sounds (the menu music is
+  `music.asm`, see Menu). CH4 (noise) carries the A8 chainsaw motor (`a8_saw`: idle rattle,
   fire rattle, bite re-pitched every tick from the A8 LFSR; `hSawBite` is set by `MeleeShot`) and the elevator rumble
   (`a8_noise`, while `ElevTick` has a car moving and no world effect plays; the saw wins while it is out). POKEY AUDF
   becomes NR43 by nearest LFSR clock; volumes are the A8's scaled 12/15 like the pulses.
@@ -154,5 +176,5 @@ ROM0 (16 KB) is nearly full in the test builds, which is why the map/world tests
   Ideas: axis-aligned statics through the room column path, far-LOD weak perspective for items/enemies,
   overlap game update with DMA, back-face edge culling.
 - Not implemented: blood / wall splats, shootable switches, infighting, door animation and key prompts,
-  menu music, menu, SRAM save, radsuit border tint (COL_SUIT_A8), trigger / cheat messages.
+  SRAM save, radsuit border tint (COL_SUIT_A8), trigger / cheat messages.
 - Enemy scale: pose data is in stick units (editor `LAYOUT_ENEMY_SCALE` = 1/4), so enemies use shift 4 / radius 3.

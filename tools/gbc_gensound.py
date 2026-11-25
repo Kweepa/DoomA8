@@ -145,6 +145,10 @@ def main():
     out.append("IF !DEF(TEST_EXIT)")
     out.append("SndBiteTab:: db %s" % ", ".join(str(nr43(sv["SAW_BITE_LO"] + k))
                                                 for k in range(sv["SAW_BITE_MASK"] + 1)))
+    # Options volume (A8 effects_vol 0..15): GB volume per value, and the CH3 output level for it.
+    out.append("SndVolTab:: db %s" % ", ".join(str(gbvol(v)) for v in range(16)))
+    out.append("SndWaveTab:: db %s" % ", ".join("$%02X" % (0 if v == 0 else 0x60 if v < 4 else 0x40 if v < 8 else 0x20)
+                                                 for v in range(16)))
     out.append("ENDC")
 
     with open(os.path.join(outdir, "sndids.inc"), "w", encoding="utf-8", newline="\n") as f:

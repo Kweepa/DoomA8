@@ -95,9 +95,13 @@ python tools\gbc_gensound.py gbc\build
 if errorlevel 1 exit /b 1
 python tools\gbc_game.py gbc\build
 if errorlevel 1 exit /b 1
+python tools\gbc_genmenu.py gbc\build
+if errorlevel 1 exit /b 1
+python tools\gbc_genmusic.py gbc\build
+if errorlevel 1 exit /b 1
 
 set "OBJS="
-for %%F in (main vars line fb bench math render posetest data input world collide doors entity objects wpn combat ai hud player level sound) do (
+for %%F in (main vars line fb bench math render posetest data input world collide doors entity objects wpn combat ai hud player level sound menu music) do (
   "%RGBDS%\rgbasm.exe" -Weverything %DEFS% -I gbc\ -I gbc\build\ -o gbc\build\%%F.o gbc\%%F.asm
   if errorlevel 1 exit /b 1
   call set "OBJS=%%OBJS%% gbc\build\%%F.o"

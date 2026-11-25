@@ -1,0 +1,13 @@
+dpad...Move and turn
+A......Fire
+B......Strafe
+Select.Switch weapon
+^
+Walk into doors to
+open them.
+
+Walk over items to
+pick them up.
+
+Walk into switches
+to activate them.

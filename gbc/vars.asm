@@ -576,3 +576,9 @@ SECTION "fbvars", WRAMX, BANK[1]
 wFbProbe::    ds 1                  ; FloorBelow: highest surface y to consider
 wAiOldY::     ds 1                  ; enemy feet y before the step (EnemyMoveOk)
 wAiFloorY::   ds 1                  ; floor y at the step destination
+
+; Menu choices that outlive the menu (A8 mem.asm: difficulty $08FF, effects_vol $08FD, game_complete $08FE).
+SECTION "menuglobals", WRAMX, BANK[1]
+wDifficulty:: ds 1                  ; skill 0..2 (too young / hurt me plenty / ultra-violence); 1 until the menu sets it
+wEffectsVol:: ds 1                  ; 0..15, Options volume (effects and menu music)
+wGameDone::   ds 1                  ; 1: E1M8 was finished, the menu shows the ending pages first

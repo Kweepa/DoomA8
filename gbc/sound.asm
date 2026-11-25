@@ -4,7 +4,7 @@
 ; mid-split raster). The data are the A8's PC-speaker bytes (tools/gbc_gensound.py -> sound.inc);
 ; the byte is a PC timer divisor, so the pitch is 1193181 / (byte * 60) Hz. Voices: ch 0 -> CH1 pulse,
 ; ch 1 -> CH2 pulse, ch 2 -> CH3 (32-sample square wave). Every tick is a pure tone at full volume
-; (A8 effects_vol $0F); a 0 byte is a gap.
+; (A8 effects_vol: wEffectsVol, the Options volume, read by SndInit); a 0 byte is a gap.
 ;
 ; PlaySound is callable from any code (it only stages a request); SndTick runs from StatISR. State is
 ; in HRAM, so the tick never depends on the WRAM bank.
@@ -21,8 +21,6 @@ DEF rNR42 EQU $FF21
 DEF rNR43 EQU $FF22
 DEF rNR44 EQU $FF23
 
-DEF SND_VOL_PULSE EQU $C0           ; NR12 / NR22: initial volume 12, no envelope
-DEF SND_VOL_WAVE  EQU $20           ; NR32: 100 %
 
 SECTION "sndhram", HRAM
 hSndReq::  ds 3                      ; staged id + 1 per channel (0 none)
@@ -38,6 +36,11 @@ hSawBite:: ds 1                      ; A8 saw_bite: the last chainsaw swing hit 
 hSawRng::  ds 1                      ; A8 saw_rng
 hElevMov:: ds 1                      ; a car is moving (gbc/level.asm ElevTick; A8 elev_noise_n)
 hNzVol::   ds 1                      ; CH4 running volume (0 off)
+hSndVolP:: ds 1                      ; NR12 / NR22 for a tone: GB volume of wEffectsVol << 4 (A8 effects_vol)
+hSndVolW:: ds 1                      ; NR32 for a tone
+hNzVBite:: ds 1                      ; CH4 volumes: bite / elevator effects_vol, idle >> 3, fire >> 2 (a8_saw)
+hNzVIdle:: ds 1
+hNzVFire:: ds 1
 
 SECTION "sound", ROM0
 
@@ -90,6 +93,29 @@ SndInit::
     ld [hl+], a
     dec b
     jr nz, .clr
+    ld a, [wEffectsVol]              ; volumes from the Options setting
+    and $0F
+    ld e, a
+    ld hl, SndWaveTab
+    call .tab
+    ldh [hSndVolW], a
+    ld hl, SndVolTab
+    call .tab
+    ldh [hNzVBite], a
+    swap a
+    ldh [hSndVolP], a
+    srl e
+    srl e
+    ld hl, SndVolTab
+    call .tab
+    ldh [hNzVFire], a
+    srl e
+    ld hl, SndVolTab
+.tab:
+    ld d, 0
+    add hl, de
+    ld a, [hl]
+    ldh [hNzVIdle], a                ; (the last call's result; earlier calls overwrite it after)
     ret
 
 ; Level loads: stop the enemy channel only (A8 stop_streamed_sfx); the world and player effects play on.
@@ -300,12 +326,14 @@ SndTick::
     ld a, $80
     ldh [rNR30], a
     inc hl
-    ld [hl], SND_VOL_WAVE
+    ldh a, [hSndVolW]
+    ld [hl], a
     jr .trig
 .pulse:
     ld a, $80
     ld [hl+], a                      ; duty 50 %
-    ld [hl], SND_VOL_PULSE
+    ldh a, [hSndVolP]
+    ld [hl], a
 .trig:
     inc hl
     ld [hl], e
@@ -363,14 +391,16 @@ SndNoise:
     ld a, b
     and 1
     jr z, .off
-    ld b, NZ_V_FIRE
+    ldh a, [hNzVFire]
+    ld b, a
     ld c, NZ_FIRE
     jr .on
 .idle:
     ld a, b
     and 2
     jr z, .off
-    ld b, NZ_V_IDLE
+    ldh a, [hNzVIdle]
+    ld b, a
     ld c, NZ_IDLE
     jr .on
 .bite:
@@ -390,7 +420,8 @@ SndNoise:
     ld hl, SndBiteTab
     add hl, de
     ld c, [hl]
-    ld b, NZ_V_BITE
+    ldh a, [hNzVBite]
+    ld b, a
     jr .on
 .elev:
     ldh a, [hElevMov]
@@ -399,7 +430,8 @@ SndNoise:
     ldh a, [hSndN + 2]
     and a
     jr nz, .off                      ; a world effect owns the world voice
-    ld b, NZ_V_ELEV
+    ldh a, [hNzVBite]
+    ld b, a
     ld c, NZ_ELEV
 .on:
     ldh a, [hNzVol]
