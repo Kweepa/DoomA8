@@ -1537,6 +1537,350 @@ button:disabled {
   color: #e66;
 }
 
+/* ---- Font tab ---- */
+.font-overview {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+  margin-bottom: 0.5rem;
+}
+
+.font-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 1px;
+  background: #0a0a0c;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  min-width: 0;
+}
+
+.font-cell canvas {
+  width: 24px;
+  height: 24px;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+.font-cell-label {
+  font-size: 0.6rem;
+  line-height: 1;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.font-cell.empty canvas {
+  opacity: 0.35;
+}
+
+.font-cell:hover {
+  border-color: var(--btn-hover);
+  background: #14161c;
+}
+
+.font-cell.in-slot {
+  border-color: var(--muted);
+}
+
+.font-cell.active {
+  border-color: var(--accent);
+}
+
+.font-cell.active .font-cell-label {
+  color: var(--accent);
+}
+
+.font-left-hint {
+  margin: 0;
+}
+
+.font-panel {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-top: 0.5rem;
+}
+
+.font-panel[hidden],
+#font-left[hidden] {
+  display: none !important;
+}
+
+.font-slots {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  flex: 0 0 auto;
+}
+
+.font-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+  padding: 0.4rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
+
+.font-slot.active {
+  border-color: var(--accent);
+}
+
+.font-slot.drop {
+  border-color: var(--accent);
+  background: #262114;
+}
+
+.font-slot-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem;
+  min-height: 1.5rem;
+}
+
+.font-slot-title {
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.font-slot.empty .font-slot-title {
+  color: var(--muted);
+}
+
+.font-slot-x {
+  padding: 0 0.4rem;
+  line-height: 1.2;
+}
+
+.font-slot.empty .font-slot-x {
+  visibility: hidden;
+}
+
+.font-grid {
+  width: 100%;
+  aspect-ratio: 1;
+  display: block;
+  cursor: crosshair;
+  touch-action: none;
+  image-rendering: pixelated;
+  border: 1px solid var(--border);
+}
+
+.font-slot-hex {
+  margin: 0;
+  min-height: 1em;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.font-preview {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
+
+.font-preview-bar {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.font-preview-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 3.2rem;
+  padding: 0.3rem 0.5rem;
+  background: #0a0a0c;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  resize: vertical;
+}
+
+.font-preview-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.font-preview-cap {
+  margin: 0;
+  font-size: 0.7rem;
+}
+
+.font-preview-canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+  background: #0a0a0c;
+}
+
+.font-preview-canvas[hidden] {
+  display: none;
+}
+
+/* Default .field label column is 5.5rem; "Touch col 0 / col 7" overflowed into the value. */
+.field.font-stat > span:first-child {
+  flex: 0 0 9.5rem;
+  min-width: 9.5rem;
+}
+
+.font-inspector-hex {
+  font-variant-numeric: tabular-nums;
+}
+
+.font-invert {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.font-drag-ghost {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 1000;
+  pointer-events: none;
+  border: 1px solid var(--accent);
+  background: #0a0a0c;
+  opacity: 0.9;
+}
+
+.font-drag-ghost canvas {
+  display: block;
+  width: 48px;
+  height: 48px;
+  image-rendering: pixelated;
+}
+
+/* ---- GB Weapons tab ---- */
+#gbw-left[hidden] {
+  display: none !important;
+}
+
+.gbw-item {
+  grid-template-columns: 0 1fr auto;
+}
+
+.gbw-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 760px;
+}
+
+.gbw-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 1.2rem;
+}
+
+.gbw-field {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.gbw-field input,
+.gbw-steps input {
+  width: 4.5rem;
+}
+
+.gbw-ms {
+  font-size: 0.75rem;
+}
+
+.gbw-steps {
+  border-collapse: collapse;
+}
+
+.gbw-steps th {
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 2px 8px 2px 0;
+}
+
+.gbw-steps td {
+  padding: 2px 8px 2px 0;
+  white-space: nowrap;
+}
+
+.gbw-note {
+  margin: 0;
+  font-size: 0.75rem;
+}
+
+.gbw-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.gbw-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.gbw-scrub {
+  width: 220px;
+}
+
+.gbw-readout {
+  min-width: 14rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.gbw-stage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.gbw-view {
+  image-rendering: pixelated;
+  background: #000;
+  border: 1px solid var(--border);
+}
+
+.gbw-timeline {
+  max-width: 100%;
+  background: #0b0d14;
+  border: 1px solid var(--border);
+  cursor: crosshair;
+}
+
   </style>
 </head>
 <body>
@@ -1547,6 +1891,8 @@ button:disabled {
       <button type="button" id="btn-mode-anim">Enemies</button>
       <button type="button" id="btn-mode-items">Items</button>
       <button type="button" id="btn-mode-gbsprites" title="Game Boy weapon, flash, blood and spark sprites">GB Sprites</button>
+      <button type="button" id="btn-mode-gbweapons" title="Game Boy weapon period and recoil / pump / punch timing, with a firing preview">Weapons</button>
+      <button type="button" id="btn-mode-font" title="8x8 UI font (A8 and Game Boy HUD), saved to editor/font.json">Font</button>
       <button type="button" id="btn-mode-build">Build</button>
     </div>
     <div class="toolbar-actions" id="draw-mode-group" role="group" aria-label="Draw mode">
@@ -1597,6 +1943,8 @@ button:disabled {
         </div>
       </section>
       <section id="gbspr-left" hidden></section>
+      <section id="font-left" hidden></section>
+      <section id="gbw-left" hidden></section>
       <section id="items-left" hidden>
         <table id="item-budget" class="item-budget">
           <tbody>
@@ -1638,6 +1986,8 @@ button:disabled {
       <p class="hint" id="hint"></p>
       <div id="build-panel" class="build-panel" hidden></div>
       <div id="gbspr-panel" class="sprites-panel" hidden></div>
+      <div id="font-panel" class="font-panel" hidden></div>
+      <div id="gbw-panel" class="sprites-panel gbw-panel" hidden></div>
     </section>
 
     <aside class="right">
@@ -3721,6 +4071,7 @@ const GBS_DEFS = [
   { id: "fist_righthand_lines", name: "Fist (idle)", group: "Weapon", w: 56, h: 21, cellLimit: 16 },
   { id: "fist_lefthand_lines", name: "Fist (punch)", group: "Weapon", w: 64, h: 32, cellLimit: 16 },
   { id: "muzzle_flash", name: "Muzzle flash", group: "Flash", w: 24, h: 21, cellLimit: 7 },
+  { id: "muzzle_flash_b", name: "Muzzle flash B", group: "Flash", w: 24, h: 21, cellLimit: 7 },
   { id: "splat_0", name: "Splat 0 (near)", group: "Splat", w: 24, h: 21, cellLimit: null },
   { id: "splat_1", name: "Splat 1", group: "Splat", w: 24, h: 21, cellLimit: null },
   { id: "splat_2", name: "Splat 2 (far)", group: "Splat", w: 24, h: 21, cellLimit: null },
@@ -3848,6 +4199,426 @@ function gbsResize(sp, w, h) {
     rows[y] = s;
   }
   return { id: sp.id, w, h, rows };
+}
+
+
+// ---- js/gbWeaponModel.js ----
+// Game Boy Color weapon timing (period, recoil / pump / punch pose tables). Pure data, no DOM.
+// Stored in editor/doom64.json ("gbWeapons"); tools/gbc_genwpntab.py writes gbc/build/wpntable.asm from it.
+// Times are VBlanks (1 / 59.73 s). The preview mirrors gbc/wpn.asm WpnPose / WpnVBlank.
+
+const GBW_VBLANK_HZ = 59.7275;
+const GBW_FLASH_TICKS = 7; // gbc/wpn.asm FLASH_TICKS
+const GBW_FLASH_DY = 15; // flash sits this far above the body (gbc/wpn.asm)
+const GBW_VIEW_W = 128;
+const GBW_VIEW_H = 112;
+const GBW_MAX_STEPS = 8;
+
+/**
+ * Catalogue in GBC weapon id order (WPN_FIST .. WPN_SAW).
+ * tabled: has a pose table (steps + overhang); the anim length is the last step's "until".
+ * Others (chaingun, chainsaw) only take period + anim length; their frame logic stays in the code.
+ * idle / alt: sprite ids in gbSprites. flash: sprite ids alternated per shot (none for melee).
+ */
+const GBW_DEFS = [
+  { id: "fist", name: "Fist", tabled: true, idle: "fist_righthand_lines", alt: "fist_lefthand_lines", flash: [], altName: "punch" },
+  { id: "shotgun", name: "Shotgun", tabled: true, idle: "shotgun_lines", alt: "shotgun_cock_lines", flash: ["muzzle_flash", "muzzle_flash_b"], altName: "pump" },
+  { id: "chaingun", name: "Chaingun", tabled: false, idle: "chaingun_a_lines", alt: "chaingun_b_lines", flash: ["muzzle_flash", "muzzle_flash_b"], altName: "B" },
+  { id: "rocket", name: "Rocket launcher", tabled: true, idle: "rocketlauncher_lines", alt: "rocketlauncher_lines", flash: ["muzzle_flash", "muzzle_flash_b"], altName: "alt" },
+  { id: "pistol", name: "Pistol", tabled: true, idle: "pistol_lines", alt: "pistol_lines", flash: ["muzzle_flash", "muzzle_flash_b"], altName: "alt" },
+  { id: "chainsaw", name: "Chainsaw", tabled: false, idle: "chainsaw_lines", alt: "chainsaw_lines", flash: [], altName: "alt" },
+];
+
+/** Defaults = the values in gbc/wpn.asm before the table moved into the editor. */
+const DEFAULTS = {
+  fist: { period: 48, anim: 22, overhang: 0, steps: [{ until: 22, dy: 0, frame: "alt" }] },
+  shotgun: {
+    period: 36,
+    anim: 34,
+    overhang: 10,
+    steps: [
+      { until: 3, dy: -10, frame: "idle" },
+      { until: 9, dy: 14, frame: "idle" },
+      { until: 15, dy: 6, frame: "idle" },
+      { until: 19, dy: 0, frame: "idle" },
+      { until: 21, dy: 0, frame: "alt" },
+      { until: 24, dy: 5, frame: "alt" },
+      { until: 34, dy: 0, frame: "alt" },
+    ],
+  },
+  chaingun: { period: 6, anim: 6, overhang: 0, steps: [] },
+  rocket: {
+    period: 60,
+    anim: 60,
+    overhang: 0,
+    steps: [
+      { until: 50, dy: 24, frame: "idle" },
+      { until: 55, dy: 16, frame: "idle" },
+      { until: 60, dy: 8, frame: "idle" },
+    ],
+  },
+  pistol: {
+    period: 36,
+    anim: 28,
+    overhang: 6,
+    steps: [
+      { until: 18, dy: -4, frame: "idle" },
+      { until: 28, dy: -6, frame: "idle" },
+    ],
+  },
+  chainsaw: { period: 6, anim: 6, overhang: 0, steps: [] },
+};
+
+function gbwDef(id) {
+  return GBW_DEFS.find((d) => d.id === id) || null;
+}
+
+function clampInt(v, min, max, fallback) {
+  const n = Math.round(Number(v));
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.min(max, n));
+}
+
+/** Default steps are written as (until, dy, frame); the document stores per-step durations. */
+function durations(steps) {
+  let prev = 0;
+  return steps.map((s) => {
+    const out = { duration: s.until - prev, dy: s.dy, frame: s.frame };
+    prev = s.until;
+    return out;
+  });
+}
+
+function gbwDefault(def) {
+  const d = DEFAULTS[def.id];
+  return { id: def.id, period: d.period, anim: d.anim, overhang: d.overhang, steps: durations(d.steps) };
+}
+
+/** Always returns every weapon, in catalogue order. Step order is kept as given (gbwIssues flags it). */
+function normalizeGbWeapons(raw) {
+  const list = Array.isArray(raw) ? raw : [];
+  return GBW_DEFS.map((def) => {
+    const base = gbwDefault(def);
+    const r = list.find((w) => w && w.id === def.id);
+    if (!r) return base;
+    // Older files stored "until" (end time); turn it into a duration.
+    let prevUntil = 0;
+    const steps = Array.isArray(r.steps)
+      ? r.steps.slice(0, GBW_MAX_STEPS).map((s) => {
+          let dur = s?.duration;
+          if (dur == null && s?.until != null) dur = Number(s.until) - prevUntil;
+          const step = {
+            duration: clampInt(dur, 1, 255, 1),
+            dy: clampInt(s?.dy, -128, 127, 0),
+            frame: s?.frame === "alt" ? "alt" : "idle",
+          };
+          prevUntil += step.duration;
+          return step;
+        })
+      : base.steps;
+    return {
+      id: def.id,
+      period: clampInt(r.period, 1, 255, base.period),
+      anim: clampInt(r.anim, 0, 255, base.anim),
+      overhang: clampInt(r.overhang, 0, 64, base.overhang),
+      steps,
+    };
+  });
+}
+
+/** End time of each step (VBlanks since the shot): what the GBC table stores as "until". */
+function gbwUntils(w) {
+  let t = 0;
+  return w.steps.map((s) => (t += s.duration));
+}
+
+/** Anim length in VBlanks: the sum of the step durations for table weapons, the stored value otherwise. */
+function gbwAnimLen(def, w) {
+  if (!def.tabled) return w.anim;
+  return w.steps.reduce((a, s) => a + s.duration, 0);
+}
+
+/** Problems that would stop gbc_genwpntab.py (or make the table meaningless). */
+function gbwIssues(def, w) {
+  const out = [];
+  if (!def.tabled) return out;
+  const total = gbwAnimLen(def, w);
+  if (total > 255) out.push(`total ${total} VBlanks: the table can hold at most 255`);
+  return out;
+}
+
+/** Pose e VBlanks after a shot (e < 0: idle). Mirrors WpnPose: {alt, dy}; dy is the offset from the rest position. */
+function gbwPose(def, w, e) {
+  if (def.tabled && e >= 0) {
+    let end = 0;
+    for (const st of w.steps) {
+      end += st.duration;
+      if (e < end) return st.frame === "alt" ? { alt: true, dy: st.dy } : { alt: false, dy: st.dy + w.overhang };
+    }
+  }
+  return { alt: false, dy: def.tabled ? w.overhang : 0 };
+}
+
+function gbwMs(vblanks) {
+  return (vblanks * 1000) / GBW_VBLANK_HZ;
+}
+
+
+// ---- js/fontModel.js ----
+// 96-glyph 8x8 UI font (ASCII 32..127). Pure data, no DOM.
+// A glyph is 8 row bytes, MSB = leftmost pixel (same as tools/genuifont.py).
+
+const FONT_FIRST = 32;
+const FONT_COUNT = 96;
+const FONT_W = 8;
+const FONT_H = 8;
+/** Overview / PNG sheet columns. */
+const FONT_COLS = 8;
+/** Keep in sync with src/menu.asm SPACE_W / FONT_GAP. */
+const FONT_SPACE_W = 4;
+const FONT_GAP = 1;
+const FONT_FILE_VERSION = 1;
+
+function fontBlank() {
+  return Array.from({ length: FONT_COUNT }, () => new Array(FONT_H).fill(0));
+}
+
+function normalizeFont(raw) {
+  const out = fontBlank();
+  if (!Array.isArray(raw)) return out;
+  for (let i = 0; i < FONT_COUNT; i++) {
+    const g = raw[i];
+    if (!Array.isArray(g)) continue;
+    for (let y = 0; y < FONT_H; y++) out[i][y] = (Number(g[y]) | 0) & 0xff;
+  }
+  return out;
+}
+
+function fontCharLabel(code) {
+  if (code === 32) return "SP";
+  if (code === 127) return "DEL";
+  return String.fromCharCode(code);
+}
+
+function fontHex2(n) {
+  return (n & 0xff).toString(16).toUpperCase().padStart(2, "0");
+}
+
+function fontGetPixel(rows, x, y) {
+  return (rows[y] & (0x80 >> x)) !== 0;
+}
+
+/** Mutates rows. Returns true when the pixel changed. */
+function fontSetPixel(rows, x, y, on) {
+  const bit = 0x80 >> x;
+  const was = (rows[y] & bit) !== 0;
+  if (was === on) return false;
+  rows[y] = on ? rows[y] | bit : rows[y] & ~bit & 0xff;
+  return true;
+}
+
+function fontRowsEqual(a, b) {
+  for (let y = 0; y < FONT_H; y++) if (a[y] !== b[y]) return false;
+  return true;
+}
+
+function popcount8(n) {
+  let c = 0;
+  for (let x = n & 0xff; x; x &= x - 1) c++;
+  return c;
+}
+
+/** lead/width match src/menu.asm font_scan: all-zero glyph = lead 0, width 0 (space). */
+function fontGlyphStats(rows) {
+  let occ = 0;
+  let pixels = 0;
+  for (let y = 0; y < FONT_H; y++) {
+    occ |= rows[y];
+    pixels += popcount8(rows[y]);
+  }
+  if (!occ) return { pixels: 0, lead: 0, width: 0, empty: true };
+  let first = 0;
+  while (!(occ & (0x80 >> first))) first++;
+  let last = 7;
+  while (!(occ & (0x80 >> last))) last--;
+  return { pixels, lead: first, width: last - first + 1, empty: false };
+}
+
+function fontStats(font) {
+  let nonEmpty = 0;
+  let pixels = 0;
+  let widest = 0;
+  let touchLeft = 0;
+  let touchRight = 0;
+  for (const rows of font) {
+    const s = fontGlyphStats(rows);
+    if (s.empty) continue;
+    nonEmpty++;
+    pixels += s.pixels;
+    if (s.width > widest) widest = s.width;
+    if (s.lead === 0) touchLeft++;
+    if (s.lead + s.width === FONT_W) touchRight++;
+  }
+  return { nonEmpty, pixels, widest, touchLeft, touchRight };
+}
+
+// ---- transforms (return new rows) ----
+
+/** dx > 0 right, dy > 0 down. No wrap. */
+function fontShift(rows, dx, dy) {
+  const out = new Array(FONT_H).fill(0);
+  for (let y = 0; y < FONT_H; y++) {
+    const sy = y - dy;
+    if (sy < 0 || sy >= FONT_H) continue;
+    const r = rows[sy] & 0xff;
+    out[y] = dx >= 0 ? (r >> dx) & 0xff : (r << -dx) & 0xff;
+  }
+  return out;
+}
+
+function reverseBits8(n) {
+  let r = 0;
+  for (let i = 0; i < 8; i++) if (n & (1 << i)) r |= 0x80 >> i;
+  return r;
+}
+
+function fontFlipH(rows) {
+  return rows.map(reverseBits8);
+}
+
+function fontFlipV(rows) {
+  return rows.slice().reverse();
+}
+
+function fontInvert(rows) {
+  return rows.map((r) => ~r & 0xff);
+}
+
+// ---- JSON file ----
+
+/** One glyph per line so diffs stay readable. */
+function fontToJson(font) {
+  const f = normalizeFont(font);
+  const lines = f.map((rows, i) => {
+    const code = FONT_FIRST + i;
+    const ch = code === 127 ? "DEL" : String.fromCharCode(code);
+    const hex = rows.map((r) => `"${fontHex2(r)}"`).join(", ");
+    return `    { "code": ${code}, "char": ${JSON.stringify(ch)}, "rows": [${hex}] }`;
+  });
+  return (
+    `{\n  "version": ${FONT_FILE_VERSION},\n  "firstChar": ${FONT_FIRST},\n  "glyphs": [\n` +
+    `${lines.join(",\n")}\n  ]\n}\n`
+  );
+}
+
+function parseRowByte(v) {
+  if (typeof v === "string") {
+    const n = parseInt(v.replace(/^(0x|\$)/i, ""), 16);
+    return Number.isFinite(n) ? n & 0xff : 0;
+  }
+  return (Number(v) | 0) & 0xff;
+}
+
+/** Throws on malformed JSON. Entries are placed by `code`, falling back to position. */
+function fontFromJson(text) {
+  const data = typeof text === "string" ? JSON.parse(text) : text;
+  const out = fontBlank();
+  const glyphs = Array.isArray(data?.glyphs) ? data.glyphs : [];
+  glyphs.forEach((g, pos) => {
+    const code = Number.isFinite(Number(g?.code)) ? Number(g.code) | 0 : FONT_FIRST + pos;
+    const idx = code - FONT_FIRST;
+    if (idx < 0 || idx >= FONT_COUNT || !Array.isArray(g?.rows)) return;
+    for (let y = 0; y < FONT_H; y++) out[idx][y] = parseRowByte(g.rows[y]);
+  });
+  return out;
+}
+
+// ---- PNG sheet ----
+
+/**
+ * Slice an RGBA image ({width,height,data}) into 8x8 cells, row-major, first cell = ASCII 32.
+ * Ink = luma > 128 (PIL "L" formula, as genuifont.py) and alpha >= 128; `invert` makes
+ * opaque dark pixels the ink instead. Returns {error} or {glyphs:[{index,rows}], cols, rows, ignored}.
+ */
+function fontFromImageData(img, opts = {}) {
+  const { width, height, data } = img;
+  if (!(width >= FONT_W) || !(height >= FONT_H) || width % FONT_W || height % FONT_H) {
+    return { error: `Sheet is ${width}x${height}; both sides must be multiples of ${FONT_W}` };
+  }
+  const cols = width / FONT_W;
+  const rowsN = height / FONT_H;
+  const cells = cols * rowsN;
+  const total = Math.min(FONT_COUNT, cells);
+  const glyphs = [];
+  for (let i = 0; i < total; i++) {
+    const cx = (i % cols) * FONT_W;
+    const cy = Math.floor(i / cols) * FONT_H;
+    const rows = [];
+    for (let y = 0; y < FONT_H; y++) {
+      let b = 0;
+      for (let x = 0; x < FONT_W; x++) {
+        const p = ((cy + y) * width + cx + x) * 4;
+        if (data[p + 3] < 128) continue;
+        const luma = (data[p] * 19595 + data[p + 1] * 38470 + data[p + 2] * 7471 + 0x8000) >> 16;
+        const on = opts.invert ? luma <= 128 : luma > 128;
+        if (on) b |= 0x80 >> x;
+      }
+      rows.push(b);
+    }
+    glyphs.push({ index: i, rows });
+  }
+  return { glyphs, cols, rows: rowsN, ignored: cells - total };
+}
+
+/** RGBA sheet, white on black, 8 cols x 12 rows. */
+function fontToImageData(font) {
+  const f = normalizeFont(font);
+  const width = FONT_COLS * FONT_W;
+  const height = (FONT_COUNT / FONT_COLS) * FONT_H;
+  const data = new Uint8ClampedArray(width * height * 4);
+  for (let i = 3; i < data.length; i += 4) data[i] = 255;
+  f.forEach((rows, i) => {
+    const cx = (i % FONT_COLS) * FONT_W;
+    const cy = Math.floor(i / FONT_COLS) * FONT_H;
+    for (let y = 0; y < FONT_H; y++) {
+      for (let x = 0; x < FONT_W; x++) {
+        if (!fontGetPixel(rows, x, y)) continue;
+        const p = ((cy + y) * width + cx + x) * 4;
+        data[p] = data[p + 1] = data[p + 2] = 255;
+      }
+    }
+  });
+  return { width, height, data };
+}
+
+// ---- text layout (mirrors src/menu.asm) ----
+
+function fontCodeFor(ch) {
+  const c = ch.charCodeAt(0);
+  return c >= FONT_FIRST && c < FONT_FIRST + FONT_COUNT ? c : FONT_FIRST;
+}
+
+/**
+ * Proportional: glyph shifted left by its lead, advance = (width || SPACE_W) + GAP.
+ * Mono: unshifted, advance 8. Returns {cells:[{x,code,shift}], width} in pixels; x is the pen
+ * position, shift the leftward pixel offset to apply when drawing.
+ */
+function fontLayoutText(font, text, proportional) {
+  const cells = [];
+  let x = 0;
+  for (const ch of text) {
+    const code = fontCodeFor(ch);
+    const rows = font[code - FONT_FIRST];
+    if (proportional) {
+      const s = fontGlyphStats(rows);
+      cells.push({ x, code, shift: s.lead });
+      x += (s.width || FONT_SPACE_W) + FONT_GAP;
+    } else {
+      cells.push({ x, code, shift: 0 });
+      x += FONT_W;
+    }
+  }
+  return { cells, width: x };
 }
 
 
@@ -7451,6 +8222,8 @@ function starterObjects() {
 function defaultEditorState() {
   return {
     mode: "layout",
+    fontSlots: [null, null, null, null],
+    fontActive: 0,
     localDraw: false,
     neighbourDraw: false,
     roomsOnlyDraw: false,
@@ -7547,10 +8320,19 @@ function parseEditorState(raw) {
     raw.mode === "layout" ||
     raw.mode === "items" ||
     raw.mode === "gbsprites" ||
+    raw.mode === "gbweapons" ||
+    raw.mode === "font" ||
     raw.mode === "build"
   ) {
     d.mode = raw.mode;
   }
+  if (Array.isArray(raw.fontSlots)) {
+    d.fontSlots = d.fontSlots.map((_, i) => {
+      const c = raw.fontSlots[i];
+      return Number.isInteger(c) && c >= 32 && c <= 127 ? c : null;
+    });
+  }
+  d.fontActive = Math.max(0, Math.min(3, num(raw.fontActive, 0) | 0));
   d.localDraw = !!raw.localDraw;
   d.neighbourDraw = !!raw.neighbourDraw;
   d.roomsOnlyDraw = !!raw.roomsOnlyDraw;
@@ -7627,6 +8409,7 @@ function gameDocument(doc) {
     weapons: doc.weapons,
     items: doc.items,
     gbSprites: doc.gbSprites,
+    gbWeapons: doc.gbWeapons,
   };
 }
 
@@ -7642,6 +8425,8 @@ function createDefaultDocument() {
     weapons: defaultWeapons(),
     items: defaultItemMeshes(),
     gbSprites: normalizeGbSprites(null),
+    gbWeapons: normalizeGbWeapons(null),
+    font: fontBlank(),
   };
 }
 
@@ -7756,6 +8541,8 @@ function normalizeDocument(raw) {
   doc.version = DOC_VERSION;
   doc.weapons = parseWeapons(raw.weapons);
   doc.gbSprites = normalizeGbSprites(raw.gbSprites);
+  doc.gbWeapons = normalizeGbWeapons(raw.gbWeapons);
+  doc.font = normalizeFont(raw.font);
   doc.items = parseItemMeshes(migrateItemMeshes(raw.items, fromVersion));
   doc.editor = parseEditorState(raw.editor);
   doc.enemies = (doc.enemies || []).filter((e) => DOOM_SPRITE_PREFIX[e.name]);
@@ -8750,6 +9537,29 @@ function downloadJSON(doc, filename = DEFAULT_DOC_PATH) {
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+const FONT_FILE = "font.json";
+
+/** Raw text of editor/font.json, or null when absent. */
+async function readFontFile() {
+  if (!projectDirHandle) return null;
+  try {
+    const editor = await projectDirHandle.getDirectoryHandle("editor");
+    const fh = await editor.getFileHandle(FONT_FILE);
+    return await (await fh.getFile()).text();
+  } catch {
+    return null;
+  }
+}
+
+async function writeFontFile(text) {
+  if (!projectDirHandle) return;
+  const editor = await projectDirHandle.getDirectoryHandle("editor");
+  const fh = await editor.getFileHandle(FONT_FILE, { create: true });
+  const w = await fh.createWritable();
+  await w.write(text);
+  await w.close();
 }
 
 
@@ -14756,6 +15566,1184 @@ class GbSpriteView {
 }
 
 
+// ---- js/gbWeaponView.js ----
+const SCALE = 3;
+const TL_W = 720;
+const TL_H = 170;
+const COL_INK = "#ffffff";
+const COL_FLASH = "#ffd23c";
+const COL_BG = "#0b0d14";
+const COL_VIEW = "#07162e";
+const SPEEDS = [1, 0.5, 0.25, 0.125];
+
+function wEl(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+
+/**
+ * Weapons tab: weapon list (left); period, anim, overhang and the pose-step table (centre top); a
+ * firing preview with a dy-over-time timeline (centre bottom). Data lives in doc.gbWeapons
+ * (opts.getWeapons()); the preview draws the sprite art from doc.gbSprites (opts.getSprites()).
+ * opts: left, panel (DOM roots), getWeapons, getSprites, beginUndo, endUndo, markDirty, onChange, onStatus.
+ */
+class GbWeaponView {
+  constructor(opts) {
+    this.opts = opts;
+    this._en = false;
+    this.selId = GBW_DEFS[0].id;
+    this.t = -1; // VBlanks since the last shot (float); < 0 = idle
+    this.shots = 0; // shot counter: parity picks flash A / B and the chaingun frame
+    this.playing = false;
+    this.loop = true;
+    this.speed = 1;
+    this.raf = 0;
+    this.last = 0;
+    this.sprCache = new Map();
+    this.listBtns = new Map();
+    this.#buildList(opts.left);
+    this.#buildPanel(opts.panel);
+  }
+
+  getState() {
+    return { sel: this.selId };
+  }
+
+  setState(s) {
+    this.selId = gbwDef(s?.sel) ? s.sel : GBW_DEFS[0].id;
+  }
+
+  selected() {
+    return this.opts.getWeapons().find((w) => w.id === this.selId) || null;
+  }
+
+  // ---- DOM ----
+
+  #buildList(root) {
+    root.textContent = "";
+    root.append(wEl("h2", "", "Weapons"));
+    const wrap = wEl("div", "spr-list");
+    for (const def of GBW_DEFS) {
+      const btn = wEl("button", "spr-item gbw-item");
+      btn.type = "button";
+      const label = wEl("span", "spr-item-label", def.name);
+      const info = wEl("span", "spr-item-dim muted");
+      btn.append(wEl("span"), label, info);
+      btn.addEventListener("click", () => this.select(def.id));
+      wrap.append(btn);
+      this.listBtns.set(def.id, { btn, info });
+    }
+    root.append(wrap);
+    root.append(
+      wEl(
+        "p",
+        "muted spr-left-hint",
+        "Times are VBlanks (1 = 16.7 ms). Saved in doom64.json; the GBC build writes gbc/build/wpntable.asm from it.",
+      ),
+    );
+  }
+
+  #buildPanel(root) {
+    root.textContent = "";
+    this.title = wEl("div", "spr-title");
+    this.form = wEl("div", "gbw-form");
+    this.preview = wEl("div", "gbw-preview");
+    root.append(this.title, this.form, this.preview);
+
+    const controls = wEl("div", "gbw-controls");
+    this.btnFire = this.#button("Fire", "Shoot once from rest (Space)", () => this.fire());
+    this.btnLoop = this.#button("Hold fire", "Re-fire every period, like holding the button", () => {
+      this.loop = !this.loop;
+      this.btnLoop.classList.toggle("active", this.loop);
+    });
+    this.btnLoop.classList.toggle("active", this.loop);
+    this.speedSel = document.createElement("select");
+    for (const s of SPEEDS) {
+      const o = document.createElement("option");
+      o.value = String(s);
+      o.textContent = s === 1 ? "real time" : `${s}x speed`;
+      this.speedSel.append(o);
+    }
+    this.speedSel.addEventListener("change", () => {
+      this.speed = Number(this.speedSel.value);
+      this.speedSel.blur();
+    });
+    this.scrub = document.createElement("input");
+    this.scrub.type = "range";
+    this.scrub.min = "-1";
+    this.scrub.max = "100";
+    this.scrub.step = "1";
+    this.scrub.className = "gbw-scrub";
+    this.scrub.addEventListener("input", () => {
+      this.playing = false;
+      this.t = Number(this.scrub.value);
+      this.#draw();
+    });
+    this.scrub.addEventListener("change", () => this.scrub.blur());
+    this.readout = wEl("span", "muted gbw-readout");
+    controls.append(this.btnFire, this.btnLoop, this.speedSel, this.scrub, this.readout);
+
+    const stage = wEl("div", "gbw-stage");
+    this.view = document.createElement("canvas");
+    this.view.width = GBW_VIEW_W * SCALE;
+    this.view.height = GBW_VIEW_H * SCALE;
+    this.view.className = "gbw-view";
+    this.tl = document.createElement("canvas");
+    this.tl.width = TL_W;
+    this.tl.height = TL_H;
+    this.tl.className = "gbw-timeline";
+    this.tl.addEventListener("pointerdown", (e) => this.#tlScrub(e));
+    this.tl.addEventListener("pointermove", (e) => {
+      if (e.buttons & 1) this.#tlScrub(e);
+    });
+    stage.append(this.view, this.tl);
+    this.preview.append(controls, stage);
+  }
+
+  #button(label, title, onClick, cls = "") {
+    const b = wEl("button", cls, label);
+    b.type = "button";
+    b.title = title;
+    b.addEventListener("click", onClick);
+    return b;
+  }
+
+  // ---- state ----
+
+  select(id) {
+    if (!gbwDef(id)) return;
+    this.selId = id;
+    this.t = -1;
+    this.playing = false;
+    this.shots = 0;
+    this.refresh();
+    this.opts.onChange?.();
+  }
+
+  refresh() {
+    this.sprCache.clear();
+    const def = gbwDef(this.selId);
+    const w = this.selected();
+    if (!def || !w) return;
+    for (const d of GBW_DEFS) {
+      const ww = this.opts.getWeapons().find((x) => x.id === d.id);
+      const rec = this.listBtns.get(d.id);
+      rec.btn.classList.toggle("active", d.id === this.selId);
+      rec.info.textContent = ww ? `${ww.period}` : "";
+      rec.btn.title = ww ? `period ${ww.period} VBlanks (${gbwMs(ww.period).toFixed(0)} ms)` : "";
+    }
+    this.title.textContent = `Weapon — ${def.name}`;
+    this.#buildForm(def, w);
+    const span = Math.max(w.period, gbwAnimLen(def, w), GBW_FLASH_TICKS) + 4;
+    this.scrub.max = String(span);
+    this.#draw();
+  }
+
+  /** Edit gesture: one undo step per committed change. */
+  #edit(fn) {
+    this.opts.beginUndo();
+    fn();
+    this.opts.endUndo();
+    this.opts.markDirty();
+    this.refresh();
+    this.opts.onChange?.();
+  }
+
+  #number(label, value, min, max, title, onCommit) {
+    const row = wEl("label", "gbw-field");
+    row.title = title || "";
+    const name = wEl("span", "gbw-field-name", label);
+    const input = document.createElement("input");
+    input.type = "number";
+    input.min = String(min);
+    input.max = String(max);
+    input.step = "1";
+    input.value = String(value);
+    input.addEventListener("change", () => {
+      const v = Math.max(min, Math.min(max, Math.round(Number(input.value))));
+      if (!Number.isFinite(v)) {
+        input.value = String(value);
+        return;
+      }
+      if (v !== value) onCommit(v);
+      else input.value = String(value);
+    });
+    row.append(name, input);
+    return { row, input };
+  }
+
+  #buildForm(def, w) {
+    const f = this.form;
+    f.textContent = "";
+    const top = wEl("div", "gbw-row");
+    const per = this.#number("Period", w.period, 1, 255, "VBlanks between shots while the button is held", (v) =>
+      this.#edit(() => (w.period = v)),
+    );
+    per.row.append(wEl("span", "muted gbw-ms", `${gbwMs(w.period).toFixed(0)} ms`));
+    top.append(per.row);
+    if (def.tabled) {
+      const ov = this.#number(
+        "Overhang",
+        w.overhang,
+        0,
+        64,
+        "Art rows that hang below the viewport at rest; added to every non-pump step so the kicks still meet the art",
+        (v) => this.#edit(() => (w.overhang = v)),
+      );
+      top.append(ov.row);
+      const len = gbwAnimLen(def, w);
+      top.append(wEl("span", "muted gbw-ms", `anim ${len} VBlanks (${gbwMs(len).toFixed(0)} ms) = sum of the durations`));
+    } else {
+      const an = this.#number("Anim", w.anim, 0, 255, "VBlanks the shot animation runs (chaingun: frame A / B per shot)", (v) =>
+        this.#edit(() => (w.anim = v)),
+      );
+      an.row.append(wEl("span", "muted gbw-ms", `${gbwMs(w.anim).toFixed(0)} ms`));
+      top.append(an.row);
+      top.append(wEl("span", "muted gbw-ms", "frames / shake are in gbc/wpn.asm; no pose table"));
+    }
+    f.append(top);
+    if (!def.tabled) return;
+
+    const issues = gbwIssues(def, w);
+    const table = wEl("table", "gbw-steps");
+    const head = wEl("tr");
+    for (const h of ["#", "duration (VBlanks)", "dy (px)", "frame", ""]) head.append(wEl("th", "", h));
+    table.append(head);
+    const ends = gbwUntils(w);
+    w.steps.forEach((st, i) => {
+      const tr = wEl("tr");
+      const from = i ? ends[i - 1] : 0;
+      tr.append(wEl("td", "muted", `${i + 1}`));
+      const mk = (val, min, max, key) => {
+        const td = wEl("td");
+        const input = document.createElement("input");
+        input.type = "number";
+        input.min = String(min);
+        input.max = String(max);
+        input.step = "1";
+        input.value = String(val);
+        input.addEventListener("change", () => {
+          const v = Math.max(min, Math.min(max, Math.round(Number(input.value))));
+          if (!Number.isFinite(v) || v === val) {
+            input.value = String(val);
+            return;
+          }
+          this.#edit(() => (st[key] = v));
+        });
+        td.append(input);
+        return td;
+      };
+      const durTd = mk(st.duration, 1, 255, "duration");
+      durTd.append(wEl("span", "muted gbw-ms", ` ${from}–${ends[i]} · ${gbwMs(st.duration).toFixed(0)} ms`));
+      tr.append(durTd, mk(st.dy, -128, 127, "dy"));
+      const sel = document.createElement("select");
+      for (const [v, label] of [
+        ["idle", "idle (dy + overhang)"],
+        ["alt", `${def.altName} (dy absolute)`],
+      ]) {
+        const o = document.createElement("option");
+        o.value = v;
+        o.textContent = label;
+        sel.append(o);
+      }
+      sel.value = st.frame;
+      sel.addEventListener("change", () => {
+        const v = sel.value;
+        sel.blur();
+        this.#edit(() => (st.frame = v));
+      });
+      const ftd = wEl("td");
+      ftd.append(sel);
+      tr.append(ftd);
+      const del = this.#button("✕", "Delete step", () => this.#edit(() => w.steps.splice(i, 1)), "danger");
+      const dtd = wEl("td");
+      dtd.append(del);
+      tr.append(dtd);
+      table.append(tr);
+    });
+    f.append(table);
+    const row = wEl("div", "btn-row");
+    const add = this.#button("Add step", "Append a step after the last one", () =>
+      this.#edit(() => {
+        const last = w.steps[w.steps.length - 1];
+        w.steps.push({ duration: 4, dy: last ? last.dy : 0, frame: last ? last.frame : "idle" });
+      }),
+    );
+    add.disabled = w.steps.length >= GBW_MAX_STEPS;
+    row.append(add);
+    f.append(row);
+    f.append(
+      wEl(
+        "p",
+        "muted gbw-note",
+        "Steps run one after another from the shot, each for its duration. After the last step the weapon is back at rest.",
+      ),
+    );
+    if (issues.length) f.append(wEl("p", "error", issues.join(" · ")));
+  }
+
+  // ---- preview ----
+
+  fire() {
+    this.shots++;
+    this.t = 0;
+    this.playing = true;
+    this.last = 0;
+    this.#loop();
+  }
+
+  #loop() {
+    if (this.raf) return;
+    const step = (now) => {
+      this.raf = 0;
+      if (!this.enabled || !this.playing) return;
+      const w = this.selected();
+      if (w) {
+        if (this.last) this.t += ((now - this.last) / 1000) * GBW_VBLANK_HZ * this.speed;
+        this.last = now;
+        if (this.loop && this.t >= w.period) {
+          this.t -= w.period;
+          this.shots++;
+        } else if (!this.loop) {
+          const def = gbwDef(this.selId);
+          const end = Math.max(w.period, gbwAnimLen(def, w), GBW_FLASH_TICKS) + 2;
+          if (this.t >= end) {
+            this.t = -1;
+            this.playing = false;
+          }
+        }
+        this.#draw();
+      }
+      this.raf = requestAnimationFrame(step);
+    };
+    this.raf = requestAnimationFrame(step);
+  }
+
+  #tlScrub(e) {
+    const rect = this.tl.getBoundingClientRect();
+    const w = this.selected();
+    const def = gbwDef(this.selId);
+    if (!w || !def) return;
+    const span = Math.max(w.period, gbwAnimLen(def, w), GBW_FLASH_TICKS) + 4;
+    const x = ((e.clientX - rect.left) / rect.width) * TL_W;
+    this.playing = false;
+    this.t = Math.max(0, Math.min(span, Math.floor(((x - 36) / (TL_W - 44)) * span)));
+    if (this.shots === 0) this.shots = 1;
+    this.#draw();
+  }
+
+  /** {canvas, w, h} for a sprite id in `color`; h is the height without trailing blank rows. */
+  #sprite(id, color) {
+    const key = `${id}|${color}`;
+    const hit = this.sprCache.get(key);
+    if (hit) return hit;
+    const sp = this.opts.getSprites()?.find((s) => s.id === id);
+    if (!sp) return null;
+    let h = 1;
+    for (let y = 0; y < sp.h; y++) if (sp.rows[y].includes("#")) h = y + 1;
+    const cv = document.createElement("canvas");
+    cv.width = sp.w;
+    cv.height = sp.h;
+    const c = cv.getContext("2d");
+    c.fillStyle = color;
+    for (let y = 0; y < sp.h; y++) for (let x = 0; x < sp.w; x++) if (sp.rows[y][x] === "#") c.fillRect(x, y, 1, 1);
+    const rec = { canvas: cv, w: sp.w, h, fullH: sp.h };
+    this.sprCache.set(key, rec);
+    return rec;
+  }
+
+  #draw() {
+    const def = gbwDef(this.selId);
+    const w = this.selected();
+    if (!def || !w) return;
+    const e = this.t < 0 ? -1 : Math.floor(this.t);
+    this.scrub.value = String(Math.max(-1, e));
+    const pose = gbwPose(def, w, e);
+    const sel = this.shots & 1; // WpnUpdate toggles wFlashSel per shot: the first shot uses flash B
+    const dueMs = e < 0 ? "rest" : `${e} VBlanks · ${gbwMs(e).toFixed(0)} ms`;
+    const flashOn = e >= 0 && e < GBW_FLASH_TICKS && def.flash.length > 0;
+    this.readout.textContent = `${dueMs}${flashOn ? " · flash" : ""}${e >= 0 && e < gbwAnimLen(def, w) ? " · anim" : ""}`;
+
+    // ---- viewport
+    const c = this.view.getContext("2d");
+    c.imageSmoothingEnabled = false;
+    c.fillStyle = COL_VIEW;
+    c.fillRect(0, 0, this.view.width, this.view.height);
+    let bodyId = def.idle;
+    if (pose.alt) bodyId = def.alt;
+    else if (def.id === "chaingun" && e >= 0 && e < w.anim && sel) bodyId = def.alt;
+    const body = this.#sprite(bodyId, COL_INK);
+    c.save();
+    c.beginPath();
+    c.rect(0, 0, this.view.width, this.view.height);
+    c.clip();
+    if (body) {
+      const bx = (GBW_VIEW_W - body.w) >> 1;
+      const by = GBW_VIEW_H - body.h + pose.dy;
+      c.drawImage(body.canvas, 0, 0, body.w, body.h, bx * SCALE, by * SCALE, body.w * SCALE, body.h * SCALE);
+      if (flashOn) {
+        const fl = this.#sprite(def.flash[sel] ?? def.flash[0], COL_FLASH);
+        if (fl) {
+          const fx = (GBW_VIEW_W - fl.w) >> 1;
+          const fy = by - GBW_FLASH_DY;
+          c.drawImage(fl.canvas, fx * SCALE, fy * SCALE, fl.w * SCALE, fl.fullH * SCALE);
+        }
+      }
+    }
+    c.restore();
+    c.strokeStyle = "rgba(255,255,255,0.18)";
+    c.strokeRect(0.5, 0.5, this.view.width - 1, this.view.height - 1);
+
+    this.#drawTimeline(def, w, e, pose);
+  }
+
+  #drawTimeline(def, w, e) {
+    const c = this.tl.getContext("2d");
+    const anim = gbwAnimLen(def, w);
+    const span = Math.max(w.period, anim, GBW_FLASH_TICKS) + 4;
+    const left = 36;
+    const right = TL_W - 8;
+    const top = 14;
+    const bottom = TL_H - 34;
+    c.fillStyle = COL_BG;
+    c.fillRect(0, 0, TL_W, TL_H);
+    // per-VBlank pose values
+    const rows = [];
+    for (let i = 0; i < span; i++) rows.push(gbwPose(def, w, i));
+    const dys = rows.map((r) => r.dy);
+    let lo = Math.min(0, ...dys);
+    let hi = Math.max(0, ...dys);
+    if (hi === lo) hi = lo + 1;
+    const X = (v) => left + ((right - left) * v) / span;
+    const Y = (v) => bottom - ((bottom - top) * (v - lo)) / (hi - lo);
+    c.font = "11px Segoe UI, sans-serif";
+    // grid + labels
+    c.strokeStyle = "rgba(255,255,255,0.08)";
+    c.fillStyle = "rgba(255,255,255,0.55)";
+    c.textAlign = "right";
+    for (const v of new Set([lo, 0, hi])) {
+      c.beginPath();
+      c.moveTo(left, Y(v));
+      c.lineTo(right, Y(v));
+      c.stroke();
+      c.fillText(String(v), left - 4, Y(v) + 4);
+    }
+    c.textAlign = "center";
+    const tick = span > 70 ? 10 : 5;
+    for (let v = 0; v <= span; v += tick) {
+      c.fillText(String(v), X(v), TL_H - 20);
+      c.strokeStyle = "rgba(255,255,255,0.06)";
+      c.beginPath();
+      c.moveTo(X(v), top);
+      c.lineTo(X(v), bottom);
+      c.stroke();
+    }
+    c.textAlign = "left";
+    c.fillText("VBlanks since the shot", left, TL_H - 6);
+    // alt-frame shading, flash bar
+    c.fillStyle = "rgba(80,160,255,0.16)";
+    rows.forEach((r, i) => {
+      if (r.alt || (def.id === "chaingun" && i < w.anim)) c.fillRect(X(i), top, X(i + 1) - X(i), bottom - top);
+    });
+    if (def.flash.length) {
+      c.fillStyle = COL_FLASH;
+      c.fillRect(X(0), bottom + 4, X(GBW_FLASH_TICKS) - X(0), 5);
+      c.fillStyle = "rgba(255,210,60,0.8)";
+      c.fillText("flash", X(GBW_FLASH_TICKS) + 4, bottom + 10);
+    }
+    // dy curve (a step per VBlank)
+    c.strokeStyle = "#7fd6ff";
+    c.lineWidth = 2;
+    c.beginPath();
+    rows.forEach((r, i) => {
+      c.lineTo(X(i), Y(r.dy));
+      c.lineTo(X(i + 1), Y(r.dy));
+    });
+    c.stroke();
+    c.lineWidth = 1;
+    // anim end + period
+    const mark = (v, color, label) => {
+      c.strokeStyle = color;
+      c.setLineDash([4, 3]);
+      c.beginPath();
+      c.moveTo(X(v), top - 4);
+      c.lineTo(X(v), bottom);
+      c.stroke();
+      c.setLineDash([]);
+      c.fillStyle = color;
+      c.textAlign = "center";
+      c.fillText(label, X(v), top - 4);
+    };
+    if (anim) mark(anim, "#9bd17a", `anim ${anim}`);
+    mark(w.period, "#ff9a6a", `period ${w.period}`);
+    // cursor
+    if (e >= 0) {
+      const cx = X(Math.min(span, this.t));
+      c.strokeStyle = "#fff";
+      c.beginPath();
+      c.moveTo(cx, top);
+      c.lineTo(cx, bottom);
+      c.stroke();
+    }
+    c.textAlign = "left";
+  }
+
+  handleKey(e) {
+    if (e.key === " " && !e.ctrlKey && !e.metaKey) {
+      this.fire();
+      return true;
+    }
+    return false;
+  }
+
+  get enabled() {
+    return this._en;
+  }
+
+  set enabled(on) {
+    this._en = on;
+    if (!on) {
+      this.playing = false;
+      if (this.raf) cancelAnimationFrame(this.raf);
+      this.raf = 0;
+    }
+  }
+}
+
+
+// ---- js/fontView.js ----
+const FONT_INK = "#e8e4d8";
+const FONT_BG = "#0a0a0c";
+const FONT_GRID = "rgba(255, 255, 255, 0.09)";
+const FONT_CELL_PX = 32;
+const FONT_SLOT_COUNT = 4;
+const FONT_DRAG_THRESHOLD = 4;
+const FONT_SAMPLE = "DoomA8: the quick brown fox\njumps over the lazy dog 0123456789 !?";
+
+function fontEl(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+
+/**
+ * Font tab: overview of 96 glyphs (left), four 8x8 workspace grids (center), live text preview.
+ * Glyph data lives in doc.font; this view reads it through opts.getFont() and never caches it.
+ * opts: left, panel (DOM roots), getFont, beginUndo, endUndo, markDirty,
+ *       onChange (inspector needs a rebuild), onUiChange (slots/active changed), onStatus.
+ */
+class FontView {
+  constructor(opts) {
+    this.opts = opts;
+    this.enabled = false;
+    this.slots = new Array(FONT_SLOT_COUNT).fill(null);
+    this.active = 0;
+    this.clip = null;
+    this.stroke = null;
+    this.drag = null;
+    this.proportional = true;
+    this.sample = FONT_SAMPLE;
+    this.cells = [];
+    this.slotEls = [];
+    this.#buildOverview(opts.left);
+    this.#buildPanel(opts.panel);
+  }
+
+  // ---- state ----
+
+  getState() {
+    return { slots: this.slots.slice(), active: this.active };
+  }
+
+  setState(s) {
+    const slots = new Array(FONT_SLOT_COUNT).fill(null);
+    if (Array.isArray(s?.slots)) {
+      for (let i = 0; i < FONT_SLOT_COUNT; i++) {
+        const c = s.slots[i];
+        if (Number.isInteger(c) && c >= FONT_FIRST && c < FONT_FIRST + FONT_COUNT) slots[i] = c;
+      }
+    }
+    this.slots = slots;
+    const a = Number(s?.active) | 0;
+    this.active = a >= 0 && a < FONT_SLOT_COUNT ? a : 0;
+  }
+
+  activeCode() {
+    return this.slots[this.active];
+  }
+
+  hasClip() {
+    return !!this.clip;
+  }
+
+  #font() {
+    return this.opts.getFont();
+  }
+
+  #rowsFor(code) {
+    return this.#font()[code - FONT_FIRST];
+  }
+
+  // ---- DOM ----
+
+  #buildOverview(root) {
+    root.textContent = "";
+    root.append(fontEl("h2", "", "Font"));
+    const grid = fontEl("div", "font-overview");
+    for (let i = 0; i < FONT_COUNT; i++) {
+      const code = FONT_FIRST + i;
+      const btn = fontEl("button", "font-cell");
+      btn.type = "button";
+      btn.dataset.code = String(code);
+      btn.title = `${code} · 0x${fontHex2(code)}`;
+      const cv = document.createElement("canvas");
+      cv.width = FONT_W;
+      cv.height = FONT_H;
+      btn.append(cv, fontEl("span", "font-cell-label", fontCharLabel(code)));
+      grid.append(btn);
+      this.cells.push({ btn, cv });
+    }
+    grid.addEventListener("pointerdown", (e) => this.#onCellDown(e));
+    grid.addEventListener("pointermove", (e) => this.#onCellMove(e));
+    grid.addEventListener("pointerup", (e) => this.#onCellUp(e, true));
+    grid.addEventListener("pointercancel", (e) => this.#onCellUp(e, false));
+    grid.addEventListener("contextmenu", (e) => e.preventDefault());
+    root.append(grid);
+    root.append(fontEl("p", "muted font-left-hint", "Drag a glyph onto a grid · click to load into the active grid"));
+  }
+
+  #buildPanel(root) {
+    root.textContent = "";
+    const slots = fontEl("div", "font-slots");
+    for (let i = 0; i < FONT_SLOT_COUNT; i++) {
+      const el = fontEl("div", "font-slot");
+      const head = fontEl("div", "font-slot-head");
+      const title = fontEl("span", "font-slot-title");
+      const close = fontEl("button", "font-slot-x", "×");
+      close.type = "button";
+      close.title = "Close this grid";
+      close.addEventListener("click", () => this.#closeSlot(i));
+      head.append(title, close);
+      const cv = document.createElement("canvas");
+      cv.className = "font-grid";
+      cv.width = FONT_W * FONT_CELL_PX;
+      cv.height = FONT_H * FONT_CELL_PX;
+      const hex = fontEl("div", "font-slot-hex muted");
+      el.append(head, cv, hex);
+      el.addEventListener("pointerdown", () => this.#setActive(i), true);
+      cv.addEventListener("pointerdown", (e) => this.#onGridDown(e, i));
+      cv.addEventListener("pointermove", (e) => this.#onGridMove(e));
+      cv.addEventListener("pointerup", (e) => this.#endStroke(e));
+      cv.addEventListener("pointercancel", (e) => this.#endStroke(e));
+      cv.addEventListener("lostpointercapture", (e) => this.#endStroke(e));
+      cv.addEventListener("contextmenu", (e) => e.preventDefault());
+      cv.addEventListener("mousedown", (e) => {
+        if (e.button === 1) e.preventDefault();
+      });
+      cv.addEventListener("auxclick", (e) => {
+        if (e.button === 1) e.preventDefault();
+      });
+      slots.append(el);
+      this.slotEls.push({ el, title, cv, hex });
+    }
+    root.append(slots);
+
+    const prev = fontEl("div", "font-preview");
+    const bar = fontEl("div", "font-preview-bar");
+    const input = document.createElement("textarea");
+    input.className = "font-preview-input";
+    input.value = this.sample;
+    input.rows = 3;
+    input.maxLength = 600;
+    input.spellcheck = false;
+    input.placeholder = "Preview text (Enter = new line)";
+    input.addEventListener("input", () => {
+      this.sample = input.value;
+      this.#drawPreview();
+    });
+    const prop = fontEl("button", "toggle active", "Proportional");
+    prop.type = "button";
+    prop.title = "Menu text: glyphs trimmed to their ink width (src/menu.asm). Off = fixed 8px.";
+    prop.addEventListener("click", () => {
+      this.proportional = !this.proportional;
+      prop.classList.toggle("active", this.proportional);
+      this.#drawPreview();
+    });
+    bar.append(input, prop);
+    // No scrolling: the large copy picks the biggest integer scale (<= 4) that fits the panel.
+    const wrap = fontEl("div", "font-preview-wrap");
+    this.previewA = document.createElement("canvas");
+    this.previewB = document.createElement("canvas");
+    this.previewA.className = this.previewB.className = "font-preview-canvas";
+    this.previewCap = fontEl("div", "font-preview-cap muted");
+    wrap.append(this.previewA, this.previewCap, this.previewB);
+    prev.append(bar, wrap);
+    root.append(prev);
+    this.previewInput = input;
+    this.previewWrap = wrap;
+    this.previewWidth = 0;
+    new ResizeObserver(() => {
+      const w = wrap.clientWidth;
+      if (w === this.previewWidth) return;
+      this.previewWidth = w;
+      this.#drawPreview();
+    }).observe(wrap);
+  }
+
+  // ---- drawing ----
+
+  refresh() {
+    if (!this.enabled) return;
+    for (let i = 0; i < FONT_COUNT; i++) this.#drawCell(FONT_FIRST + i);
+    for (let i = 0; i < FONT_SLOT_COUNT; i++) this.#drawSlot(i);
+    this.#drawPreview();
+  }
+
+  #drawGlyphEverywhere(code) {
+    this.#drawCell(code);
+    for (let i = 0; i < FONT_SLOT_COUNT; i++) if (this.slots[i] === code) this.#drawSlot(i);
+    this.#drawPreview();
+  }
+
+  #drawCell(code) {
+    const { btn, cv } = this.cells[code - FONT_FIRST];
+    const rows = this.#rowsFor(code);
+    const ctx = cv.getContext("2d");
+    ctx.fillStyle = FONT_BG;
+    ctx.fillRect(0, 0, FONT_W, FONT_H);
+    ctx.fillStyle = FONT_INK;
+    for (let y = 0; y < FONT_H; y++) {
+      for (let x = 0; x < FONT_W; x++) if (fontGetPixel(rows, x, y)) ctx.fillRect(x, y, 1, 1);
+    }
+    const inSlot = this.slots.includes(code);
+    btn.classList.toggle("in-slot", inSlot);
+    btn.classList.toggle("active", this.slots[this.active] === code);
+    btn.classList.toggle("empty", rows.every((r) => r === 0));
+  }
+
+  #drawSlot(i) {
+    const { el, title, cv, hex } = this.slotEls[i];
+    const code = this.slots[i];
+    el.classList.toggle("active", i === this.active);
+    el.classList.toggle("empty", code == null);
+    const ctx = cv.getContext("2d");
+    const S = FONT_W * FONT_CELL_PX;
+    ctx.fillStyle = FONT_BG;
+    ctx.fillRect(0, 0, S, S);
+    if (code == null) {
+      title.textContent = `Grid ${i + 1}`;
+      hex.textContent = "";
+      this.#drawGridLines(ctx, S);
+      ctx.fillStyle = "#8b91a0";
+      ctx.font = "22px Segoe UI, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("drop a glyph here", S / 2, S / 2);
+      return;
+    }
+    const rows = this.#rowsFor(code);
+    ctx.fillStyle = FONT_INK;
+    for (let y = 0; y < FONT_H; y++) {
+      for (let x = 0; x < FONT_W; x++) {
+        if (fontGetPixel(rows, x, y)) {
+          ctx.fillRect(x * FONT_CELL_PX + 1, y * FONT_CELL_PX + 1, FONT_CELL_PX - 1, FONT_CELL_PX - 1);
+        }
+      }
+    }
+    this.#drawGridLines(ctx, S);
+    title.textContent = `${fontCharLabel(code)}  ${code} · 0x${fontHex2(code)}`;
+    hex.textContent = rows.map(fontHex2).join(" ");
+  }
+
+  #drawGridLines(ctx, S) {
+    ctx.strokeStyle = FONT_GRID;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let i = 0; i <= FONT_W; i++) {
+      const p = i * FONT_CELL_PX + 0.5;
+      ctx.moveTo(p, 0);
+      ctx.lineTo(p, S);
+      ctx.moveTo(0, p);
+      ctx.lineTo(S, p);
+    }
+    ctx.stroke();
+  }
+
+  #drawPreview() {
+    if (!this.enabled) return;
+    const font = this.#font();
+    const lays = this.sample.split("\n").map((l) => fontLayoutText(font, l, this.proportional));
+    const w = Math.max(1, ...lays.map((l) => l.width));
+    const h = lays.length * FONT_H;
+    const avail = this.previewWrap.clientWidth || w;
+    const fit = Math.max(1, Math.min(4, Math.floor(avail / w)));
+    this.previewCap.textContent = `${w}x${h} px · actual size above${fit > 1 ? `, ${fit}x below` : ""}`;
+    this.previewB.hidden = fit === 1;
+    for (const [cv, scale] of [
+      [this.previewA, 1],
+      [this.previewB, fit],
+    ]) {
+      cv.width = w;
+      cv.height = h;
+      cv.style.width = `${w * scale}px`;
+      cv.style.aspectRatio = `${w} / ${h}`;
+      const ctx = cv.getContext("2d");
+      ctx.fillStyle = FONT_BG;
+      ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = FONT_INK;
+      lays.forEach((lay, li) => {
+        const y0 = li * FONT_H;
+        for (const c of lay.cells) {
+          const rows = font[c.code - FONT_FIRST];
+          for (let y = 0; y < FONT_H; y++) {
+            for (let x = 0; x < FONT_W; x++) {
+              const px = c.x + x - c.shift;
+              if (px >= 0 && fontGetPixel(rows, x, y)) ctx.fillRect(px, y0 + y, 1, 1);
+            }
+          }
+        }
+      });
+    }
+  }
+
+  // ---- slots ----
+
+  #setActive(i) {
+    if (this.active === i) return;
+    this.active = i;
+    this.opts.onUiChange?.();
+    this.refresh();
+    this.opts.onChange?.();
+  }
+
+  #closeSlot(i) {
+    if (this.slots[i] == null) return;
+    this.slots[i] = null;
+    this.opts.onUiChange?.();
+    this.refresh();
+    this.opts.onChange?.();
+  }
+
+  loadSlot(i, code) {
+    this.slots[i] = code;
+    this.active = i;
+    this.opts.onUiChange?.();
+    this.refresh();
+    this.opts.onChange?.();
+  }
+
+  // ---- overview drag ----
+
+  #onCellDown(e) {
+    if (!this.enabled || e.button !== 0) return;
+    const btn = e.target.closest?.(".font-cell");
+    if (!btn) return;
+    e.preventDefault();
+    this.drag = {
+      code: Number(btn.dataset.code),
+      pid: e.pointerId,
+      sx: e.clientX,
+      sy: e.clientY,
+      moved: false,
+      ghost: null,
+      hover: -1,
+    };
+    btn.setPointerCapture(e.pointerId);
+  }
+
+  #slotAt(x, y) {
+    for (let i = 0; i < FONT_SLOT_COUNT; i++) {
+      const r = this.slotEls[i].el.getBoundingClientRect();
+      if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return i;
+    }
+    return -1;
+  }
+
+  #onCellMove(e) {
+    const d = this.drag;
+    if (!d || e.pointerId !== d.pid) return;
+    if (!d.moved) {
+      if (Math.hypot(e.clientX - d.sx, e.clientY - d.sy) < FONT_DRAG_THRESHOLD) return;
+      d.moved = true;
+      const ghost = fontEl("div", "font-drag-ghost");
+      const cv = document.createElement("canvas");
+      cv.width = FONT_W;
+      cv.height = FONT_H;
+      const ctx = cv.getContext("2d");
+      ctx.fillStyle = FONT_BG;
+      ctx.fillRect(0, 0, FONT_W, FONT_H);
+      ctx.fillStyle = FONT_INK;
+      const rows = this.#rowsFor(d.code);
+      for (let y = 0; y < FONT_H; y++) {
+        for (let x = 0; x < FONT_W; x++) if (fontGetPixel(rows, x, y)) ctx.fillRect(x, y, 1, 1);
+      }
+      ghost.append(cv);
+      document.body.append(ghost);
+      d.ghost = ghost;
+      document.body.classList.add("font-dragging");
+    }
+    d.ghost.style.transform = `translate(${e.clientX + 10}px, ${e.clientY + 10}px)`;
+    const hover = this.#slotAt(e.clientX, e.clientY);
+    if (hover !== d.hover) {
+      d.hover = hover;
+      this.slotEls.forEach((s, i) => s.el.classList.toggle("drop", i === hover));
+    }
+  }
+
+  #onCellUp(e, commit) {
+    const d = this.drag;
+    if (!d || e.pointerId !== d.pid) return;
+    this.drag = null;
+    d.ghost?.remove();
+    document.body.classList.remove("font-dragging");
+    this.slotEls.forEach((s) => s.el.classList.remove("drop"));
+    if (!commit) return;
+    if (d.moved) {
+      if (d.hover >= 0) this.loadSlot(d.hover, d.code);
+      return;
+    }
+    const existing = this.slots.indexOf(d.code);
+    if (existing >= 0) this.#setActive(existing);
+    else this.loadSlot(this.active, d.code);
+  }
+
+  // ---- painting ----
+
+  #cellAt(canvas, e) {
+    const r = canvas.getBoundingClientRect();
+    return {
+      x: Math.floor(((e.clientX - r.left) / r.width) * FONT_W),
+      y: Math.floor(((e.clientY - r.top) / r.height) * FONT_H),
+    };
+  }
+
+  #onGridDown(e, slot) {
+    if (!this.enabled) return;
+    if (e.button === 1) e.preventDefault();
+    if (e.button !== 0 && e.button !== 2) return;
+    const code = this.slots[slot];
+    if (code == null) return;
+    e.preventDefault();
+    const c = this.#cellAt(e.currentTarget, e);
+    this.stroke = {
+      slot,
+      code,
+      on: e.button === 0,
+      last: c,
+      pid: e.pointerId,
+      began: false,
+    };
+    e.currentTarget.setPointerCapture(e.pointerId);
+    this.#paintCell(c.x, c.y);
+  }
+
+  #onGridMove(e) {
+    const s = this.stroke;
+    if (!s || e.pointerId !== s.pid) return;
+    const c = this.#cellAt(this.slotEls[s.slot].cv, e);
+    if (c.x === s.last.x && c.y === s.last.y) return;
+    // Bresenham so fast drags leave no gaps.
+    let x0 = s.last.x;
+    let y0 = s.last.y;
+    const dx = Math.abs(c.x - x0);
+    const dy = -Math.abs(c.y - y0);
+    const sx = x0 < c.x ? 1 : -1;
+    const sy = y0 < c.y ? 1 : -1;
+    let err = dx + dy;
+    for (;;) {
+      this.#paintCell(x0, y0);
+      if (x0 === c.x && y0 === c.y) break;
+      const e2 = 2 * err;
+      if (e2 >= dy) {
+        err += dy;
+        x0 += sx;
+      }
+      if (e2 <= dx) {
+        err += dx;
+        y0 += sy;
+      }
+    }
+    s.last = c;
+  }
+
+  #paintCell(x, y) {
+    const s = this.stroke;
+    if (!s || x < 0 || y < 0 || x >= FONT_W || y >= FONT_H) return;
+    const rows = this.#rowsFor(s.code);
+    if (fontGetPixel(rows, x, y) === s.on) return;
+    if (!s.began) {
+      s.began = true;
+      this.opts.beginUndo();
+    }
+    fontSetPixel(rows, x, y, s.on);
+    this.#drawGlyphEverywhere(s.code);
+  }
+
+  #endStroke(e) {
+    const s = this.stroke;
+    if (!s || (e && e.pointerId !== s.pid)) return;
+    this.stroke = null;
+    if (!s.began) return;
+    this.opts.endUndo();
+    this.opts.markDirty();
+    this.opts.onChange?.();
+  }
+
+  // ---- glyph operations (inspector buttons, shortcuts) ----
+
+  #editActive(fn) {
+    const code = this.activeCode();
+    if (code == null) return false;
+    const font = this.#font();
+    const idx = code - FONT_FIRST;
+    const next = fn(font[idx].slice());
+    if (fontRowsEqual(next, font[idx])) return false;
+    this.opts.beginUndo();
+    font[idx] = next;
+    this.opts.endUndo();
+    this.opts.markDirty();
+    this.#drawGlyphEverywhere(code);
+    this.opts.onChange?.();
+    return true;
+  }
+
+  shiftActive(dx, dy) {
+    return this.#editActive((r) => fontShift(r, dx, dy));
+  }
+  flipHActive() {
+    return this.#editActive(fontFlipH);
+  }
+  flipVActive() {
+    return this.#editActive(fontFlipV);
+  }
+  invertActive() {
+    return this.#editActive(fontInvert);
+  }
+  clearActive() {
+    return this.#editActive(() => new Array(FONT_H).fill(0));
+  }
+
+  copyActive() {
+    const code = this.activeCode();
+    if (code == null) return false;
+    this.clip = this.#rowsFor(code).slice();
+    this.opts.onStatus?.(`Copied ${fontCharLabel(code)}`);
+    this.opts.onChange?.();
+    return true;
+  }
+
+  pasteActive() {
+    if (!this.clip) return false;
+    const clip = this.clip.slice();
+    return this.#editActive(() => clip);
+  }
+
+  /** Returns true when the key was a font shortcut. Caller skips text inputs. */
+  handleKey(e) {
+    if (e.altKey) return false;
+    const mod = e.ctrlKey || e.metaKey;
+    const k = e.key.toLowerCase();
+    if (mod) {
+      if (e.shiftKey) return false;
+      if (k === "c") return this.copyActive() || true;
+      if (k === "v") return this.pasteActive() || true;
+      return false;
+    }
+    if (k >= "1" && k <= String(FONT_SLOT_COUNT)) {
+      this.#setActive(Number(k) - 1);
+      return true;
+    }
+    switch (k) {
+      case "arrowleft":
+        return this.shiftActive(-1, 0) || true;
+      case "arrowright":
+        return this.shiftActive(1, 0) || true;
+      case "arrowup":
+        return this.shiftActive(0, -1) || true;
+      case "arrowdown":
+        return this.shiftActive(0, 1) || true;
+      case "h":
+        return this.flipHActive() || true;
+      case "v":
+        return this.flipVActive() || true;
+      case "i":
+        return this.invertActive() || true;
+      case "delete":
+      case "backspace":
+        return this.clearActive() || true;
+      default:
+        return false;
+    }
+  }
+
+  // ---- PNG sheet import / export ----
+
+  async importSheet(file, invert) {
+    let bmp;
+    try {
+      bmp = await createImageBitmap(file, { colorSpaceConversion: "none" });
+    } catch {
+      this.opts.onStatus?.("Could not read that image", true);
+      return;
+    }
+    const cv = document.createElement("canvas");
+    cv.width = bmp.width;
+    cv.height = bmp.height;
+    const ctx = cv.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(bmp, 0, 0);
+    bmp.close?.();
+    const res = fontFromImageData(ctx.getImageData(0, 0, cv.width, cv.height), { invert });
+    if (res.error) {
+      this.opts.onStatus?.(res.error, true);
+      return;
+    }
+    const font = this.#font();
+    const changed = res.glyphs.filter((g) => !fontRowsEqual(g.rows, font[g.index]));
+    if (!changed.length) {
+      this.opts.onStatus?.(`Imported ${res.glyphs.length} glyphs: no changes`);
+      return;
+    }
+    this.opts.beginUndo();
+    for (const g of changed) font[g.index] = g.rows.slice();
+    this.opts.endUndo();
+    this.opts.markDirty();
+    this.refresh();
+    this.opts.onChange?.();
+    const nonEmpty = res.glyphs.filter((g) => !fontGlyphStats(g.rows).empty).length;
+    const extra = res.ignored ? `, ${res.ignored} cells past glyph 96 ignored` : "";
+    this.opts.onStatus?.(
+      `Imported ${res.glyphs.length} glyphs (${nonEmpty} non-empty, ${changed.length} changed)${extra}`,
+    );
+  }
+
+  exportSheet() {
+    const img = fontToImageData(this.#font());
+    const cv = document.createElement("canvas");
+    cv.width = img.width;
+    cv.height = img.height;
+    cv.getContext("2d").putImageData(new ImageData(img.data, img.width, img.height), 0, 0);
+    cv.toBlob((blob) => {
+      if (!blob) {
+        this.opts.onStatus?.("PNG export failed", true);
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "font.png";
+      document.body.append(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      this.opts.onStatus?.("Exported font.png (64x96)");
+    }, "image/png");
+  }
+}
+
+
 // ---- js/buildView.js ----
 const REPORT_NAME = "build-report.json";
 const VARIANT_ORDER = ["a8"];
@@ -16195,6 +18183,36 @@ const gbSpriteView = new GbSpriteView({
   onStatus: (msg, isError) => setStatus(msg, isError),
 });
 
+/** editor/font.json existed but would not parse: do not overwrite it. */
+let fontFileBlocked = false;
+
+const fontView = new FontView({
+  left: document.getElementById("font-left"),
+  panel: document.getElementById("font-panel"),
+  getFont: () => doc.font,
+  beginUndo,
+  endUndo,
+  markDirty: () => markDirty(),
+  onChange: () => renderInspector(),
+  onUiChange: () => markUi(),
+  onStatus: (msg, isError) => setStatus(msg, isError),
+});
+
+const gbWeaponView = new GbWeaponView({
+  left: document.getElementById("gbw-left"),
+  panel: document.getElementById("gbw-panel"),
+  getWeapons: () => {
+    if (!doc.gbWeapons) doc.gbWeapons = normalizeGbWeapons(null);
+    return doc.gbWeapons;
+  },
+  getSprites: () => doc.gbSprites,
+  beginUndo,
+  endUndo,
+  markDirty,
+  onChange: () => markUi(),
+  onStatus: (msg, isError) => setStatus(msg, isError),
+});
+
 function setStatus(msg, isError = false) {
   statusEl.textContent = msg || "";
   statusEl.classList.toggle("error", isError);
@@ -16361,6 +18379,8 @@ function collectEditorState() {
   const enemy = doc.enemies[enemyIndex];
   return parseEditorState({
     mode: editorMode,
+    fontSlots: fontView.getState().slots,
+    fontActive: fontView.getState().active,
     localDraw,
     neighbourDraw,
     roomsOnlyDraw,
@@ -16440,6 +18460,7 @@ function applyEditorState(ed) {
     iorb.target.x = ed.itemOrbit.target.x;
     iorb.target.y = ed.itemOrbit.target.y;
     iorb.target.z = ed.itemOrbit.target.z;
+    fontView.setState({ slots: ed.fontSlots, active: ed.fontActive });
     setNeighbourDraw(ed.neighbourDraw, false);
     setRoomsOnlyDraw(ed.roomsOnlyDraw, false);
     setDrawMode(ed.localDraw);
@@ -16468,6 +18489,7 @@ async function saveNow(okMsg = "Saved") {
     await writeEnemyFiles(enemyFileRecords(doc));
     const mapRecords = mapFileRecords(doc);
     await writeMapFiles(mapRecords);
+    if (!fontFileBlocked) await writeFontFile(fontToJson(doc.font));
     markClean();
     persistMdlRigBackup();
     if (mapRecords.namesFilled) refreshAll();
@@ -16490,6 +18512,8 @@ function snapshot() {
     weapons: doc.weapons,
     items: doc.items,
     gbSprites: doc.gbSprites,
+    gbWeapons: doc.gbWeapons,
+    font: doc.font,
   });
 }
 
@@ -16773,9 +18797,13 @@ function setMode(mode) {
   document.getElementById("btn-mode-anim").classList.toggle("active", mode === "anim");
   document.getElementById("btn-mode-items")?.classList.toggle("active", mode === "items");
   document.getElementById("btn-mode-gbsprites")?.classList.toggle("active", mode === "gbsprites");
+  document.getElementById("btn-mode-gbweapons")?.classList.toggle("active", mode === "gbweapons");
+  document.getElementById("btn-mode-font")?.classList.toggle("active", mode === "font");
   document.getElementById("btn-mode-build")?.classList.toggle("active", mode === "build");
   document.querySelector(".layout")?.classList.toggle("layout-build", mode === "build");
-  const gbs = mode === "gbsprites";
+  const gbs = mode === "gbsprites" || mode === "gbweapons";
+  const gbw = mode === "gbweapons";
+  const fnt = mode === "font";
   const leftAside = document.querySelector(".left");
   if (leftAside) leftAside.hidden = mode === "build";
   const rightAside = document.querySelector(".right");
@@ -16783,13 +18811,21 @@ function setMode(mode) {
   const buildPanel = document.getElementById("build-panel");
   if (buildPanel) buildPanel.hidden = mode !== "build";
   const gbsPanel = document.getElementById("gbspr-panel");
-  if (gbsPanel) gbsPanel.hidden = !gbs;
+  if (gbsPanel) gbsPanel.hidden = mode !== "gbsprites";
+  const gbwPanel = document.getElementById("gbw-panel");
+  if (gbwPanel) gbwPanel.hidden = !gbw;
+  const gbwLeft = document.getElementById("gbw-left");
+  if (gbwLeft) gbwLeft.hidden = !gbw;
   const gbsLeft = document.getElementById("gbspr-left");
-  if (gbsLeft) gbsLeft.hidden = !gbs;
+  if (gbsLeft) gbsLeft.hidden = mode !== "gbsprites";
   const centerHeading = document.querySelector(".center-heading");
-  if (centerHeading) centerHeading.hidden = mode === "build" || gbs;
+  if (centerHeading) centerHeading.hidden = mode === "build" || gbs || fnt;
   const mapStage = document.getElementById("map-stage");
-  if (mapStage) mapStage.hidden = mode === "build" || gbs;
+  if (mapStage) mapStage.hidden = mode === "build" || gbs || fnt;
+  const fontPanel = document.getElementById("font-panel");
+  if (fontPanel) fontPanel.hidden = !fnt;
+  const fontLeft = document.getElementById("font-left");
+  if (fontLeft) fontLeft.hidden = !fnt;
   const stick = mode === "anim";
   mapStage?.classList.toggle("stick-stage", stick);
   for (const id of ["stick-left", "stick-front"]) {
@@ -16799,7 +18835,7 @@ function setMode(mode) {
   stickLeft.enabled = stick;
   stickFront.enabled = stick;
   const hintEl = document.getElementById("hint");
-  if (hintEl) hintEl.hidden = mode === "build" || gbs;
+  if (hintEl) hintEl.hidden = mode === "build" || gbs || fnt;
   document.getElementById("layout-left").hidden = mode !== "layout";
   document.querySelector(".left")?.classList.toggle("left-map", mode === "layout");
   document.getElementById("anim-left").hidden = mode !== "anim";
@@ -16819,6 +18855,10 @@ function setMode(mode) {
       ? "Drag palette to place · LMB box/click-select · Ctrl+LMB box-select points · Shift add · WASD/wheel fly · Q/E up · RMB look · Alt+LMB / Alt+MMB orbit · MMB pan · Alt+RMB zoom · F focus · G drop · Ctrl+D dup · gizmo moves selection · Del"
       : mode === "items"
           ? "LMB box-select verts · click vert/line to select · Shift add · gizmo moves · V add vert · L add line · Ctrl+C/V copy/paste · Del · F focus · MMB pan · Alt+LMB / RMB orbit · Alt+RMB zoom"
+          : mode === "font"
+            ? "LMB paint · RMB erase · drag a glyph into a grid · arrows shift · H/V flip · I invert · Del clear · 1-4 pick grid · Ctrl+C/V copy/paste glyph"
+          : mode === "gbweapons"
+            ? "Fire (Space) plays the shot · scrub the timeline · edit period / steps on top; times are VBlanks"
           : mode === "gbsprites"
             ? "LMB paint · RMB erase · arrows shift (Shift = 8) · H/V flip · I invert · Del clear · Ctrl+C/V"
             : mode === "build"
@@ -16827,8 +18867,12 @@ function setMode(mode) {
   layoutView.enabled = mode === "layout";
   animView.enabled = mode === "anim";
   itemView.enabled = mode === "items";
-  gbSpriteView.enabled = gbs;
-  if (gbs) gbSpriteView.refresh();
+  gbSpriteView.enabled = mode === "gbsprites";
+  fontView.enabled = fnt;
+  if (fnt) fontView.refresh();
+  if (mode === "gbsprites") gbSpriteView.refresh();
+  gbWeaponView.enabled = gbw;
+  if (gbw) gbWeaponView.refresh();
   if (mode === "layout") layoutView.resize();
   else if (mode === "anim") {
     requestAnimationFrame(() => {
@@ -17381,7 +19425,9 @@ function updateCenterChrome() {
         ? itemMeshKey
         : editorMode === "build"
           ? "Build"
-          : "Enemy";
+          : editorMode === "font"
+            ? "Font"
+            : "Enemy";
   if (statsEl) {
     statsEl.hidden = true;
     statsEl.textContent = "";
@@ -18233,9 +20279,132 @@ function renderLayoutObjectFields(root, objs) {
   }
 }
 
+function fontBtn(label, title, onClick, cls = "") {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.textContent = label;
+  if (title) b.title = title;
+  if (cls) b.className = cls;
+  b.addEventListener("click", onClick);
+  return b;
+}
+
+function fontStatRow(label, value) {
+  const row = document.createElement("div");
+  row.className = "field level-stat font-stat";
+  const a = document.createElement("span");
+  a.textContent = label;
+  const b = document.createElement("span");
+  b.textContent = value;
+  row.append(a, b);
+  return row;
+}
+
+function renderFontInspector(root) {
+  const h = document.createElement("h2");
+  h.textContent = "Font";
+  root.appendChild(h);
+
+  const st = fontStats(doc.font);
+  root.append(
+    fontStatRow("Glyphs drawn", `${st.nonEmpty} / ${FONT_COUNT}`),
+    fontStatRow("Set pixels", String(st.pixels)),
+    fontStatRow("Widest glyph", `${st.widest} px`),
+    fontStatRow("Touch col 0 / col 7", `${st.touchLeft} / ${st.touchRight}`),
+  );
+  const file = document.createElement("p");
+  file.className = fontFileBlocked ? "error" : "muted";
+  file.textContent = fontFileBlocked
+    ? "editor/font.json failed to parse: saving disabled until reload"
+    : "Autosaves to editor/font.json";
+  root.appendChild(file);
+
+  const gh = document.createElement("h2");
+  gh.textContent = "Glyph";
+  root.appendChild(gh);
+  const code = fontView.activeCode();
+  if (code == null) {
+    const p = document.createElement("p");
+    p.className = "muted";
+    p.textContent = "Drag a glyph into a grid to edit it.";
+    root.appendChild(p);
+  } else {
+    const rows = doc.font[code - FONT_FIRST];
+    const gs = fontGlyphStats(rows);
+    root.append(
+      fontStatRow("Char", `${fontCharLabel(code)} · ${code} · 0x${fontHex2(code)}`),
+      fontStatRow("Pixels", String(gs.pixels)),
+      fontStatRow("Lead / width", gs.empty ? "empty (space)" : `${gs.lead} / ${gs.width}`),
+    );
+    const hex = document.createElement("p");
+    hex.className = "muted font-inspector-hex";
+    hex.textContent = rows.map(fontHex2).join(" ");
+    root.appendChild(hex);
+
+    const edit = document.createElement("div");
+    edit.className = "btn-row";
+    edit.append(
+      fontBtn("Clear", "Del", () => fontView.clearActive(), "danger"),
+      fontBtn("Invert", "I", () => fontView.invertActive()),
+      fontBtn("Flip H", "H", () => fontView.flipHActive()),
+      fontBtn("Flip V", "V", () => fontView.flipVActive()),
+    );
+    root.appendChild(edit);
+    const shift = document.createElement("div");
+    shift.className = "btn-row";
+    shift.append(
+      fontBtn("←", "Shift left (arrow)", () => fontView.shiftActive(-1, 0)),
+      fontBtn("→", "Shift right (arrow)", () => fontView.shiftActive(1, 0)),
+      fontBtn("↑", "Shift up (arrow)", () => fontView.shiftActive(0, -1)),
+      fontBtn("↓", "Shift down (arrow)", () => fontView.shiftActive(0, 1)),
+    );
+    root.appendChild(shift);
+    const clip = document.createElement("div");
+    clip.className = "btn-row";
+    const paste = fontBtn("Paste", "Ctrl+V", () => fontView.pasteActive());
+    paste.disabled = !fontView.hasClip();
+    clip.append(fontBtn("Copy", "Ctrl+C", () => fontView.copyActive()), paste);
+    root.appendChild(clip);
+  }
+
+  const sh = document.createElement("h2");
+  sh.textContent = "PNG sheet";
+  root.appendChild(sh);
+  const note = document.createElement("p");
+  note.className = "muted";
+  note.textContent = "8x8 cells, row-major, first cell = ASCII 32. Ink = bright pixels.";
+  root.appendChild(note);
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.hidden = true;
+  const invert = document.createElement("input");
+  invert.type = "checkbox";
+  const invertLabel = document.createElement("label");
+  invertLabel.className = "font-invert";
+  invertLabel.append(invert, " Dark ink on light");
+  input.addEventListener("change", () => {
+    const f = input.files?.[0];
+    input.value = "";
+    if (f) void fontView.importSheet(f, invert.checked);
+  });
+  const sheet = document.createElement("div");
+  sheet.className = "btn-row";
+  sheet.append(
+    fontBtn("Import PNG…", "Overwrites the glyphs the sheet covers (undoable)", () => input.click()),
+    fontBtn("Export PNG", "64x96, white on black", () => fontView.exportSheet()),
+    input,
+  );
+  root.append(sheet, invertLabel);
+}
+
 function renderInspector() {
   const root = document.getElementById("right-editors");
   root.innerHTML = "";
+  if (editorMode === "font") {
+    renderFontInspector(root);
+    return;
+  }
   if (editorMode === "items") {
     const h = document.createElement("h2");
     h.textContent = "Item";
@@ -19374,6 +21543,10 @@ function refreshPanels() {
     gbSpriteView.refresh();
     return;
   }
+  if (editorMode === "gbweapons") {
+    gbWeaponView.refresh();
+    return;
+  }
   renderLevelList();
   renderObjectList();
   renderEnemyList();
@@ -19386,6 +21559,7 @@ function refreshPanels() {
   if (editorMode === "anim") animView.draw();
   if (editorMode === "items") itemView.draw();
   if (editorMode === "gbsprites") gbSpriteView.refresh();
+  if (editorMode === "font") fontView.refresh();
 }
 
 function refreshAll() {
@@ -19394,6 +21568,8 @@ function refreshAll() {
   if (editorMode === "layout") layoutView.draw();
   else if (editorMode === "items") itemView.draw();
   else if (editorMode === "gbsprites") gbSpriteView.refresh();
+  else if (editorMode === "gbweapons") gbWeaponView.refresh();
+  else if (editorMode === "font") fontView.refresh();
   else if (editorMode !== "build") animView.draw();
 }
 
@@ -19405,6 +21581,12 @@ document.getElementById("btn-mode-anim").addEventListener("click", () => {
 });
 document.getElementById("btn-mode-gbsprites")?.addEventListener("click", () => {
   setMode("gbsprites");
+});
+document.getElementById("btn-mode-font")?.addEventListener("click", () => {
+  setMode("font");
+});
+document.getElementById("btn-mode-gbweapons")?.addEventListener("click", () => {
+  setMode("gbweapons");
 });
 document.getElementById("btn-mode-items")?.addEventListener("click", () => {
   setMode("items");
@@ -19452,6 +21634,20 @@ async function applyLoadedDoc(loaded) {
   if (side?.length) loaded = { ...loaded, enemies: side };
   const sideMaps = await readMapFiles();
   if (sideMaps) loaded = { ...loaded, maps: { ...(loaded.maps || {}), ...sideMaps } };
+  const fontText = await readFontFile();
+  fontFileBlocked = false;
+  let fontNote = "";
+  if (fontText == null) {
+    fontNote = "editor/font.json not found: font starts blank and is created on save";
+  } else {
+    try {
+      loaded = { ...loaded, font: fontFromJson(fontText) };
+    } catch (err) {
+      // Never overwrite a file we could not parse.
+      fontFileBlocked = true;
+      fontNote = `editor/font.json is not valid JSON (${err.message || err}); font saving is disabled until reload`;
+    }
+  }
   doc = normalizeDocument(loaded);
   deriveAllEnemyFrames();
   persistMdlRigBackup();
@@ -19465,7 +21661,7 @@ async function applyLoadedDoc(loaded) {
   await loadProjectSprites();
   buildPalette();
   refreshAll();
-  setStatus(`Loaded ${docFileName()}`);
+  setStatus(fontNote ? `Loaded ${docFileName()} · ${fontNote}` : `Loaded ${docFileName()}`, fontFileBlocked);
 }
 
 function showFileAccessGate(storedDir) {
@@ -19558,6 +21754,14 @@ window.addEventListener("keydown", (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") {
     e.preventDefault();
     redo();
+    return;
+  }
+  if (editorMode === "font" && fontView.handleKey(e)) {
+    e.preventDefault();
+    return;
+  }
+  if (editorMode === "gbweapons" && gbWeaponView.handleKey(e)) {
+    e.preventDefault();
     return;
   }
   if (editorMode === "gbsprites" && gbSpriteView.handleKey(e)) {

@@ -2286,6 +2286,29 @@
       ]
     },
     {
+      "id": "muzzle_flash_b",
+      "w": 16,
+      "h": 16,
+      "rows": [
+        "................",
+        "................",
+        "................",
+        "........#.......",
+        "................",
+        "........#.......",
+        "........#.......",
+        ".......#.#......",
+        ".......#.#......",
+        "......#...#.....",
+        ".....#.....#....",
+        ".....#......#...",
+        "....#.......#...",
+        "...##.......##..",
+        ".....#.....#....",
+        "......#...#....."
+      ]
+    },
+    {
       "id": "splat_0",
       "w": 16,
       "h": 16,
@@ -2337,6 +2360,119 @@
         "........",
         "........"
       ]
+    }
+  ],
+  "gbWeapons": [
+    {
+      "id": "fist",
+      "period": 45,
+      "anim": 22,
+      "overhang": 0,
+      "steps": [
+        {
+          "duration": 22,
+          "dy": 0,
+          "frame": "alt"
+        }
+      ]
+    },
+    {
+      "id": "shotgun",
+      "period": 50,
+      "anim": 34,
+      "overhang": 10,
+      "steps": [
+        {
+          "duration": 8,
+          "dy": -10,
+          "frame": "idle"
+        },
+        {
+          "duration": 6,
+          "dy": 14,
+          "frame": "idle"
+        },
+        {
+          "duration": 6,
+          "dy": 6,
+          "frame": "idle"
+        },
+        {
+          "duration": 4,
+          "dy": 0,
+          "frame": "idle"
+        },
+        {
+          "duration": 8,
+          "dy": 0,
+          "frame": "alt"
+        },
+        {
+          "duration": 9,
+          "dy": 5,
+          "frame": "alt"
+        },
+        {
+          "duration": 8,
+          "dy": 0,
+          "frame": "alt"
+        }
+      ]
+    },
+    {
+      "id": "chaingun",
+      "period": 6,
+      "anim": 6,
+      "overhang": 0,
+      "steps": []
+    },
+    {
+      "id": "rocket",
+      "period": 60,
+      "anim": 60,
+      "overhang": 0,
+      "steps": [
+        {
+          "duration": 32,
+          "dy": 24,
+          "frame": "idle"
+        },
+        {
+          "duration": 8,
+          "dy": 16,
+          "frame": "idle"
+        },
+        {
+          "duration": 8,
+          "dy": 8,
+          "frame": "idle"
+        }
+      ]
+    },
+    {
+      "id": "pistol",
+      "period": 30,
+      "anim": 28,
+      "overhang": 6,
+      "steps": [
+        {
+          "duration": 10,
+          "dy": -4,
+          "frame": "idle"
+        },
+        {
+          "duration": 18,
+          "dy": -6,
+          "frame": "idle"
+        }
+      ]
+    },
+    {
+      "id": "chainsaw",
+      "period": 6,
+      "anim": 6,
+      "overhang": 0,
+      "steps": []
     }
   ]
 }

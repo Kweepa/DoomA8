@@ -146,6 +146,8 @@ import {
   writeEnemyFiles,
   readMapFiles,
   writeMapFiles,
+  readFontFile,
+  writeFontFile,
   readProjectBytes,
 } from "./io.js";
 import { showBuildView } from "./buildView.js";
@@ -166,6 +168,19 @@ import { AnimView } from "./animView.js";
 import { ItemView } from "./itemView.js";
 import { GbSpriteView } from "./gbSpriteView.js";
 import { normalizeGbSprites } from "./gbSpriteModel.js";
+import { GbWeaponView } from "./gbWeaponView.js";
+import { normalizeGbWeapons } from "./gbWeaponModel.js";
+import { FontView } from "./fontView.js";
+import {
+  FONT_COUNT,
+  FONT_FIRST,
+  fontCharLabel,
+  fontFromJson,
+  fontGlyphStats,
+  fontHex2,
+  fontStats,
+  fontToJson,
+} from "./fontModel.js";
 
 const statusEl = document.getElementById("status");
 const titleEl = document.querySelector(".toolbar h1");
@@ -574,6 +589,36 @@ const gbSpriteView = new GbSpriteView({
   onStatus: (msg, isError) => setStatus(msg, isError),
 });
 
+/** editor/font.json existed but would not parse: do not overwrite it. */
+let fontFileBlocked = false;
+
+const fontView = new FontView({
+  left: document.getElementById("font-left"),
+  panel: document.getElementById("font-panel"),
+  getFont: () => doc.font,
+  beginUndo,
+  endUndo,
+  markDirty: () => markDirty(),
+  onChange: () => renderInspector(),
+  onUiChange: () => markUi(),
+  onStatus: (msg, isError) => setStatus(msg, isError),
+});
+
+const gbWeaponView = new GbWeaponView({
+  left: document.getElementById("gbw-left"),
+  panel: document.getElementById("gbw-panel"),
+  getWeapons: () => {
+    if (!doc.gbWeapons) doc.gbWeapons = normalizeGbWeapons(null);
+    return doc.gbWeapons;
+  },
+  getSprites: () => doc.gbSprites,
+  beginUndo,
+  endUndo,
+  markDirty,
+  onChange: () => markUi(),
+  onStatus: (msg, isError) => setStatus(msg, isError),
+});
+
 function setStatus(msg, isError = false) {
   statusEl.textContent = msg || "";
   statusEl.classList.toggle("error", isError);
@@ -740,6 +785,8 @@ function collectEditorState() {
   const enemy = doc.enemies[enemyIndex];
   return parseEditorState({
     mode: editorMode,
+    fontSlots: fontView.getState().slots,
+    fontActive: fontView.getState().active,
     localDraw,
     neighbourDraw,
     roomsOnlyDraw,
@@ -819,6 +866,7 @@ function applyEditorState(ed) {
     iorb.target.x = ed.itemOrbit.target.x;
     iorb.target.y = ed.itemOrbit.target.y;
     iorb.target.z = ed.itemOrbit.target.z;
+    fontView.setState({ slots: ed.fontSlots, active: ed.fontActive });
     setNeighbourDraw(ed.neighbourDraw, false);
     setRoomsOnlyDraw(ed.roomsOnlyDraw, false);
     setDrawMode(ed.localDraw);
@@ -847,6 +895,7 @@ async function saveNow(okMsg = "Saved") {
     await writeEnemyFiles(enemyFileRecords(doc));
     const mapRecords = mapFileRecords(doc);
     await writeMapFiles(mapRecords);
+    if (!fontFileBlocked) await writeFontFile(fontToJson(doc.font));
     markClean();
     persistMdlRigBackup();
     if (mapRecords.namesFilled) refreshAll();
@@ -869,6 +918,8 @@ function snapshot() {
     weapons: doc.weapons,
     items: doc.items,
     gbSprites: doc.gbSprites,
+    gbWeapons: doc.gbWeapons,
+    font: doc.font,
   });
 }
 
@@ -1152,9 +1203,13 @@ function setMode(mode) {
   document.getElementById("btn-mode-anim").classList.toggle("active", mode === "anim");
   document.getElementById("btn-mode-items")?.classList.toggle("active", mode === "items");
   document.getElementById("btn-mode-gbsprites")?.classList.toggle("active", mode === "gbsprites");
+  document.getElementById("btn-mode-gbweapons")?.classList.toggle("active", mode === "gbweapons");
+  document.getElementById("btn-mode-font")?.classList.toggle("active", mode === "font");
   document.getElementById("btn-mode-build")?.classList.toggle("active", mode === "build");
   document.querySelector(".layout")?.classList.toggle("layout-build", mode === "build");
-  const gbs = mode === "gbsprites";
+  const gbs = mode === "gbsprites" || mode === "gbweapons";
+  const gbw = mode === "gbweapons";
+  const fnt = mode === "font";
   const leftAside = document.querySelector(".left");
   if (leftAside) leftAside.hidden = mode === "build";
   const rightAside = document.querySelector(".right");
@@ -1162,13 +1217,21 @@ function setMode(mode) {
   const buildPanel = document.getElementById("build-panel");
   if (buildPanel) buildPanel.hidden = mode !== "build";
   const gbsPanel = document.getElementById("gbspr-panel");
-  if (gbsPanel) gbsPanel.hidden = !gbs;
+  if (gbsPanel) gbsPanel.hidden = mode !== "gbsprites";
+  const gbwPanel = document.getElementById("gbw-panel");
+  if (gbwPanel) gbwPanel.hidden = !gbw;
+  const gbwLeft = document.getElementById("gbw-left");
+  if (gbwLeft) gbwLeft.hidden = !gbw;
   const gbsLeft = document.getElementById("gbspr-left");
-  if (gbsLeft) gbsLeft.hidden = !gbs;
+  if (gbsLeft) gbsLeft.hidden = mode !== "gbsprites";
   const centerHeading = document.querySelector(".center-heading");
-  if (centerHeading) centerHeading.hidden = mode === "build" || gbs;
+  if (centerHeading) centerHeading.hidden = mode === "build" || gbs || fnt;
   const mapStage = document.getElementById("map-stage");
-  if (mapStage) mapStage.hidden = mode === "build" || gbs;
+  if (mapStage) mapStage.hidden = mode === "build" || gbs || fnt;
+  const fontPanel = document.getElementById("font-panel");
+  if (fontPanel) fontPanel.hidden = !fnt;
+  const fontLeft = document.getElementById("font-left");
+  if (fontLeft) fontLeft.hidden = !fnt;
   const stick = mode === "anim";
   mapStage?.classList.toggle("stick-stage", stick);
   for (const id of ["stick-left", "stick-front"]) {
@@ -1178,7 +1241,7 @@ function setMode(mode) {
   stickLeft.enabled = stick;
   stickFront.enabled = stick;
   const hintEl = document.getElementById("hint");
-  if (hintEl) hintEl.hidden = mode === "build" || gbs;
+  if (hintEl) hintEl.hidden = mode === "build" || gbs || fnt;
   document.getElementById("layout-left").hidden = mode !== "layout";
   document.querySelector(".left")?.classList.toggle("left-map", mode === "layout");
   document.getElementById("anim-left").hidden = mode !== "anim";
@@ -1198,6 +1261,10 @@ function setMode(mode) {
       ? "Drag palette to place · LMB box/click-select · Ctrl+LMB box-select points · Shift add · WASD/wheel fly · Q/E up · RMB look · Alt+LMB / Alt+MMB orbit · MMB pan · Alt+RMB zoom · F focus · G drop · Ctrl+D dup · gizmo moves selection · Del"
       : mode === "items"
           ? "LMB box-select verts · click vert/line to select · Shift add · gizmo moves · V add vert · L add line · Ctrl+C/V copy/paste · Del · F focus · MMB pan · Alt+LMB / RMB orbit · Alt+RMB zoom"
+          : mode === "font"
+            ? "LMB paint · RMB erase · drag a glyph into a grid · arrows shift · H/V flip · I invert · Del clear · 1-4 pick grid · Ctrl+C/V copy/paste glyph"
+          : mode === "gbweapons"
+            ? "Fire (Space) plays the shot · scrub the timeline · edit period / steps on top; times are VBlanks"
           : mode === "gbsprites"
             ? "LMB paint · RMB erase · arrows shift (Shift = 8) · H/V flip · I invert · Del clear · Ctrl+C/V"
             : mode === "build"
@@ -1206,8 +1273,12 @@ function setMode(mode) {
   layoutView.enabled = mode === "layout";
   animView.enabled = mode === "anim";
   itemView.enabled = mode === "items";
-  gbSpriteView.enabled = gbs;
-  if (gbs) gbSpriteView.refresh();
+  gbSpriteView.enabled = mode === "gbsprites";
+  fontView.enabled = fnt;
+  if (fnt) fontView.refresh();
+  if (mode === "gbsprites") gbSpriteView.refresh();
+  gbWeaponView.enabled = gbw;
+  if (gbw) gbWeaponView.refresh();
   if (mode === "layout") layoutView.resize();
   else if (mode === "anim") {
     requestAnimationFrame(() => {
@@ -1760,7 +1831,9 @@ function updateCenterChrome() {
         ? itemMeshKey
         : editorMode === "build"
           ? "Build"
-          : "Enemy";
+          : editorMode === "font"
+            ? "Font"
+            : "Enemy";
   if (statsEl) {
     statsEl.hidden = true;
     statsEl.textContent = "";
@@ -2612,9 +2685,132 @@ function renderLayoutObjectFields(root, objs) {
   }
 }
 
+function fontBtn(label, title, onClick, cls = "") {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.textContent = label;
+  if (title) b.title = title;
+  if (cls) b.className = cls;
+  b.addEventListener("click", onClick);
+  return b;
+}
+
+function fontStatRow(label, value) {
+  const row = document.createElement("div");
+  row.className = "field level-stat font-stat";
+  const a = document.createElement("span");
+  a.textContent = label;
+  const b = document.createElement("span");
+  b.textContent = value;
+  row.append(a, b);
+  return row;
+}
+
+function renderFontInspector(root) {
+  const h = document.createElement("h2");
+  h.textContent = "Font";
+  root.appendChild(h);
+
+  const st = fontStats(doc.font);
+  root.append(
+    fontStatRow("Glyphs drawn", `${st.nonEmpty} / ${FONT_COUNT}`),
+    fontStatRow("Set pixels", String(st.pixels)),
+    fontStatRow("Widest glyph", `${st.widest} px`),
+    fontStatRow("Touch col 0 / col 7", `${st.touchLeft} / ${st.touchRight}`),
+  );
+  const file = document.createElement("p");
+  file.className = fontFileBlocked ? "error" : "muted";
+  file.textContent = fontFileBlocked
+    ? "editor/font.json failed to parse: saving disabled until reload"
+    : "Autosaves to editor/font.json";
+  root.appendChild(file);
+
+  const gh = document.createElement("h2");
+  gh.textContent = "Glyph";
+  root.appendChild(gh);
+  const code = fontView.activeCode();
+  if (code == null) {
+    const p = document.createElement("p");
+    p.className = "muted";
+    p.textContent = "Drag a glyph into a grid to edit it.";
+    root.appendChild(p);
+  } else {
+    const rows = doc.font[code - FONT_FIRST];
+    const gs = fontGlyphStats(rows);
+    root.append(
+      fontStatRow("Char", `${fontCharLabel(code)} · ${code} · 0x${fontHex2(code)}`),
+      fontStatRow("Pixels", String(gs.pixels)),
+      fontStatRow("Lead / width", gs.empty ? "empty (space)" : `${gs.lead} / ${gs.width}`),
+    );
+    const hex = document.createElement("p");
+    hex.className = "muted font-inspector-hex";
+    hex.textContent = rows.map(fontHex2).join(" ");
+    root.appendChild(hex);
+
+    const edit = document.createElement("div");
+    edit.className = "btn-row";
+    edit.append(
+      fontBtn("Clear", "Del", () => fontView.clearActive(), "danger"),
+      fontBtn("Invert", "I", () => fontView.invertActive()),
+      fontBtn("Flip H", "H", () => fontView.flipHActive()),
+      fontBtn("Flip V", "V", () => fontView.flipVActive()),
+    );
+    root.appendChild(edit);
+    const shift = document.createElement("div");
+    shift.className = "btn-row";
+    shift.append(
+      fontBtn("←", "Shift left (arrow)", () => fontView.shiftActive(-1, 0)),
+      fontBtn("→", "Shift right (arrow)", () => fontView.shiftActive(1, 0)),
+      fontBtn("↑", "Shift up (arrow)", () => fontView.shiftActive(0, -1)),
+      fontBtn("↓", "Shift down (arrow)", () => fontView.shiftActive(0, 1)),
+    );
+    root.appendChild(shift);
+    const clip = document.createElement("div");
+    clip.className = "btn-row";
+    const paste = fontBtn("Paste", "Ctrl+V", () => fontView.pasteActive());
+    paste.disabled = !fontView.hasClip();
+    clip.append(fontBtn("Copy", "Ctrl+C", () => fontView.copyActive()), paste);
+    root.appendChild(clip);
+  }
+
+  const sh = document.createElement("h2");
+  sh.textContent = "PNG sheet";
+  root.appendChild(sh);
+  const note = document.createElement("p");
+  note.className = "muted";
+  note.textContent = "8x8 cells, row-major, first cell = ASCII 32. Ink = bright pixels.";
+  root.appendChild(note);
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.hidden = true;
+  const invert = document.createElement("input");
+  invert.type = "checkbox";
+  const invertLabel = document.createElement("label");
+  invertLabel.className = "font-invert";
+  invertLabel.append(invert, " Dark ink on light");
+  input.addEventListener("change", () => {
+    const f = input.files?.[0];
+    input.value = "";
+    if (f) void fontView.importSheet(f, invert.checked);
+  });
+  const sheet = document.createElement("div");
+  sheet.className = "btn-row";
+  sheet.append(
+    fontBtn("Import PNG…", "Overwrites the glyphs the sheet covers (undoable)", () => input.click()),
+    fontBtn("Export PNG", "64x96, white on black", () => fontView.exportSheet()),
+    input,
+  );
+  root.append(sheet, invertLabel);
+}
+
 function renderInspector() {
   const root = document.getElementById("right-editors");
   root.innerHTML = "";
+  if (editorMode === "font") {
+    renderFontInspector(root);
+    return;
+  }
   if (editorMode === "items") {
     const h = document.createElement("h2");
     h.textContent = "Item";
@@ -3753,6 +3949,10 @@ function refreshPanels() {
     gbSpriteView.refresh();
     return;
   }
+  if (editorMode === "gbweapons") {
+    gbWeaponView.refresh();
+    return;
+  }
   renderLevelList();
   renderObjectList();
   renderEnemyList();
@@ -3765,6 +3965,7 @@ function refreshPanels() {
   if (editorMode === "anim") animView.draw();
   if (editorMode === "items") itemView.draw();
   if (editorMode === "gbsprites") gbSpriteView.refresh();
+  if (editorMode === "font") fontView.refresh();
 }
 
 function refreshAll() {
@@ -3773,6 +3974,8 @@ function refreshAll() {
   if (editorMode === "layout") layoutView.draw();
   else if (editorMode === "items") itemView.draw();
   else if (editorMode === "gbsprites") gbSpriteView.refresh();
+  else if (editorMode === "gbweapons") gbWeaponView.refresh();
+  else if (editorMode === "font") fontView.refresh();
   else if (editorMode !== "build") animView.draw();
 }
 
@@ -3784,6 +3987,12 @@ document.getElementById("btn-mode-anim").addEventListener("click", () => {
 });
 document.getElementById("btn-mode-gbsprites")?.addEventListener("click", () => {
   setMode("gbsprites");
+});
+document.getElementById("btn-mode-font")?.addEventListener("click", () => {
+  setMode("font");
+});
+document.getElementById("btn-mode-gbweapons")?.addEventListener("click", () => {
+  setMode("gbweapons");
 });
 document.getElementById("btn-mode-items")?.addEventListener("click", () => {
   setMode("items");
@@ -3831,6 +4040,20 @@ async function applyLoadedDoc(loaded) {
   if (side?.length) loaded = { ...loaded, enemies: side };
   const sideMaps = await readMapFiles();
   if (sideMaps) loaded = { ...loaded, maps: { ...(loaded.maps || {}), ...sideMaps } };
+  const fontText = await readFontFile();
+  fontFileBlocked = false;
+  let fontNote = "";
+  if (fontText == null) {
+    fontNote = "editor/font.json not found: font starts blank and is created on save";
+  } else {
+    try {
+      loaded = { ...loaded, font: fontFromJson(fontText) };
+    } catch (err) {
+      // Never overwrite a file we could not parse.
+      fontFileBlocked = true;
+      fontNote = `editor/font.json is not valid JSON (${err.message || err}); font saving is disabled until reload`;
+    }
+  }
   doc = normalizeDocument(loaded);
   deriveAllEnemyFrames();
   persistMdlRigBackup();
@@ -3844,7 +4067,7 @@ async function applyLoadedDoc(loaded) {
   await loadProjectSprites();
   buildPalette();
   refreshAll();
-  setStatus(`Loaded ${docFileName()}`);
+  setStatus(fontNote ? `Loaded ${docFileName()} · ${fontNote}` : `Loaded ${docFileName()}`, fontFileBlocked);
 }
 
 function showFileAccessGate(storedDir) {
@@ -3937,6 +4160,14 @@ window.addEventListener("keydown", (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") {
     e.preventDefault();
     redo();
+    return;
+  }
+  if (editorMode === "font" && fontView.handleKey(e)) {
+    e.preventDefault();
+    return;
+  }
+  if (editorMode === "gbweapons" && gbWeaponView.handleKey(e)) {
+    e.preventDefault();
     return;
   }
   if (editorMode === "gbsprites" && gbSpriteView.handleKey(e)) {

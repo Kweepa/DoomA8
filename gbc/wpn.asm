@@ -7,6 +7,7 @@
 INCLUDE "hw.inc"
 INCLUDE "wpn_ids.inc"
 INCLUDE "a8const.inc"
+INCLUDE "wpntable.asm"                  ; WPN_PERIOD_* / WPN_ANIM_*, WpnPoseTab, Pose* (tools/gbc_genwpntab.py)
 
 DEF WPN_FIST    EQU 0
 DEF WPN_SHOT    EQU 1
@@ -29,32 +30,26 @@ DEF FLASH_TILE0   EQU 242
 DEF FLASH_TICKS   EQU 7
 DEF VIEW_X0       EQU 16                ; screen x of the viewport's left edge
 DEF VIEW_H        EQU 112
+DEF FLASH_PARK    EQU 100               ; added to a parked flash entry's y (flash y is ~80..130)
 
 ; Per weapon (8 bytes): idle frame, alt frame, flash 0, flash 1 ($FF none), period, anim length,
-; ammo type, cost. Periods / lengths are in VBlanks (A8: fist 800 / punch 360 ms, shotgun 600,
-; chaingun 100, rocket 1000, pistol 600, saw 100).
+; ammo type, cost. Period and anim length (VBlanks) come from the editor's Weapons tab through
+; wpntable.asm (A8: fist 800 / punch 360 ms, shotgun 600, chaingun 100, rocket 1000, pistol 600, saw 100).
 SECTION "wpndef", ROM0
 WpnDef:
-    db WF_FIST_HAND,  WF_FIST_PUNCH, $FF,         $FF,         48, 22, AMMO_NONE,   0
-    db WF_SHOT,       WF_SHOT_COCK,  WF_MUZZLE,   $FF,         36, 34, AMMO_SHELL,  1
-    db WF_CHAIN_A,    WF_CHAIN_B,    WF_MUZZLE,   $FF,          6,  6, AMMO_BULLET, 1
-    db WF_ROCKET,     WF_ROCKET,     WF_MUZZLE,   $FF,         60,  5, AMMO_ROCKET, 1
-    db WF_PISTOL,     WF_PISTOL,     WF_MUZZLE,   $FF,         36, 28, AMMO_BULLET, 1
-    db WF_SAW,        WF_SAW,        $FF,         $FF,          6,  6, AMMO_NONE,   0
+    db WF_FIST_HAND,  WF_FIST_PUNCH, $FF,         $FF,         WPN_PERIOD_FIST,   WPN_ANIM_FIST,   AMMO_NONE,   0
+    db WF_SHOT,       WF_SHOT_COCK,  WF_MUZZLE,   WF_MUZZLE_B, WPN_PERIOD_SHOT,   WPN_ANIM_SHOT,   AMMO_SHELL,  1
+    db WF_CHAIN_A,    WF_CHAIN_B,    WF_MUZZLE,   WF_MUZZLE_B, WPN_PERIOD_CHAIN,  WPN_ANIM_CHAIN,  AMMO_BULLET, 1
+    db WF_ROCKET,     WF_ROCKET,     WF_MUZZLE,   WF_MUZZLE_B, WPN_PERIOD_ROCKET, WPN_ANIM_ROCKET, AMMO_ROCKET, 1
+    db WF_PISTOL,     WF_PISTOL,     WF_MUZZLE,   WF_MUZZLE_B, WPN_PERIOD_PISTOL, WPN_ANIM_PISTOL, AMMO_BULLET, 1
+    db WF_SAW,        WF_SAW,        $FF,         $FF,         WPN_PERIOD_SAW,    WPN_ANIM_SAW,    AMMO_NONE,   0
 
-; Recoil: (until elapsed VBlanks, dy) pairs, 0 ends (dy 0 afterwards). dy in pixels, down positive.
-; A8 values (art is native size): shotgun snaps up 10, kicks down 14, settles 6 (16/35/35 ms);
-; rocket snaps down 24, 16, 8; pistol rises 4 for 300 ms then 6 for 160 ms.
-KickShot:
-    db 1, -10, 3, 14, 5, 6, 0
-KickRocket:
-    db 1, 24, 3, 16, 5, 8, 0
-KickPistol:
-    db 18, -4, 28, -6, 0
-; Art rows that hang below the viewport bottom at rest (A8 idle y puts 10 / 6 rows of the
-; shotgun / pistol art past the edge, so the upward kicks still meet it).
-DEF OVERHANG_SHOT   EQU 10
-DEF OVERHANG_PISTOL EQU 6
+; Pose tables (WpnPoseTab, generated into wpntable.asm from the Weapons tab): per weapon `db overhang`,
+; then steps `db until, dy, frame`, then `db 0`. A step applies while the VBlanks since the shot are < until
+; (ascending); past the last one, or idle, the pose is the idle frame at dy 0. dy in pixels, down positive.
+;   frame 0 (idle): dy + overhang + walk bob (the recoil kicks)
+;   frame 1 (alt):  the weapon's alt frame (shotgun pump, fist punch), dy absolute (no overhang or bob)
+; The anim length (WpnDef) is the last "until". Chaingun and chainsaw have no table (WpnPose).
 
 SECTION "wpn", ROM0
 
@@ -68,21 +63,6 @@ WpnDefPtr:
     ld de, WpnDef
     add hl, de
     ret
-
-; HL = recoil table, E = elapsed VBlanks -> A = dy. Clobbers HL.
-KickLookup:
-.l:
-    ld a, [hl+]
-    and a
-    ret z                           ; end: back to rest
-    cp e
-    jr c, .skip                     ; limit < elapsed
-    jr z, .skip
-    ld a, [hl]
-    ret
-.skip:
-    inc hl
-    jr .l
 
 WpnInit::
     ld a, (1 << WPN_FIST) | (1 << WPN_PISTOL)
@@ -116,6 +96,13 @@ WpnInit::
     ld [wSawFlip], a
     ld [wFireEvent], a
     ld [wOamUsed], a
+    ld [wApOk], a
+    ld [wInPose], a
+    ld [wVbSince], a
+    ld [wApB], a
+    ld [wApBodyN], a
+    ld [wApFlashN], a
+    ld [wApHid], a
     ld a, $FF
     ld [wLoadedBody], a
     ld [wLoadedFlash], a
@@ -176,15 +163,14 @@ ENDC
     ld a, [wWpnCur]
     ld b, NUM_WPN
 .next:
-    inc a
-    cp NUM_WPN
-    jr c, .nw
-    xor a
-.nw:
-    ld c, a
-    ld hl, .bits
     ld e, a
     ld d, 0
+    ld hl, WpnCycle
+    add hl, de
+    ld a, [hl]                      ; next weapon in the cycle
+    ld c, a
+    ld e, a
+    ld hl, WpnBits
     add hl, de
     ld a, [wHaveWpn]
     and [hl]
@@ -297,13 +283,26 @@ ENDC
     xor a
     ld [wBobPhase], a
 .bobDone:
-    ; body frame and vertical offset
+    ld a, 1
+    ld [wInPose], a
+    xor a
+    ld [wVbSince], a
+    call WpnPose
+    xor a
+    ld [wInPose], a
+    ret
+
+; Body frame, vertical offset and flash frame for the weapon's state "wVbSince VBlanks after" the last game
+; frame's timers (wWpnAnim / wFlashTimer already hold the time left at the frame's dt). Called from
+; WpnUpdate (wVbSince = 0) and from the VBlank interrupt via WpnTick.
+WpnPose:
     ld a, [wWpnCur]
     call WpnDefPtr
     ld a, [hl+]
     ld c, a                         ; idle frame
     ld b, [hl]                      ; alt frame
     ld a, [wWpnAnim]
+    call WpnVbSub
     and a
     jr nz, .animating
     ld a, $FF
@@ -326,74 +325,69 @@ ENDC
     srl a
     ld d, a                         ; D = bob, 0..4 (down only)
     ld a, [wWpnCur]
-    cp WPN_SHOT
-    jr z, .wShot
-    cp WPN_ROCKET
-    jr z, .wRocket
-    cp WPN_PISTOL
-    jp z, .wPistol
     cp WPN_SAW
     jp z, .wSaw
     cp WPN_CHAIN
     jp z, .wChain
-    ; fist: the punch frame for the animation
-    ld a, e
-    cp $FF
-    ld a, c
-    jr z, .fistSet
-    ld a, b
-.fistSet:
-    ld [wBodyFrame], a
-    ld a, d
-    ld [wWpnDy], a
-    jp .bodyDone
-.wShot:
-    ld a, e
-    cp 19
-    jr c, .shotRecoil               ; snap up, kick down, settle
-    cp 34
-    jr nc, .shotRecoil
-    ld a, b                         ; cock (A8: after 320 ms): flush at the bottom, dips 4 for a moment
-    ld [wBodyFrame], a
-    ld a, e
-    cp 21
-    jr c, .cock0
-    cp 24
-    jr nc, .cock0
-    ld a, 5                         ; A8 cock dip
-    jr .cockDy
-.cock0:
+    ; table driven: fist, shotgun, rocket, pistol
+    push de
+    ld a, [wWpnCur]
+    ld e, a
+    ld d, 0
+    ld hl, WpnPoseTab
+    add hl, de
+    add hl, de
+    ld a, [hl+]
+    ld h, [hl]
+    ld l, a                         ; HL = pose table
+    pop de
+    ld a, [hl+]
+    push af                         ; overhang
+.look:
+    ld a, [hl+]                     ; until
+    and a
+    jr z, .rest
+    cp e
+    jr c, .skip                     ; until < elapsed
+    jr z, .skip
+    ld a, [hl+]                     ; dy
+    ld l, [hl]                      ; frame kind
+    jr .got
+.skip:
+    inc hl
+    inc hl
+    jr .look
+.rest:
     xor a
-.cockDy:
-    ld [wWpnDy], a
-    jp .bodyDone
-.shotRecoil:
+    ld l, a
+.got:
+    ld h, a                         ; H = dy, L = frame kind (0 idle, 1 alt)
+    pop af
+    ld e, a                         ; E = overhang
+    ld a, l
+    and a
+    jr nz, .poseAlt
     ld a, c
     ld [wBodyFrame], a
-    ld hl, KickShot
-    call KickLookup
-    add OVERHANG_SHOT
+    ld a, h
+    add e
     add d
     ld [wWpnDy], a
     jp .bodyDone
-.wRocket:
-    ld a, c
+.poseAlt:
+    ld a, b
     ld [wBodyFrame], a
-    ld hl, KickRocket
-    call KickLookup
-    add d
-    ld [wWpnDy], a
-    jp .bodyDone
-.wPistol:
-    ld a, c
-    ld [wBodyFrame], a
-    ld hl, KickPistol
-    call KickLookup
-    add OVERHANG_PISTOL
-    add d
+    ld a, h
     ld [wWpnDy], a
     jp .bodyDone
 .wChain:
+    ld a, [wVbSince]
+    and a
+    jr z, .chainPick
+    ld a, d                         ; VBlank tick: keep the frame picked when the shot fired (A / B per shot)
+    ld [wWpnDy], a
+    jr .bodyDone
+.chainPick:
     ld a, e
     cp $FF
     ld a, c
@@ -428,6 +422,7 @@ ENDC
 .bodyDone:
     ; flash frame
     ld a, [wFlashTimer]
+    call WpnVbSub
     and a
     jr z, .noFlash
     ld a, [wWpnCur]
@@ -452,12 +447,26 @@ ENDC
     ld a, $FF
     ld [wFlashFrame], a
     ret
-.bits:
+; A = max(0, A - wVbSince). Clobbers D, E.
+WpnVbSub:
+    ld d, a
+    ld a, [wVbSince]
+    ld e, a
+    ld a, d
+    sub e
+    ret nc
+    xor a
+    ret
+
+WpnBits:
     db 1, 2, 4, 8, 16, 32
+; SELECT cycle: fist, chainsaw, pistol, shotgun, minigun, rocket launcher (indexed by weapon id).
+WpnCycle:
+    db WPN_SAW, WPN_CHAIN, WPN_ROCKET, WPN_FIST, WPN_SHOT, WPN_PISTOL
 
 ; ---- VBlank: tile upload + OAM -----------------------------------------------------------
 
-; A = frame id, C = 0 body / 1 flash. Uploads the frame's tiles and caches its placements.
+; A = frame id, C = 0 body / 1 flash. Uploads the frame's tiles and remembers where its placement list is.
 WpnUpload:
     ld l, a
     ld h, 0
@@ -473,55 +482,31 @@ WpnUpload:
     ld d, a                         ; DE = tiles (16-byte aligned)
     ld a, [hl+]
     ld h, [hl]
-    ld l, a                         ; HL = placement list
+    ld l, a                         ; HL = placement header: ncells, w, h
     ld a, [hl+]
     ld b, a                         ; ncells
-    ld a, [hl+]
-    ld [wWpnW + 0], a
-    ld a, [hl+]
-    ld [wWpnH + 0], a
-    ; cache placements
+    inc hl                          ; w (art is centred; x is baked into the placements)
+    ld a, [hl+]                     ; h
+    ld [wWpnH], a
     ld a, c
     and a
     jr nz, .cacheFlash
     ld a, b
     ld [wBodyN], a
-    ld a, [wWpnW]
-    ld [wBodyW], a
     ld a, [wWpnH]
     ld [wBodyH], a
-    push de
-    ld de, wBodyPlace
-    jr .copy
+    ld a, l
+    ld [wBodyPtr], a
+    ld a, h
+    ld [wBodyPtr + 1], a
+    jr .doDma
 .cacheFlash:
     ld a, b
     ld [wFlashN], a
-    ld a, [wWpnW]
-    ld [wFlashW], a
-    ld a, [wWpnH]
-    ld [wFlashH], a
-    push de
-    ld de, wFlashPlace
-.copy:
-    ld a, b
-    add a
-    ld b, a
-    jr z, .copied
-.cl:
-    ld a, [hl+]
-    ld [de], a
-    inc de
-    dec b
-    jr nz, .cl
-.copied:
-    pop de
-    ld a, [wBodyN]
-    ld b, a
-    ld a, c
-    and a
-    jr z, .doDma
-    ld a, [wFlashN]
-    ld b, a
+    ld a, l
+    ld [wFlashPtr], a
+    ld a, h
+    ld [wFlashPtr + 1], a
 .doDma:
     ld a, b
     and a
@@ -535,21 +520,20 @@ WpnUpload:
     jr nz, .flashDst
     ld a, 1
     ldh [rVBK], a
-    ld a, $8E                       ; $8E00 = tile 224
+    ld a, HIGH($8000 + BODY_TILE0 * 16)
     ldh [rHDMA3], a
-    xor a
+    ld a, LOW($8000 + BODY_TILE0 * 16)
     ldh [rHDMA4], a
-    ld a, [wBodyN]
     jr .go
 .flashDst:
     xor a
     ldh [rVBK], a
-    ld a, $8F                       ; $8F20 = tile 242
+    ld a, HIGH($8000 + FLASH_TILE0 * 16)
     ldh [rHDMA3], a
-    ld a, $20
+    ld a, LOW($8000 + FLASH_TILE0 * 16)
     ldh [rHDMA4], a
-    ld a, [wFlashN]
 .go:
+    ld a, b
     add a
     dec a                           ; blocks - 1 (2 blocks per cell)
     ldh [rHDMA5], a
@@ -557,8 +541,35 @@ WpnUpload:
     ldh [rVBK], a
     ret
 
-; Call right after the frame flip, in VBlank.
+; A = flash frame to keep loaded: the running one, else the weapon's first flash frame ($FF: none), so
+; the tiles and OAM entries exist when a shot's flash is switched on in between frame flips.
+WpnFlashWant:
+    ld a, [wFlashFrame]
+    cp $FF
+    ret nz
+    ld a, [wWpnCur]
+    call WpnDefPtr
+    inc hl
+    inc hl
+    ld a, [hl]
+    ret
+
+; Call right after the frame flip, in VBlank. This is on the VBlank budget (double speed leaves ~2300
+; machine cycles for ShowBank + this + HudBlit): OAM writes are dropped once the LCD leaves VBlank, so the
+; placement loops read ready-made (dy, x, tile) triples straight from the weapon ROM bank.
+; The weapon art lives in ROM bank WpnBank, so this maps it. The main loop reaches here straight after
+; DrawWorldObjects, which leaves the entity bank mapped, and the code after it (HUD message, pickups,
+; combat) reads banked data on that assumption: put the entity bank back, or a frame swap leaves the
+; weapon bank mapped and corrupts whatever reads next.
 WpnVBlank::
+    call WpnVBlankBody
+    ld a, [EntBank]
+    ld [rROMB0], a
+    ret
+
+WpnVBlankBody:
+    xor a
+    ld [wApOk], a
     ld a, [wBodyFrame]
     cp $FF
     ret z
@@ -571,7 +582,8 @@ WpnVBlank::
     ld c, 0
     call WpnUpload
 .bodyOk:
-    ld a, [wFlashFrame]
+    call WpnFlashWant
+    ld [wFlashWant], a
     cp $FF
     jr z, .flashOk
     ld b, a
@@ -583,120 +595,100 @@ WpnVBlank::
     ld c, 1
     call WpnUpload
 .flashOk:
-    ; body origin: x = VIEW_X0 + (128 - w)/2, y = VIEW_H - h + dy (overhang, bob, recoil; the
-    ; STAT interrupt clips everything below the viewport)
-    ld a, [wBodyW]
-    ld b, a
-    ld a, 128
-    sub b
-    srl a
-    add VIEW_X0
-    ld [wOx], a
+    ld a, [WpnBank]
+    ld [rROMB0], a
+    ; B = OAM y of the body's top: VIEW_H - h + dy (overhang, bob, recoil; the STAT interrupt clips
+    ; everything below the viewport) + 16
     ld a, [wBodyH]
     ld b, a
-    ld a, VIEW_H
+    ld a, VIEW_H + 16
     sub b
     ld hl, wWpnDy
     add [hl]
-    ld [wOy], a
-    ; ---- OAM: body cells, then flash cells ----
+    ld b, a
+    ld [wApB], a
+    xor a
+    ld [wApFlashN], a
+    ld [wApHid], a
     ld hl, OAM_BASE
     ld a, [wBodyN]
+    ld c, a
+    ld [wApBodyN], a
+    ld [wUsedNow], a
     and a
     jr z, .noBody
-    ld [wCnt], a
-    ld de, wBodyPlace
-    ld a, BODY_TILE0
-    ld [wTile], a
+    ld a, [wBodyPtr]
+    ld e, a
+    ld a, [wBodyPtr + 1]
+    ld d, a
 .bodyLoop:
     ld a, [de]
     inc de
-    ld b, a                         ; dx
+    add b
+    ld [hl+], a                     ; Y
     ld a, [de]
     inc de
-    ld c, a                         ; dy
-    ld a, [wOy]
-    add c
-    add 16
-    ld [hl+], a                     ; Y
-    ld a, [wOx]
-    add b
-    add 8
     ld [hl+], a                     ; X
-    ld a, [wTile]
-    ld [hl+], a
-    add 2
-    ld [wTile], a
+    ld a, [de]
+    inc de
+    ld [hl+], a                     ; tile
     ld a, $08                       ; VRAM bank 1, palette 0
     ld [hl+], a
-    ld a, [wCnt]
-    dec a
-    ld [wCnt], a
+    dec c
     jr nz, .bodyLoop
 .noBody:
-    ld a, [wBodyN]
-    ld [wUsedNow], a
-    ld a, [wFlashFrame]
+    ld a, [wFlashWant]
     cp $FF
     jr z, .noFlash
     ld a, [wFlashN]
     and a
     jr z, .noFlash
-    ld [wCnt], a
-    ld b, a
-    ld a, [wUsedNow]
-    add b
-    ld [wUsedNow], a
-    ld a, [wBodyW]
-    ld b, a
-    ld a, [wFlashW]
+    ld [wApFlashN], a
     ld c, a
-    ld a, b
-    sub c
-    sra a
-    ld b, a
-    ld a, [wOx]
-    add b
-    ld [wFx], a
-    ld a, [wWpnCur]                 ; A8 FLASH_DY_GUN 20 above the body, chainsaw flash on it
+    ld a, [wUsedNow]
+    add c
+    ld [wUsedNow], a
+    ld a, [wWpnCur]                 ; A8 FLASH_DY_GUN 20 above the body, here 15 (flash lowered 5 px); chainsaw flash on it
     cp WPN_SAW
-    ld a, 20
+    ld a, 15
     jr nz, .fdy
     xor a
 .fdy:
+    cpl
+    inc a                           ; -fdy
+    add b
     ld b, a
-    ld a, [wOy]
-    sub b
-    ld [wFy], a
-    ld de, wFlashPlace
-    ld a, FLASH_TILE0
-    ld [wTile], a
+    ld a, [wFlashFrame]             ; no flash running: the entries sit parked until WpnTick shows them
+    cp $FF
+    jr nz, .shown
+    ld a, 1
+    ld [wApHid], a
+    ld a, b
+    add FLASH_PARK
+    ld b, a
+.shown:
+    ld a, [wFlashPtr]
+    ld e, a
+    ld a, [wFlashPtr + 1]
+    ld d, a
 .flashLoop:
     ld a, [de]
     inc de
-    ld b, a
+    add b
+    ld [hl+], a
     ld a, [de]
     inc de
-    ld c, a
-    ld a, [wFy]
-    add c
-    add 16
     ld [hl+], a
-    ld a, [wFx]
-    add b
-    add 8
+    ld a, [de]
+    inc de
     ld [hl+], a
-    ld a, [wTile]
-    ld [hl+], a
-    add 2
-    ld [wTile], a
     ld a, $01                       ; bank 0, palette 1
     ld [hl+], a
-    ld a, [wCnt]
-    dec a
-    ld [wCnt], a
+    dec c
     jr nz, .flashLoop
 .noFlash:
+    ld a, 1
+    ld [wApOk], a
     ; hide entries that were used last time but not now
     ld a, [wOamUsed]
     ld b, a
@@ -716,4 +708,106 @@ WpnVBlank::
     inc hl
     dec b
     jr nz, .hide
+    ret
+
+; ---- VBlank interrupt: weapon motion at VBlank rate -------------------------------------------
+; The game frame is several VBlanks long, so the recoil steps (16 / 35 / 35 ms) and the muzzle flash (7
+; VBlanks) would be sampled once per frame and mostly skipped. VBlankISR calls this on every VBlank
+; except the one the main loop is waiting on (WpnVBlank does the full job there): it re-evaluates the pose
+; for "now" and patches only the OAM y of the entries WpnVBlank wrote (body shifted by the base change,
+; flash entries shifted with it and parked off screen once the flash time is up). Tiles and frame swaps
+; (pump, punch, chaingun A/B) still change at the next frame flip. Chainsaw shake stays per game frame.
+WpnTick::
+    ld a, [wApOk]
+    and a
+    ret z
+    ld a, [wInPose]
+    and a
+    ret nz
+    ld a, [wHP]
+    and a
+    ret z
+    ld a, [wWpnCur]
+    cp WPN_SAW
+    ret z
+    ldh a, [hFrame]
+    ld b, a
+    ldh a, [hLastFrame]
+    ld c, a
+    ld a, b
+    sub c
+    ld [wVbSince], a
+    call WpnPose
+    ; body: shift by the change of the base y (only while the loaded frame is the one in OAM)
+    ld a, [wBodyFrame]
+    ld b, a
+    ld a, [wLoadedBody]
+    cp b
+    jr nz, .vis
+    ld a, [wBodyH]
+    ld b, a
+    ld a, VIEW_H + 16
+    sub b
+    ld hl, wWpnDy
+    add [hl]
+    ld b, a                         ; new base
+    ld a, [wApB]
+    ld c, a
+    ld a, b
+    sub c
+    jr z, .vis
+    ld d, a                         ; delta
+    ld a, b
+    ld [wApB], a
+    ld a, [wApBodyN]
+    ld c, a
+    ld a, [wApFlashN]
+    add c
+    jr z, .vis
+    ld c, a
+    ld hl, OAM_BASE
+.shift:
+    ld a, [hl]
+    add d
+    ld [hl+], a
+    inc hl
+    inc hl
+    inc hl
+    dec c
+    jr nz, .shift
+.vis:
+    ld a, [wApFlashN]
+    and a
+    ret z
+    ld c, a
+    ld a, [wApHid]
+    ld b, a                         ; 1: parked now
+    ld a, [wFlashFrame]
+    cp $FF
+    ld a, 0
+    jr nz, .want                    ; flash on: want parked = 0
+    inc a                           ; flash off: want parked = 1
+.want:
+    cp b
+    ret z
+    ld [wApHid], a
+    and a
+    ld d, FLASH_PARK
+    jr nz, .park
+    ld d, -FLASH_PARK
+.park:
+    ld a, [wApBodyN]
+    add a
+    add a
+    ld l, a
+    ld h, HIGH(OAM_BASE)
+.parkLoop:
+    ld a, [hl]
+    add d
+    ld [hl+], a
+    inc hl
+    inc hl
+    inc hl
+    dec c
+    jr nz, .parkLoop
     ret

@@ -89,6 +89,8 @@ python tools\gbc_genobj.py gbc\build
 if errorlevel 1 exit /b 1
 python tools\gbc_genwpn.py gbc\build
 if errorlevel 1 exit /b 1
+python tools\gbc_genwpntab.py gbc\build
+if errorlevel 1 exit /b 1
 python tools\gbc_game.py gbc\build
 if errorlevel 1 exit /b 1
 

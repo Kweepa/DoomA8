@@ -13,6 +13,8 @@ OUT = ROOT / "index.html"
 JS_ORDER = [
     "js/roomGeom.js",
     "js/gbSpriteModel.js",
+    "js/gbWeaponModel.js",
+    "js/fontModel.js",
     "js/model.js",
   "js/math3d.js",
   "js/gizmo.js",
@@ -25,6 +27,8 @@ JS_ORDER = [
     "js/animView.js",
     "js/itemView.js",
     "js/gbSpriteView.js",
+    "js/gbWeaponView.js",
+    "js/fontView.js",
     "js/buildView.js",
     "js/doompic.js",
     "js/stickOrtho.js",
@@ -81,6 +85,8 @@ def main() -> None:
       <button type="button" id="btn-mode-anim">Enemies</button>
       <button type="button" id="btn-mode-items">Items</button>
       <button type="button" id="btn-mode-gbsprites" title="Game Boy weapon, flash, blood and spark sprites">GB Sprites</button>
+      <button type="button" id="btn-mode-gbweapons" title="Game Boy weapon period and recoil / pump / punch timing, with a firing preview">Weapons</button>
+      <button type="button" id="btn-mode-font" title="8x8 UI font (A8 and Game Boy HUD), saved to editor/font.json">Font</button>
       <button type="button" id="btn-mode-build">Build</button>
     </div>
     <div class="toolbar-actions" id="draw-mode-group" role="group" aria-label="Draw mode">
@@ -131,6 +137,8 @@ def main() -> None:
         </div>
       </section>
       <section id="gbspr-left" hidden></section>
+      <section id="font-left" hidden></section>
+      <section id="gbw-left" hidden></section>
       <section id="items-left" hidden>
         <table id="item-budget" class="item-budget">
           <tbody>
@@ -172,6 +180,8 @@ def main() -> None:
       <p class="hint" id="hint"></p>
       <div id="build-panel" class="build-panel" hidden></div>
       <div id="gbspr-panel" class="sprites-panel" hidden></div>
+      <div id="font-panel" class="font-panel" hidden></div>
+      <div id="gbw-panel" class="sprites-panel gbw-panel" hidden></div>
     </section>
 
     <aside class="right">

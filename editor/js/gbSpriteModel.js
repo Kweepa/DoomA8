@@ -26,6 +26,7 @@ export const GBS_DEFS = [
   { id: "fist_righthand_lines", name: "Fist (idle)", group: "Weapon", w: 56, h: 21, cellLimit: 16 },
   { id: "fist_lefthand_lines", name: "Fist (punch)", group: "Weapon", w: 64, h: 32, cellLimit: 16 },
   { id: "muzzle_flash", name: "Muzzle flash", group: "Flash", w: 24, h: 21, cellLimit: 7 },
+  { id: "muzzle_flash_b", name: "Muzzle flash B", group: "Flash", w: 24, h: 21, cellLimit: 7 },
   { id: "splat_0", name: "Splat 0 (near)", group: "Splat", w: 24, h: 21, cellLimit: null },
   { id: "splat_1", name: "Splat 1", group: "Splat", w: 24, h: 21, cellLimit: null },
   { id: "splat_2", name: "Splat 2 (far)", group: "Splat", w: 24, h: 21, cellLimit: null },

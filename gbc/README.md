@@ -57,7 +57,7 @@ CGB-only MBC5+RAM+battery, RGBDS 1.0.4.
   column on the left (bullets, shells, rockets), health and armour on row 16, the frame time ("ms" + ms per game
   frame) under the armour, and a key card column on the right (blue, yellow, red). Three digits with leading zeros,
   no labels, no title / map name.
-  Glyphs are the A8 UI charset (ui/doomfont.png via `tools/gbc_hudfont.py`) at $9000, tile id = ASCII - 32; the A8
+  Glyphs are the A8 UI charset (editor/font.json (Font tab) via `tools/gbc_hudfont.py`) at $9000, tile id = ASCII - 32; the A8
   icons are `{ | }` (ammo) and `[ \ ]` (red / yellow / blue key); `^` health and `~` armour are GBC glyphs, drawn as
   placeholders (cross, shield) while their cells in the sheet are empty. The LY 111 STAT interrupt switches the HUD
   rows to $8800 tile addressing (and sprites off); VBlank switches back.

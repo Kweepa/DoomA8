@@ -1,4 +1,6 @@
 import { normalizeGbSprites } from "./gbSpriteModel.js";
+import { normalizeGbWeapons } from "./gbWeaponModel.js";
+import { fontBlank, normalizeFont } from "./fontModel.js";
 import {
   ROOM_SHAPES,
   clampRoomShape,
@@ -3668,6 +3670,8 @@ function starterObjects() {
 export function defaultEditorState() {
   return {
     mode: "layout",
+    fontSlots: [null, null, null, null],
+    fontActive: 0,
     localDraw: false,
     neighbourDraw: false,
     roomsOnlyDraw: false,
@@ -3764,10 +3768,19 @@ export function parseEditorState(raw) {
     raw.mode === "layout" ||
     raw.mode === "items" ||
     raw.mode === "gbsprites" ||
+    raw.mode === "gbweapons" ||
+    raw.mode === "font" ||
     raw.mode === "build"
   ) {
     d.mode = raw.mode;
   }
+  if (Array.isArray(raw.fontSlots)) {
+    d.fontSlots = d.fontSlots.map((_, i) => {
+      const c = raw.fontSlots[i];
+      return Number.isInteger(c) && c >= 32 && c <= 127 ? c : null;
+    });
+  }
+  d.fontActive = Math.max(0, Math.min(3, num(raw.fontActive, 0) | 0));
   d.localDraw = !!raw.localDraw;
   d.neighbourDraw = !!raw.neighbourDraw;
   d.roomsOnlyDraw = !!raw.roomsOnlyDraw;
@@ -3844,6 +3857,7 @@ export function gameDocument(doc) {
     weapons: doc.weapons,
     items: doc.items,
     gbSprites: doc.gbSprites,
+    gbWeapons: doc.gbWeapons,
   };
 }
 
@@ -3859,6 +3873,8 @@ export function createDefaultDocument() {
     weapons: defaultWeapons(),
     items: defaultItemMeshes(),
     gbSprites: normalizeGbSprites(null),
+    gbWeapons: normalizeGbWeapons(null),
+    font: fontBlank(),
   };
 }
 
@@ -3973,6 +3989,8 @@ export function normalizeDocument(raw) {
   doc.version = DOC_VERSION;
   doc.weapons = parseWeapons(raw.weapons);
   doc.gbSprites = normalizeGbSprites(raw.gbSprites);
+  doc.gbWeapons = normalizeGbWeapons(raw.gbWeapons);
+  doc.font = normalizeFont(raw.font);
   doc.items = parseItemMeshes(migrateItemMeshes(raw.items, fromVersion));
   doc.editor = parseEditorState(raw.editor);
   doc.enemies = (doc.enemies || []).filter((e) => DOOM_SPRITE_PREFIX[e.name]);

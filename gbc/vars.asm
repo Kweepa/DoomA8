@@ -365,8 +365,16 @@ wFlashW::     ds 1
 wFlashH::     ds 1
 wWpnW::       ds 1
 wWpnH::       ds 1
-wBodyPlace::  ds 32
-wFlashPlace:: ds 16
+wBodyPtr::    ds 2                  ; placement list (ROM, bank WpnBank) of the loaded body frame
+wFlashPtr::   ds 2
+wVbSince::    ds 1                  ; VBlanks since the game frame's dt was taken (0 inside WpnUpdate)
+wInPose::     ds 1                  ; WpnUpdate is inside WpnPose: the VBlank tick must not run
+wApOk::       ds 1                  ; OAM holds the weapon as WpnVBlank wrote it (the tick may patch it)
+wApB::        ds 1                  ; body base OAM y of that write
+wApBodyN::    ds 1                  ; body entries written (OAM 0..)
+wApFlashN::   ds 1                  ; flash entries written right after them (0: none)
+wFlashWant::  ds 1                  ; flash frame kept loaded: the active one, else the weapon's first ($FF: none)
+wApHid::      ds 1                  ; 1: the flash entries are parked off screen by WpnTick
 wBobX::       ds 1
 wBobY::       ds 1
 wKick::       ds 1

@@ -4397,7 +4397,83 @@ SplatMiss:
     call WallHit
     ret nc
     ld a, COL_SPLAT_MISS
-    jr SplatSet
+    call SplatSet
+    ; fall through: WallHit's point is whole cells (eye and hit both floored), which lands it up to ~1.4
+    ; cells off the view ray, a constant screen-x offset per angle / distance. Slide it back onto the axis.
+
+; Shift wSplatOrg sideways (along the view's X axis) so its view-space X is 0 (the aim ray: screen centre).
+SplatCenter:
+    ld a, [wCamX]                    ; dx = org - cam (8.8, org fraction 0)
+    ld b, a
+    xor a
+    sub b
+    ld [wDx], a
+    ld a, [wCamX + 1]
+    ld b, a
+    ld a, [wSplatOrg + 1]
+    sbc b
+    ld [wDx + 1], a
+    ld a, [wCamZ]
+    ld b, a
+    xor a
+    sub b
+    ld [wDz], a
+    ld a, [wCamZ + 1]
+    ld b, a
+    ld a, [wSplatOrg + 5]
+    sbc b
+    ld [wDz + 1], a
+    ld a, [wDx]                      ; X = dx * cos - dz * sin
+    ld e, a
+    ld a, [wDx + 1]
+    ld d, a
+    ld a, [wCos]
+    ld c, a
+    call SMul16
+    ld a, e
+    ld [wTa], a
+    ld a, d
+    ld [wTa + 1], a
+    ld a, [wDz]
+    ld e, a
+    ld a, [wDz + 1]
+    ld d, a
+    ld a, [wSin]
+    ld c, a
+    call SMul16
+    ld a, [wTa]
+    sub e
+    ld [wTa], a
+    ld a, [wTa + 1]
+    sbc d
+    ld [wTa + 1], a                  ; X
+    ld a, [wTa]                      ; org.x -= X * cos
+    ld e, a
+    ld a, [wTa + 1]
+    ld d, a
+    ld a, [wCos]
+    ld c, a
+    call SMul16
+    ld a, [wSplatOrg]
+    sub e
+    ld [wSplatOrg], a
+    ld a, [wSplatOrg + 1]
+    sbc d
+    ld [wSplatOrg + 1], a
+    ld a, [wTa]                      ; org.z += X * sin
+    ld e, a
+    ld a, [wTa + 1]
+    ld d, a
+    ld a, [wSin]
+    ld c, a
+    call SMul16
+    ld a, [wSplatOrg + 4]
+    add e
+    ld [wSplatOrg + 4], a
+    ld a, [wSplatOrg + 5]
+    adc d
+    ld [wSplatOrg + 5], a
+    ret
 
 ; A8 line_fit_b + line_solids_hit with pitch 0: from the eye along the view to the room boundary, the nearest
 ; solid (cutout, crate, platform, car, slope, the room shell) -> wTgt (cells). Carry = found.

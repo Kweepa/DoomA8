@@ -502,3 +502,26 @@ export function downloadJSON(doc, filename = DEFAULT_DOC_PATH) {
   a.click();
   URL.revokeObjectURL(url);
 }
+
+const FONT_FILE = "font.json";
+
+/** Raw text of editor/font.json, or null when absent. */
+export async function readFontFile() {
+  if (!projectDirHandle) return null;
+  try {
+    const editor = await projectDirHandle.getDirectoryHandle("editor");
+    const fh = await editor.getFileHandle(FONT_FILE);
+    return await (await fh.getFile()).text();
+  } catch {
+    return null;
+  }
+}
+
+export async function writeFontFile(text) {
+  if (!projectDirHandle) return;
+  const editor = await projectDirHandle.getDirectoryHandle("editor");
+  const fh = await editor.getFileHandle(FONT_FILE, { create: true });
+  const w = await fh.createWritable();
+  await w.write(text);
+  await w.close();
+}

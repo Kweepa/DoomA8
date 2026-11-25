@@ -24,6 +24,24 @@ ClearFB::
     ld sp, hl
     ret
 
+; ClearFB for the running game: interrupts stay enabled. The stack fill in ClearFB keeps them off for
+; ~3.8 ms; a VBlank landing in that window ran its interrupt (LCDC restore, weapon OAM tick) up to 3.8 ms
+; late, i.e. into the next frame's top lines (HUD-mode tiles = font glyphs at the top of the viewport,
+; dropped OAM writes), and the STAT interrupt at LY 111 (sprites off below the viewport) late too (weapon
+; drawn into the message line). `ld [hl+], a` clears at the same 2 cycles per byte as push de, so nothing
+; is lost by keeping interrupts on.
+ClearFBLive::
+    ld hl, FB
+    xor a
+    ld b, FB_SIZE / 16              ; 224 iterations x 16 B
+.loop:
+    REPT 16
+    ld [hl+], a
+    ENDR
+    dec b
+    jr nz, .loop
+    ret
+
 ; Whole 4 KB framebuffer -> VRAM bank 0 $8000 in two 2 KB general DMAs (bench only).
 CopyFBToVRAM::
     xor a

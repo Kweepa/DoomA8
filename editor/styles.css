@@ -1528,3 +1528,347 @@ button:disabled {
 .spr-item-dim.error {
   color: #e66;
 }
+
+/* ---- Font tab ---- */
+.font-overview {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+  margin-bottom: 0.5rem;
+}
+
+.font-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 1px;
+  background: #0a0a0c;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  min-width: 0;
+}
+
+.font-cell canvas {
+  width: 24px;
+  height: 24px;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+.font-cell-label {
+  font-size: 0.6rem;
+  line-height: 1;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.font-cell.empty canvas {
+  opacity: 0.35;
+}
+
+.font-cell:hover {
+  border-color: var(--btn-hover);
+  background: #14161c;
+}
+
+.font-cell.in-slot {
+  border-color: var(--muted);
+}
+
+.font-cell.active {
+  border-color: var(--accent);
+}
+
+.font-cell.active .font-cell-label {
+  color: var(--accent);
+}
+
+.font-left-hint {
+  margin: 0;
+}
+
+.font-panel {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-top: 0.5rem;
+}
+
+.font-panel[hidden],
+#font-left[hidden] {
+  display: none !important;
+}
+
+.font-slots {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  flex: 0 0 auto;
+}
+
+.font-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+  padding: 0.4rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
+
+.font-slot.active {
+  border-color: var(--accent);
+}
+
+.font-slot.drop {
+  border-color: var(--accent);
+  background: #262114;
+}
+
+.font-slot-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem;
+  min-height: 1.5rem;
+}
+
+.font-slot-title {
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.font-slot.empty .font-slot-title {
+  color: var(--muted);
+}
+
+.font-slot-x {
+  padding: 0 0.4rem;
+  line-height: 1.2;
+}
+
+.font-slot.empty .font-slot-x {
+  visibility: hidden;
+}
+
+.font-grid {
+  width: 100%;
+  aspect-ratio: 1;
+  display: block;
+  cursor: crosshair;
+  touch-action: none;
+  image-rendering: pixelated;
+  border: 1px solid var(--border);
+}
+
+.font-slot-hex {
+  margin: 0;
+  min-height: 1em;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.font-preview {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
+
+.font-preview-bar {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.font-preview-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 3.2rem;
+  padding: 0.3rem 0.5rem;
+  background: #0a0a0c;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  resize: vertical;
+}
+
+.font-preview-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.font-preview-cap {
+  margin: 0;
+  font-size: 0.7rem;
+}
+
+.font-preview-canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+  background: #0a0a0c;
+}
+
+.font-preview-canvas[hidden] {
+  display: none;
+}
+
+/* Default .field label column is 5.5rem; "Touch col 0 / col 7" overflowed into the value. */
+.field.font-stat > span:first-child {
+  flex: 0 0 9.5rem;
+  min-width: 9.5rem;
+}
+
+.font-inspector-hex {
+  font-variant-numeric: tabular-nums;
+}
+
+.font-invert {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.font-drag-ghost {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 1000;
+  pointer-events: none;
+  border: 1px solid var(--accent);
+  background: #0a0a0c;
+  opacity: 0.9;
+}
+
+.font-drag-ghost canvas {
+  display: block;
+  width: 48px;
+  height: 48px;
+  image-rendering: pixelated;
+}
+
+/* ---- GB Weapons tab ---- */
+#gbw-left[hidden] {
+  display: none !important;
+}
+
+.gbw-item {
+  grid-template-columns: 0 1fr auto;
+}
+
+.gbw-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 760px;
+}
+
+.gbw-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 1.2rem;
+}
+
+.gbw-field {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.gbw-field input,
+.gbw-steps input {
+  width: 4.5rem;
+}
+
+.gbw-ms {
+  font-size: 0.75rem;
+}
+
+.gbw-steps {
+  border-collapse: collapse;
+}
+
+.gbw-steps th {
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 2px 8px 2px 0;
+}
+
+.gbw-steps td {
+  padding: 2px 8px 2px 0;
+  white-space: nowrap;
+}
+
+.gbw-note {
+  margin: 0;
+  font-size: 0.75rem;
+}
+
+.gbw-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.gbw-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.gbw-scrub {
+  width: 220px;
+}
+
+.gbw-readout {
+  min-width: 14rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.gbw-stage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.gbw-view {
+  image-rendering: pixelated;
+  background: #000;
+  border: 1px solid var(--border);
+}
+
+.gbw-timeline {
+  max-width: 100%;
+  background: #0b0d14;
+  border: 1px solid var(--border);
+  cursor: crosshair;
+}

@@ -565,22 +565,29 @@ def scenario_chase(li, etype=0, closes=True):
     return ok
 
 
+def pose_table(wid):
+    """(overhang, [(until, dy, frame)]) of a weapon's pose table in editor/doom64.json (frame 0 idle, 1 alt)."""
+    import json
+    name = {1: "shotgun", 3: "rocket", 4: "pistol"}[wid]
+    for w in json.load(open(os.path.join(ROOT, "editor", "doom64.json"), encoding="utf-8"))["gbWeapons"]:
+        if w["id"] == name:
+            out, t = [], 0
+            for st in w["steps"]:
+                t += st["duration"]
+                out.append((t, st["dy"], 1 if st["frame"] == "alt" else 0))
+            return w["overhang"], out
+    raise KeyError(name)
+
+
 def kick_expect(wid, e):
-    """Weapon dy (px, down positive) e VBlanks after a shot: A8 recoil (native art) plus rest overhang."""
-    def look(tab):
-        for lim, dy in tab:
-            if e < lim:
-                return dy
-        return 0
-    if wid == 1:
-        if 19 <= e < 34:
-            return 5 if 21 <= e < 24 else 0
-        return look([(1, -10), (3, 14), (5, 6)]) + 10
-    if wid == 3:
-        return look([(1, 24), (3, 16), (5, 8)])
-    if wid == 4:
-        return look([(18, -4), (28, -6)]) + 6
-    return None
+    """Weapon dy (px, down positive) e VBlanks after a shot, from the weapon's pose table in editor/doom64.json."""
+    if wid not in (1, 3, 4):
+        return None
+    over, steps = pose_table(wid)
+    for until, dy, fr in steps:
+        if e < until:
+            return dy if fr else dy + over
+    return over
 
 
 def scenario_recoil(wid):

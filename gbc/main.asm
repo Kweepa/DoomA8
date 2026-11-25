@@ -180,7 +180,7 @@ ENDC
 
 ; ---- demo: spinning room, double buffered ---------------------------------
 Demo:
-    call ClearFB
+    call ClearFBLive                ; interrupts stay on (VBlank / STAT must not run late)
     ei
     call RenderScene
 IF !DEF(NOOBJ)
@@ -371,11 +371,22 @@ VBlankISR:
     ldh a, [rLCDC]
     or LCDCF_OBJON | LCDCF_BG8000           ; viewport: sprites on, $8000 tiles
     ldh [rLCDC], a
-    ld a, 1
-    ldh [hVBlank], a
     ldh a, [hFrame]
     inc a
     ldh [hFrame], a
+    ldh a, [hVBlank]
+    and a
+    jr z, .flip                             ; the main loop waits on this VBlank and runs WpnVBlank itself
+    push bc
+    push de
+    push hl
+    call WpnTick                            ; weapon recoil / flash at VBlank rate (gbc/wpn.asm)
+    pop hl
+    pop de
+    pop bc
+.flip:
+    ld a, 1
+    ldh [hVBlank], a
     pop af
     reti
 
