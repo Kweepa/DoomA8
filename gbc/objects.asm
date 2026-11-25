@@ -464,6 +464,8 @@ DrawWorldObjects::
     ld c, a
     pop af
     call EntSetEnemyMesh            ; C = type, A = frame
+    xor a
+    ld [wEntDrawn], a
     call DrawEntity
     call MuzzleCheck
 .nextE:
@@ -951,6 +953,9 @@ EN_META_ROWS EnMetaE
 ; (tip - EMUZ_OX / OY) snaps to the nearest byte column and the 24x21 box stays in the viewport
 ; (A8 stamp_anchor).
 MuzzleCheck:
+    ld a, [wEntDrawn]
+    and a
+    ret z                           ; culled (behind / outside the view): wVerts is stale, no muzzle
     ld a, [wObjI]
     ld e, a
     ld d, 0
@@ -1011,6 +1016,36 @@ MuzzleCheck:
     ld a, [hl]
     and a
     ret z                           ; behind the camera
+    ld a, c                         ; tip must be inside the viewport (no muzzle off either edge)
+    add a
+    add 96
+    ld l, a
+    ld a, [hl+]
+    ld e, a
+    ld d, [hl]                      ; DE = tip sx
+    bit 7, d
+    ret nz
+    ld a, d
+    and a
+    ret nz
+    ld a, e
+    cp VIEW_COLS * 8
+    ret nc
+    ld a, c
+    add a
+    add 128
+    ld l, a
+    ld a, [hl+]
+    ld e, a
+    ld d, [hl]                      ; DE = tip sy
+    bit 7, d
+    ret nz
+    ld a, d
+    and a
+    ret nz
+    ld a, e
+    cp VIEW_ROWS * 8
+    ret nc
     ld a, c
     add a
     add 65
@@ -1026,14 +1061,39 @@ MuzzleCheck:
 .lod:
     ld a, b
     ld [wEmuzLod], a
+    add a
+    ld e, a
+    ld d, 0
+    push bc                         ; C = weapon vertex
+    ld hl, EmuzPtr
+    add hl, de
+    ld a, [hl+]
+    ld h, [hl]
+    ld l, a                         ; header: width bytes, height, origin x, y (tip - origin = top left)
+    ld a, [hl+]
+    ld [wEmuzWB], a
+    ld a, [hl+]
+    ld [wEmuzH], a
+    ld a, [hl+]
+    ld [wEmuzOX], a
+    ld a, [hl]
+    ld [wEmuzOY], a
+    pop bc
     ld a, c
     add a
     add 96
     ld l, a
+    ld h, HIGH(wVerts)
     ld a, [hl+]
     ld e, a
     ld d, [hl]                      ; DE = tip sx
-    ld hl, 4 - EMUZ_OX
+    ld a, [wEmuzOX]
+    cpl
+    add 5                           ; 4 - ox: rounds to the nearest byte column
+    ld l, a
+    add a
+    sbc a
+    ld h, a
     add hl, de
     sra h
     rr l
@@ -1041,17 +1101,21 @@ MuzzleCheck:
     rr l
     sra h
     rr l                            ; nearest byte column of the uncropped left
+    ld a, [wEmuzWB]
+    cpl
+    add VIEW_COLS + 1
+    ld b, a                         ; widest column that keeps the box in the viewport
     bit 7, h
     ld a, 0
     jr nz, .col
     ld a, h
     and a
-    ld a, VIEW_COLS - 3
+    ld a, b
     jr nz, .col
     ld a, l
-    cp VIEW_COLS - 3
+    cp b
     jr c, .col
-    ld a, VIEW_COLS - 3
+    ld a, b
 .col:
     ld [wEmuzCol], a
     ld a, c
@@ -1062,19 +1126,29 @@ MuzzleCheck:
     ld a, [hl+]
     ld e, a
     ld d, [hl]                      ; DE = tip sy
-    ld hl, -EMUZ_OY
+    ld a, [wEmuzOY]
+    cpl
+    inc a                           ; -oy
+    ld l, a
+    add a
+    sbc a
+    ld h, a
     add hl, de
+    ld a, [wEmuzH]
+    cpl
+    add VIEW_ROWS * 8 + 1
+    ld b, a                         ; lowest row that keeps the box in the viewport
     bit 7, h
     ld a, 0
     jr nz, .row
     ld a, h
     and a
-    ld a, VIEW_ROWS * 8 - 21
+    ld a, b
     jr nz, .row
     ld a, l
-    cp VIEW_ROWS * 8 - 21
+    cp b
     jr c, .row
-    ld a, VIEW_ROWS * 8 - 21
+    ld a, b
 .row:
     ld [wEmuzY], a
     ld a, [wEmuzMs]                 ; A8 ws_snd: SOUND_RLAUNC_E as the muzzle starts (not while it runs)
@@ -1089,8 +1163,8 @@ IF DEF(SMOKE)
 ENDC
     ret
 
-; A8 stamp_emuz: while the muzzle timer runs, OR its 24x21 LOD image into bitplane 1 (red) at the
-; anchored byte column / row.
+; A8 stamp_emuz: while the muzzle timer runs, OR its LOD image into bitplane 1 (red) at the anchored byte
+; column / row. Only the image's own size is stamped (header wb, h).
 DrawMuzzle:
     ld a, [wEmuzMs]
     and a
@@ -1111,16 +1185,23 @@ DrawMuzzle:
     ld h, [hl]
     ld l, a
     ld b, h
-    ld c, l                         ; BC = image rows (3 bytes each)
+    ld c, l                         ; BC = image (header, then wb columns of h bytes)
     ; fall through
 
-; BC = 24x21 image (3 bytes per row), wStampCol (byte column), wStampY, wStampPlane (0 ink, 1 red): OR it into
-; the framebuffer.
+; BC = image: db wb, h, ox, oy then wb columns of h bytes (bit 7 = left; the generator's column-major layout),
+; wStampCol (byte column), wStampY, wStampPlane (0 ink, 1 red): OR it into the framebuffer.
 StampImage:
+    ld a, [bc]
+    inc bc
+    ld [wStampWB], a
+    ld a, [bc]
+    inc bc
+    ld [wStampH], a
+    inc bc
+    inc bc
     xor a
 .colk:
     ld [wEmuzK], a
-    push bc
     ld a, [wStampCol]               ; HL = FB + plane + (col + k) * FB_STRIDE + y * 2
     ld e, a
     ld a, [wEmuzK]
@@ -1147,27 +1228,22 @@ StampImage:
     ld e, a
     ld d, 0
     add hl, de
-    ld a, [wEmuzK]
-    add c
-    ld c, a
-    ld a, b
-    adc 0
-    ld b, a                         ; BC = this column's byte of row 0
-    ld d, 21
+    ld a, [wStampH]
+    ld d, a
 .rows:
     ld a, [bc]
+    inc bc
     or [hl]
     ld [hl+], a
     inc hl
-    inc bc
-    inc bc
-    inc bc
     dec d
     jr nz, .rows
-    pop bc
     ld a, [wEmuzK]
     inc a
-    cp 3
+    ld e, a
+    ld a, [wStampWB]
+    cp e
+    ld a, e
     jr nz, .colk
     ret
 

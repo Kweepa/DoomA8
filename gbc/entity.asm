@@ -205,6 +205,8 @@ DrawEntity::
     ld a, d
     sbc b
     ret c                           ; zt < |X0|
+    ld a, 1
+    ld [wEntDrawn], a               ; survived the cull: wVerts is this object's
 
     ; object-yaw rotation: psi = camYaw + objYaw
     ld a, [wYaw]

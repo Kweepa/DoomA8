@@ -63,21 +63,44 @@ def main():
         out.append(db(flat(e["edges"])))
         for f in e["frames"]:
             out.append(db(flat(f)))
-    # A8 enemy muzzle (assets/enemies/enemy_muzzle_0..2.png, tools/genenemymuzzle.py): per distance LOD
-    # 21 rows x 3 bytes (24 px, bit 7 = left), stamped in red at tip - (EMUZ_OX, EMUZ_OY).
+    # Enemy muzzle LODs come from the editor's GB Sprites tab (doom64.json gbSprites enemy_muzzle_0..2),
+    # stamped at their own size, centred on the weapon vertex. The splat is still the A8 PNG, 24x21.
+    # Layout per image: db width_bytes, height, origin_x, origin_y (px from the box's top left to the tip),
+    # then width_bytes columns of height bytes (bit 7 = left), as gbc/objects.asm StampImage reads it.
     from PIL import Image
-    for tag, label, path in (("Emuz", "EmuzPtr", "enemies/enemy_muzzle_%d.png"), ("Splat", "SplatPtr", "weapons/splat_%d.png")):
+    import json
+    with open(os.path.join(ge.ROOT, "editor", "doom64.json"), encoding="utf-8") as f:
+        gbs = {sp["id"]: sp for sp in json.load(f).get("gbSprites", [])}
+    for tag, label, path in (("Emuz", "EmuzPtr", "enemy_muzzle_%d"), ("Splat", "SplatPtr", "weapons/splat_%d.png")):
         out.append("%s:: dw " % label + ", ".join("%s%d" % (tag, i) for i in range(3)))
         for i in range(3):
-            im = Image.open(os.path.join(ge.ROOT, "assets", path % i)).convert("L")
-            if im.size != (24, 21):
-                raise SystemExit("%s is %dx%d, expected 24x21" % ((path % i,) + im.size))
-            rows = []
-            for y in range(21):
-                for b in range(3):
+            if tag == "Emuz":
+                sp = gbs.get(path % i)
+                if sp is None:
+                    raise SystemExit("gbc_genent: sprite %r missing from doom64.json (gbSprites)" % (path % i))
+                w, h = sp["w"], sp["h"]
+                if w > 128 or h > 112:
+                    raise SystemExit("gbc_genent: %s is %dx%d, larger than the viewport" % (path % i, w, h))
+                oxy = (w // 2, h // 2)
+
+                def ink(x, y, sp=sp):
+                    return sp["rows"][y][x] == "#"
+            else:
+                im = Image.open(os.path.join(ge.ROOT, "assets", path % i)).convert("L")
+                if im.size != (24, 21):
+                    raise SystemExit("%s is %dx%d, expected 24x21" % ((path % i,) + im.size))
+                w, h = 24, 21
+                oxy = (12, 10)
+
+                def ink(x, y, im=im):
+                    return im.getpixel((x, y)) > 128
+            wb = (w + 7) // 8
+            rows = [wb, h, oxy[0], oxy[1]]
+            for b in range(wb):
+                for y in range(h):
                     v = 0
                     for x in range(8):
-                        if im.getpixel((b * 8 + x, y)) > 128:
+                        if b * 8 + x < w and ink(b * 8 + x, y):
                             v |= 0x80 >> x
                     rows.append(v)
             out.append("%s%d:" % (tag, i))

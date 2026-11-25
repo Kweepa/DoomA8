@@ -157,8 +157,10 @@ CGB-only MBC5+RAM+battery, RGBDS 1.0.4.
     room colliders, solids, ceiling and floor; 10 / 30 + rnd(16) on a hit; RKT_LIFE_MS; drawn as the A8 red
     Bresenham circle (`DrawCircle`, entity bank; A8 `sph_bres`, world radius `RKT_R` = 0.375, min 1 px) in bitplane 1,
     player rockets too (same slots).
-  - Muzzle: on the fire frame (possessed, imp / baron throwing) the A8 enemy_muzzle image (3 distance LODs) is
-    stamped in red at the projected weapon vertex for EMUZ_MS, byte-snapped and kept inside the viewport.
+  - Muzzle: on the fire frame (possessed, imp / baron throwing) the enemy_muzzle image (3 distance LODs; editor GB Sprites tab,
+    `enemy_muzzle_0..2` in doom64.json, seeded from the A8 PNGs) is stamped in red at its own width x height
+    (header `db width_bytes, h, ox, oy`, column-major; origin = w/2, h/2) centred on the projected weapon vertex
+    for EMUZ_MS, byte-snapped. Not drawn when the enemy was culled or the weapon vertex is outside the viewport.
   - Steps need a floor within STEP_UP of the enemy's feet at the destination (collider floor, crate top, solid
     platform: `FloorBelow` / `EnemyMoveOk`), so enemies stop at ledges as on the A8.
 - Input is hold-time based like the A8's 50 Hz IRQ: a timer interrupt (~241 Hz, 4 per VBlank, `TimerISR` in main.asm)

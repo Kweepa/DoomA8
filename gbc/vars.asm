@@ -257,6 +257,7 @@ wEntLX::      ds 1
 wEntLY::      ds 1
 wEntLZ::      ds 1
 wEntCur::     ds 2
+wEntDrawn::   ds 1                  ; DrawEntity: 1 once the object passed its cull (wVerts valid), else caller-cleared 0
 
 ; World objects / enemies (objects.asm)
 SECTION "objvars", WRAMX, BANK[1]
@@ -345,10 +346,14 @@ wZcSg::       ds 3                   ; .z_aim: signed / absolute deltas
 wZcAd::       ds 3
 wEmuzMs::     ds 1                   ; A8 world-sprite timer for the enemy muzzle (ms left)
 wEmuzLod::    ds 1
-wEmuzCol::    ds 1                   ; byte column of the 24x21 box (0 .. VIEW_COLS - 3)
+wEmuzCol::    ds 1                   ; byte column of the image box (0 .. VIEW_COLS - wEmuzWB)
 wEmuzY::      ds 1
 wEmuzK::      ds 1
 wEmuzSeen::   ds 1                   ; smoke builds: muzzle starts
+wEmuzWB::     ds 1                   ; header of the LOD image being started: width bytes, height, origin x / y
+wEmuzH::      ds 1
+wEmuzOX::     ds 1
+wEmuzOY::     ds 1
 
 ; Player / weapons (wpn.asm)
 SECTION "wpnvars", WRAMX, BANK[1]
@@ -557,9 +562,11 @@ wSplatOrg::   ds 6                   ; origin 8.8 (xl, x, yl, y, zl, z), fractio
 wSplatJx::    ds 1                   ; signed screen jitter added after projection
 wSplatJy::    ds 1
 wSplatCol::   ds 1                   ; COL_SPLAT_HIT (red) / COL_SPLAT_MISS (ink)
-wStampCol::   ds 1                   ; StampImage: byte column of the 24x21 box, its row, the bitplane
+wStampCol::   ds 1                   ; StampImage: byte column of the image box, its row, the bitplane
 wStampY::     ds 1
 wStampPlane:: ds 1
+wStampWB::    ds 1                   ; StampImage: image width in bytes / height, read from its header
+wStampH::     ds 1
 wLnMode::     ds 1                   ; LineSolids: 0 first hit, 1 nearest
 wLnNear::     ds 1                   ; nearest hit t (Q7), $FF none
 wSgHit::      ds 1                   ; shotgun volley: last enemy hit / a pellet reached a barrel
