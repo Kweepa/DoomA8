@@ -13,12 +13,15 @@ Writes <outdir>/menu_gfx.inc and <outdir>/menu_logo_preview.png:
   Skull: ui/m_skull_c64.png (closed) / ui/m_skull2_c64.png (eyes), 20x19, as 8x16 OBJ: two layers of 3x2 sprites,
   each layer one OBJ palette (3 colours + transparent). 2 frames x 2 layers x 6 sprites x 2 tiles = 48 tiles at
   VRAM bank 1 tile 0.
-  Menus: the A8 menu tree minus Quit / Mouse, labels shortened to fit the skull + 16 columns.
+  Menus: the A8 menu tree minus Quit / Mouse; long labels wrap onto two lines to fit the skull + 17 columns.
   Pages: gbc/text/{controls,order,readthis,credits,ending}.txt, pages split on lines that are only '^'
-  (as tools/gen_menu_text.py). At most 20 columns x 9 lines per page; drawn on rows 9-17, centred.
+  (as tools/gen_menu_text.py). At most 20 columns x 9 lines per page (readthis, order, ending, credits: lines word-wrapped to 18 columns first;
+  credits also gets 'Built <d> <mon> <yyyy>.' appended to its last page); drawn on rows 9-17, centred (a 9-line page starts on row 8).
 """
 import os
 import sys
+import datetime
+import textwrap
 
 import numpy as np
 from PIL import Image
@@ -31,6 +34,7 @@ LOGO = os.path.join(ROOT, "ui", "hiresdoomlogo.png")
 SKULL = (os.path.join(ROOT, "ui", "m_skull_c64.png"), os.path.join(ROOT, "ui", "m_skull2_c64.png"))
 TEXT_DIR = os.path.join(ROOT, "gbc", "text")
 PAGES = ("controls", "order", "readthis", "credits", "ending")
+WRAP = {"readthis": 18, "order": 18, "ending": 18, "credits": 18}                  # pages whose lines are word-wrapped to this many columns when generated
 
 LOGO_W, LOGO_H = 128, 64
 LOGO_COL = 2                             # BG map column of the logo's left edge (centred on 20)
@@ -43,11 +47,13 @@ TEXT_YELLOW = (0xB8, 0xC7, 0x6F)         # VIC 7 (Pepto), A8 menu TEXT_COL
 TEXT_WHITE = (0xFF, 0xFF, 0xFF)          # VIC 1, A8 menu HILITE_COL
 RESTARTS = 24
 
-# A8 next_menu / menu_str tables (src/menu.asm) without Quit and Mouse. Shortened labels: the skull needs 3 columns.
+# A8 next_menu / menu_str tables (src/menu.asm) without Quit and Mouse. The skull needs 3 columns, so long labels wrap
+# onto two lines ('\n'); the second line is indented one character. A menu with a wrapped item spaces its items 3 rows
+# apart instead of 2.
 MENUS = [
     ("", ["New game", "Options", "Controls", "Read this!", "Credits"]),
-    ("Which episode?", ["Knee deep in dead", "Shores of hell", "Inferno"]),
-    ("Choose skill level", ["Too young to die", "Hurt me plenty", "Ultra-violence"]),
+    ("Which episode?", ["Knee-deep in\nthe dead", "The shores\nof hell", "Inferno"]),
+    ("Choose skill level", ["I'm too young\nto die", "Hurt me plenty", "Ultra-violence"]),
     ("Options", ["Volume 15"]),
 ]
 VOL_MENU, VOL_ITEM, VOL_DIGITS = 3, 0, 7  # "Volume " is 7 characters; two digits follow
@@ -267,7 +273,7 @@ def check_chars(s, glyphs, where):
             die("%s: %r has no glyph in editor/font.json" % (where, ch))
 
 
-def load_pages(name, glyphs):
+def load_pages(name, glyphs, wrap=None):
     path = os.path.join(TEXT_DIR, name + ".txt")
     if not os.path.exists(path):
         die("missing %s" % path)
@@ -290,6 +296,8 @@ def load_pages(name, glyphs):
         if not pg:
             continue
         where = "%s.txt page %d" % (name, n + 1)
+        if wrap:
+            pg = [w for ln in pg for w in (textwrap.wrap(ln, wrap, break_long_words=False) or [""])]
         if len(pg) > PAGE_ROWS:
             die("%s has %d lines (max %d)" % (where, len(pg), PAGE_ROWS))
         for ln in pg:
@@ -300,6 +308,14 @@ def load_pages(name, glyphs):
     if not out:
         die("%s.txt has no pages" % name)
     return out
+
+
+MONTHS = ("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec")
+
+
+def build_stamp():
+    d = datetime.date.today()
+    return "Built %d %s %d." % (d.day, MONTHS[d.month - 1], d.year)
 
 
 def asm_tiles(s):
@@ -377,20 +393,27 @@ def main():
         rows = glyphs.get(code, [0] * 8)
         o.append("    db " + ",".join("$%02X" % r for r in rows))
 
-    # menus: nitems, text column, skull x (OAM, +8), first item row; title (row, col, len, tiles); items (len, tiles)
+    # menus: nitems, text column, skull x (OAM, +8), first item row, row stride; title (row, col, len, tiles);
+    # items: two (len, tiles) lines each, the second (len 0 = none) already carrying its one-character indent
     o.append("MenuDefs:")
     for m in range(len(MENUS)):
         o.append("    dw MenuDef%d" % m)
     for m, (title, items) in enumerate(MENUS):
-        width = max(len(s) for s in items)
+        lines = [s.split("\n") for s in items]
+        if any(len(ln) > 2 for ln in lines):
+            die("menu %d: an item wraps onto more than two lines" % m)
+        lines = [[ln[0], (" " + ln[1]) if len(ln) > 1 else ""] for ln in lines]
+        width = max(len(s) for ln in lines for s in ln)
         if SKULL_COLS + width > SCREEN_COLS:
             die("menu %d: %d-column label leaves no room for the skull" % (m, width))
         left = (SCREEN_COLS - SKULL_COLS - width) // 2
         first = MENU_ROW0 + (2 if title else 0)
-        if first + 2 * (len(items) - 1) > 17:
+        wrapped = any(ln[1] for ln in lines)
+        stride = 3 if wrapped else 2
+        if first + stride * (len(items) - 1) + (1 if lines[-1][1] else 0) > 17:
             die("menu %d does not fit below the logo" % m)
         o.append("MenuDef%d:" % m)
-        o.append("    db %d, %d, %d, %d" % (len(items), left + SKULL_COLS, left * 8 + 8, first))
+        o.append("    db %d, %d, %d, %d, %d" % (len(items), left + SKULL_COLS, left * 8 + 8, first, stride))
         if title:
             check_chars(title, glyphs, "menu title")
             if len(title) > SCREEN_COLS:
@@ -399,14 +422,24 @@ def main():
                                                      asm_tiles(title), title))
         else:
             o.append("    db 0")
-        for s in items:
-            check_chars(s, glyphs, "menu item")
-            o.append("    db %d, %s   ; %s" % (len(s), asm_tiles(s), s))
+        for ln in lines:
+            for s in ln:
+                check_chars(s, glyphs, "menu item")
+                if s:
+                    o.append("    db %d, %s   ; %s" % (len(s), asm_tiles(s), s))
+                else:
+                    o.append("    db 0")
 
     # pages: per text: db npages; dw page...; page: db nlines; per line: dw map offset, db len, tiles
     total = 0
     for name in PAGES:
-        pages = load_pages(name, glyphs)
+        pages = load_pages(name, glyphs, WRAP.get(name))
+        if name == "credits":                 # build date under the last page
+            stamp = build_stamp()
+            check_chars(stamp, glyphs, "build stamp")
+            if len(stamp) > SCREEN_COLS or len(pages[-1]) + 2 > PAGE_ROWS:
+                die("no room for %r at the end of credits.txt" % stamp)
+            pages[-1] = pages[-1] + ["", stamp]
         lab_ = "Text" + name.capitalize()
         o.append("%s::" % lab_)
         o.append("    db %d" % len(pages))
@@ -418,6 +451,8 @@ def main():
             w = max(len(ln) for ln in pg)
             col = (SCREEN_COLS - w) // 2
             row = PAGE_ROW0 + (PAGE_ROWS - len(pg)) // 2
+            if len(pg) == PAGE_ROWS:              # a full page moves up a row so it clears the screen bottom
+                row -= 1
             for i, ln in enumerate(pg):
                 off = (row + i) * 32 + col
                 if ln:

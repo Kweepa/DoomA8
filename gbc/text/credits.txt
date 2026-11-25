@@ -1,50 +1,30 @@
-Doom is a trademark
-of id software llc/
-zenimax media inc.
+Doom is a trademark of id software llc/ zenimax media inc.
 
-Unofficial game boy
-color fan port by
-steve mccrea, 2026.
+Unofficial game boy color fan port by steve mccrea.
 ^
-Not affiliated with
-or endorsed by id
-software or zenimax.
+Not affiliated with or endorsed by id software or zenimax.
 
-For non-commercial/
-fan use only.
+For non-commercial/ fan use only.
 ^
-Doom was created by
-john carmack, john
-romero, dave taylor,
+Doom created by
+john carmack,
+john romero,
+dave taylor,
 adrian carmack,
-kevin cloud, sandy
-peterson, jay wilbur
-and shawn green...
+kevin cloud,
+sandy peterson,
+jay wilbur, and
+shawn green...
 ^
-...with additional
-support from tom
-hall, bobby prince,
-paul radek, gregor
-punchatz, american
-mcgee and donna
-jackson.
+...with additional support from tom hall, bobby prince, paul radek, gregor punchatz, american mcgee and donna jackson.
 ^
-Design and technical
-direction by
+Design and tech direction by
 steve mccrea.
 
-Programming grunt
-work by claude.
+Programming grunt work by claude.
 ^
-Music by benjamin
-dibbert, butchered
-by an automatic sid
-to game boy
-translation.
+Music by benjamin dibbert, butchered by an automatic sid to game boy translation.
 ^
-Rgbds assembler by
-the rgbds team.
-bgb emulator by
-beware.
+Rgbds assembler by the rgbds team. Bgb emulator by beware.
 
 Thanks y'all!

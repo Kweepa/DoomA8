@@ -8,6 +8,8 @@ INCLUDE "wpn_ids.inc"
 
 INCLUDE "en.inc"
 
+DEF DEATH_HOLD_MS EQU 2000              ; on the floor after the death drop, before the level reloads
+
 SECTION "combat", ROM0
 
 ; ---- helpers -----------------------------------------------------------------------------
@@ -607,6 +609,16 @@ PlayerDamage::
     ld [wHP], a
     ld a, SND_PLPAIN                ; A8 take_damage: hurt grunt, or the death cry at 0 hp
     jr nz, .snd
+    ld a, [wFalling]                ; death cam (collide.asm DeathCam): wFalling = in motion; airborne keeps its speed
+    and a
+    jr nz, .cry
+    inc a
+    ld [wFalling], a
+    xor a
+    ld [wFallVL], a
+    ld [wFallVH], a
+    ld [wFallAcc], a
+.cry:
     ld a, SND_PLDETH
 .snd:
     jp PlaySound
@@ -629,6 +641,15 @@ ElevPre::
     ld a, BANK(ElevPreB)
     ld [rROMB0], a
     call ElevPreB
+    ld a, [wLevelBank]
+    ld [rROMB0], a
+    ret
+
+; Dead: the eye drop (gbc/ai.asm DeathCamB), from UpdateMove.
+DeathCamStep::
+    ld a, BANK(DeathCamB)
+    ld [rROMB0], a
+    call DeathCamB
     ld a, [wLevelBank]
     ld [rROMB0], a
     ret
@@ -734,7 +755,10 @@ CombatUpdate::
     ld a, BANK(AiTick)
     ld [rROMB0], a
     jp AiTick
-.dead:                              ; A8 death_restart: the game is frozen; scream + PL_DEATH_WAIT_MS
+.dead:                              ; the world is frozen; the eye drops (DeathCam), then DEATH_HOLD_MS on the floor
+    ld a, [wFalling]
+    and a
+    ret nz                          ; still dropping / bouncing
     ld a, [wDtMs]
     ld b, a
     ld a, [wDeadMs]
@@ -743,11 +767,11 @@ CombatUpdate::
     ld a, [wDeadMs + 1]
     adc 0
     ld [wDeadMs + 1], a
-    cp HIGH(PL_DEATH_WAIT_MS)
+    cp HIGH(DEATH_HOLD_MS)
     ret c
     jr nz, .go
     ld a, [wDeadMs]
-    cp LOW(PL_DEATH_WAIT_MS)
+    cp LOW(DEATH_HOLD_MS)
     ret c
 .go:
     xor a

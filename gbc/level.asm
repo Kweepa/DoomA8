@@ -871,11 +871,11 @@ ElevActivate:
     ld hl, wElevY
     add hl, bc
     ld a, [hl]
-    ld [wLvTag], a                   ; current height
+    ld e, a                          ; current height (not wLvTag: TrigEnter.elev holds the group id there)
     ld a, F_ELEV_HOME
     call MapGet
     ld d, a                          ; home
-    ld a, [wLvTag]
+    ld a, e
     cp d
     jr nz, .toHome
     ld a, F_ELEV_DEST                ; at home: go to the dest stop

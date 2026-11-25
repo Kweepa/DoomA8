@@ -41,7 +41,10 @@ wMenuSize:    ds 1
 wMenuTextCol: ds 1
 wMenuSkullX:  ds 1                   ; OAM x of the skull's left edge
 wMenuRow0:    ds 1                   ; tile row of item 0
-wMenuLens:    ds 8                   ; label length per item (attribute rows)
+wMenuStride:  ds 1                   ; tile rows between items (2, or 3 when an item wraps)
+wMenuLens:    ds 16                  ; label line lengths per item: line 1, line 2 (attribute rows)
+wMenuLen1:    ds 1                   ; scratch while drawing / re-attributing an item
+wMenuLen2:    ds 1
 wMenuStackD:  ds 1
 wMenuStkM:    ds 4
 wMenuStkI:    ds 4
@@ -184,11 +187,8 @@ MenuSkullOam:
     jr nz, .hide
     ret
 .on:
-    ld a, [wMenuItem]               ; y = (row0 + 2 item) * 8 - 6, OAM + 16
-    add a
-    ld b, a
-    ld a, [wMenuRow0]
-    add b
+    ld a, [wMenuItem]               ; y = (row0 + stride item) * 8 - 6, OAM + 16
+    call MenuItemRow
     add a
     add a
     add a
@@ -512,6 +512,8 @@ MenuDraw:
     ld [wMenuSkullX], a
     ld a, [hl+]
     ld [wMenuRow0], a
+    ld a, [hl+]
+    ld [wMenuStride], a
     ld a, [hl+]                     ; title row (0 = none)
     and a
     jr z, .items
@@ -537,17 +539,10 @@ MenuDraw:
 .items:
     ld c, 0
 .item:
-    ld b, [hl]                      ; label length, kept for the attribute rows
     push hl
     ld a, c
-    ADDA wMenuLens
-    ld [hl], b
-    ld a, c
-    add a
-    ld b, a
-    ld a, [wMenuRow0]
-    add b
-    call MenuRowAddr
+    call MenuItemRow
+    call MenuRowAddr                ; DE = line 1
     pop hl
     ld a, [wMenuItem]
     cp c
@@ -555,9 +550,33 @@ MenuDraw:
     jr nz, .put
     ld a, ATTR_HILITE
 .put:
-    push bc
-    call MenuPut
+    push bc                         ; C = item
+    push af                         ; attribute
+    push de
+    call MenuPut                    ; line 1; B = length
+    ld a, b
+    ld [wMenuLen1], a
+    pop de
+    ld a, e                         ; line 2: next map row
+    add 32
+    ld e, a
+    ld a, d
+    adc 0
+    ld d, a
+    pop af
+    call MenuPut                    ; line 2 (length 0 = none); B = length
+    ld a, b
+    ld [wMenuLen2], a
     pop bc
+    push hl
+    ld a, c
+    add a
+    ADDA wMenuLens
+    ld a, [wMenuLen1]
+    ld [hl+], a
+    ld a, [wMenuLen2]
+    ld [hl], a
+    pop hl
     inc c
     ld a, [wMenuSize]
     cp c
@@ -585,19 +604,28 @@ MenuSelAttr:
     ld a, [wMenuItem]
     ld c, ATTR_HILITE
 .row:
-    push bc
+    push bc                         ; C = attribute
     ld b, a
-    ADDA wMenuLens
-    ld a, [hl]
-    push af
-    ld a, b
     add a
-    ld b, a
-    ld a, [wMenuRow0]
-    add b
-    call MenuRowAddr
-    pop af
+    ADDA wMenuLens
+    ld a, [hl+]
+    ld [wMenuLen1], a
+    ld a, [hl]
+    ld [wMenuLen2], a
+    ld a, b
+    call MenuItemRow
+    call MenuRowAddr                ; DE = line 1
     pop bc
+    ld a, [wMenuLen1]
+    call .fill
+    ld a, e                         ; line 2: next map row
+    add 32
+    ld e, a
+    ld a, d
+    adc 0
+    ld d, a
+    ld a, [wMenuLen2]
+.fill:                              ; A = length (0 = none), DE = map address, C = attribute
     and a
     ret z
     ld b, a
@@ -612,6 +640,21 @@ MenuSelAttr:
     jr nz, .a
     xor a
     ldh [rVBK], a
+    ret
+
+; A = item -> A = wMenuRow0 + item * wMenuStride. Clobbers B, D.
+MenuItemRow:
+    ld b, a
+    ld a, [wMenuStride]
+    ld d, a
+    ld a, [wMenuRow0]
+    inc b
+    jr .t
+.l:
+    add d
+.t:
+    dec b
+    jr nz, .l
     ret
 
 ; Volume row digits (A8 write_vol2: ' ' or '1', then the units). VBlank or LCD off.

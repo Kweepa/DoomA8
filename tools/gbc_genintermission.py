@@ -8,7 +8,7 @@ Writes <outdir>/inter_gfx.inc and <outdir>/inter_preview.png.
     the overflow in bank 1 ids 0.. (map attribute bit 3 selects the bank).
   Font: the HUD glyphs (editor/font.json), 2bpp colour 1, bank 1 ids 128..223 (tile = ASCII + 96, ASCII 32 = blank).
   Sprites (8x16 OBJ, bank 1 ids 224..): splat 16x16 (2 sprites), the two arrows 8x8 (padded), "you are here" 24x16
-    (3 sprites). OBJ palettes 0 splat, 1 arrow, 2 text (3 colours + transparent each).
+    (3 sprites). OBJ palette 0 = splat / arrow / text (one shared red palette), 1..7 buildings (3 colours + transparent each).
   Nodes: Doom lnodes[0] (E1M1..E1M8) scaled from 320x200 to the 160x128 map (x 0.5, y 0.64, +16 for the caption rows),
     patch offsets from the lumps (WISPLAT 28x22 at 15,11; WIURH0 60x15 at -2,15 = text right of the node;
     WIURH1 62,15 = text left). Doom picks WIURH0 unless it runs off the right edge, else WIURH1.
@@ -54,11 +54,12 @@ BLD_GAIN = 0.5                           # ... and the sprite colour is at least
 BLD_WIN_W, BLD_WIN_H = 24, 16            # window per node: 3 sprites of 8x16
 # Hand-drawn building art: node -> (map x, map y, 8x16 columns). Greyest / worst quantised buildings.
 HAND = {0: (72, 99, 5), 4: (46, 52, 4), 5: (74, 27, 3), 6: (32, 22, 1)}
-BLD_OAM_MAX = 22                         # all building sprites together (OAM 40 - 4 arrow / text - 14 splats)
+BLD_OAM_MAX = 19                         # all building sprites together (10 per scanline worst case with splats, arrow, text)
 BROWN_DIST = 12.0                        # Lab distance from every terrain colour at which a pixel counts fully
 BROWN_W_MIN = 0.2                        # weight of a pixel that is a terrain colour
 BLD_WEIGHT = 1.0                         # map tiles around the nodes weigh this much in the BG palette fit
-OBJ_PAL_BLD0 = 3                         # OBJ palettes 3..7
+OBJ_PAL_BLD0 = 1                         # OBJ palettes 1..7 (0 = splat / arrow / text, one shared red palette)
+NPAL_BLD = 8 - OBJ_PAL_BLD0
 
 
 def die(msg):
@@ -224,29 +225,20 @@ def sprite_tiles(idx, x0, h=16):
 
 def load_hand(node):
     """ui/intermission/bld_<node>.png: hand-drawn replacement for the HAND window of that node (width cols * 8, 16 tall,
-    transparent where the map shows through, at most 3 opaque colours). Returns (rows of 0..3, palette) or None."""
+    transparent where the map shows through, at most 3 opaque colours per 8-px column: each column is one sprite with
+    its own palette). Returns a 16 x (cols * 8) grid of RGB555 tuples / None (transparent), or None without the file."""
     path = os.path.join(UI, "bld_%d.png" % node)
     if not os.path.exists(path):
         return None
     x0, y0, cols = HAND[node]
     im = load_rgba("bld_%d.png" % node, (cols * 8, 16))
-    colours = []
-    rows = []
-    for y in range(16):
-        row = []
-        for x in range(cols * 8):
-            p = im.getpixel((x, y))
-            if p[3] < 128:
-                row.append(0)
-                continue
-            c = gmenu.to555(p[:3])
-            if c not in colours:
-                colours.append(c)
-            row.append(1 + colours.index(c))
-        rows.append(row)
-    if len(colours) > 3:
-        die("bld_%d.png has %d opaque colours (RGB555), a sprite palette holds 3" % (node, len(colours)))
-    return np.array(rows), colours + [(0, 0, 0)] * (3 - len(colours))
+    grid = [[None if im.getpixel((x, y))[3] < 128 else gmenu.to555(im.getpixel((x, y))[:3])
+             for x in range(cols * 8)] for y in range(16)]
+    for k in range(cols):
+        cs = {grid[y][x] for y in range(16) for x in range(k * 8, k * 8 + 8)} - {None}
+        if len(cs) > 3:
+            die("bld_%d.png column %d has %d opaque colours (RGB555), a sprite palette holds 3" % (node, k, len(cs)))
+    return grid
 
 
 def load_mask(node):
@@ -290,15 +282,20 @@ def prepare(orig555, qimg555, nodes_map):
     return lo, err, W, elig, gain
 
 
-def fit_rows(lo, err, W, elig, gain, orig555, units, npal, seed):
+def fit_rows(lo, err, W, elig, gain, orig555, units, npal, seed, art=None):
     """Cluster the units (8x16 sprite origins (x, y)) into npal 3-colour palettes, weighted away from brown.
     Returns (palettes, assignment, rows per unit)."""
     ulab, ucnt = [], []
+    art = art or {}
     for (xs, y0) in units:
         px = {}
         for y in range(y0, y0 + 16):
             for x in range(xs, xs + 8):
-                if elig[y, x]:
+                if (xs, y0) in art:
+                    c = art[(xs, y0)][y - y0][x - xs]
+                    if c is not None:
+                        px[c] = px.get(c, 0.0) + 4.0      # hand-drawn colours outweigh the cut ones
+                elif elig[y, x]:
                     c = tuple(int(v) for v in orig555[y, x])
                     px[c] = px.get(c, 0.0) + W[y, x]
         cols = list(px) or [(0, 0, 0)]
@@ -313,7 +310,12 @@ def fit_rows(lo, err, W, elig, gain, orig555, units, npal, seed):
             row = []
             for x in range(xs, xs + 8):
                 v = 0
-                if elig[y, x]:
+                if (xs, y0) in art:
+                    c = art[(xs, y0)][y - y0][x - xs]
+                    if c is not None:
+                        cl = gmenu.lab(np.array([gmenu.from555(c)], dtype=np.float64))[0]
+                        v = 1 + int(np.argmin(np.linalg.norm(pal_lab[assign[n]] - cl, axis=1)))
+                elif elig[y, x]:
                     d = np.linalg.norm(pal_lab[assign[n]] - lo[y, x], axis=1)
                     if d.min() + gain[y, x] < err[y, x]:
                         v = 1 + int(np.argmin(d))
@@ -325,113 +327,53 @@ def fit_rows(lo, err, W, elig, gain, orig555, units, npal, seed):
 
 def build_buildings(orig555, qimg555, nodes_map):
     """Sprites over the buildings. Nodes in HAND have a fixed window (x, y, columns of 8x16 sprites) and use the
-    hand-drawn ui/intermission/bld_<node>.png when it exists (one OBJ palette each); without it the window is cut
+    hand-drawn ui/intermission/bld_<node>.png when it exists (at most 3 colours per 8-px column, a palette per column); without it the window is cut
     automatically from the original image inside its building mask (templates/bld_<node>_mask.png). The other nodes
     get a 24x16 window at the vertical offset with the most quantisation error. Of those candidates the sprites with
     the most error (away from brown terrain pixels) are cut, up to the OAM budget, onto the remaining OBJ palettes.
     Returns [(map x, map y, [16 rows of 8 values 0..3], palette index 0..4)] and the palettes."""
     h, w = orig555.shape[:2]
     lo, err, W, elig, gain = prepare(orig555, qimg555, nodes_map)
-    out, pals_hand = [], []
+    out = []
     cand = []                                      # (score, x, y)
+    forced, art = [], {}                           # HAND window columns: always cut, hand art overrides the cut
     for i, (cx, cy) in enumerate(nodes_map):
-        hand = load_hand(i) if i in HAND else None
-        if hand is not None:
-            rows, cols3 = hand
-            x0, y0, ncols = HAND[i]
-            for k in range(ncols):
-                sub = rows[:, k * 8:k * 8 + 8].tolist()
-                if any(any(r) for r in sub):
-                    out.append((x0 + 8 * k, y0, sub, len(pals_hand)))
-            pals_hand.append(cols3)
-            continue
         if i in HAND:
             x0, y0, ncols = HAND[i]
-        else:
-            best = None
-            for dy in range(-12, -3):
-                yy = min(max(int(round(cy)) + dy, 0), h - BLD_WIN_H)
-                xx = min(max(int(round(cx)) - BLD_WIN_W // 2, 0), w - BLD_WIN_W)
-                sc = float(np.where(elig[yy:yy + BLD_WIN_H, xx:xx + BLD_WIN_W],
-                                    (err * W)[yy:yy + BLD_WIN_H, xx:xx + BLD_WIN_W], 0).sum())
-                if best is None or sc > best[0]:
-                    best = (sc, xx, yy)
-            _, x0, y0 = best
-            ncols = BLD_WIN_W // 8
-        for k in range(ncols):
+            grid = load_hand(i)
+            for k in range(ncols):
+                forced.append((x0 + 8 * k, y0))
+                if grid is not None:
+                    art[(x0 + 8 * k, y0)] = [row[k * 8:k * 8 + 8] for row in grid]
+            continue
+        best = None
+        for dy in range(-12, -3):
+            yy = min(max(int(round(cy)) + dy, 0), h - BLD_WIN_H)
+            xx = min(max(int(round(cx)) - BLD_WIN_W // 2, 0), w - BLD_WIN_W)
+            sc = float(np.where(elig[yy:yy + BLD_WIN_H, xx:xx + BLD_WIN_W],
+                                (err * W)[yy:yy + BLD_WIN_H, xx:xx + BLD_WIN_W], 0).sum())
+            if best is None or sc > best[0]:
+                best = (sc, xx, yy)
+        _, x0, y0 = best
+        for k in range(BLD_WIN_W // 8):
             xs = x0 + 8 * k
             cand.append((float(np.where(elig[y0:y0 + 16, xs:xs + 8], (err * W)[y0:y0 + 16, xs:xs + 8], 0).sum()),
                          xs, y0))
-    npal_auto = 5 - len(pals_hand)
-    budget = min(NBLD_MAX, BLD_OAM_MAX - len(out)) if npal_auto > 0 else 0
+    budget = min(NBLD_MAX, BLD_OAM_MAX - len(forced))
     chosen = sorted(sorted(cand, reverse=True)[:max(budget, 0)], key=lambda c: (c[2], c[1]))
-    chosen = [c for c in chosen if c[0] > 0]
+    units = forced + [(c[1], c[2]) for c in chosen if c[0] > 0]
+    units.sort(key=lambda u: (u[1], u[0]))
     pals_auto = []
     n_auto = 0
-    if chosen:
-        pals_auto, assign, rows_all = fit_rows(lo, err, W, elig, gain, orig555, [(c[1], c[2]) for c in chosen],
-                                               npal_auto, 777)
-        for n, (_, xs, y0) in enumerate(chosen):
+    if units:
+        pals_auto, assign, rows_all = fit_rows(lo, err, W, elig, gain, orig555, units, NPAL_BLD, 777, art)
+        for n, (xs, y0) in enumerate(units):
             if any(any(r) for r in rows_all[n]):
-                out.append((xs, y0, rows_all[n], len(pals_hand) + int(assign[n])))
+                out.append((xs, y0, rows_all[n], int(assign[n])))
                 n_auto += 1
-    print("gbc_genintermission: %d building sprites (%d hand-drawn windows, %d cut from the map)" % (
-        len(out), len(pals_hand), n_auto))
-    return out, pals_hand + [list(p) for p in pals_auto]
-
-
-def write_auto(dest, orig555, qimg555, nodes_map):
-    """bld_<node>_auto.png: the automatic cut of each hand-drawn window inside its mask with ONE 3-colour palette
-    (transparent elsewhere): a starting point to edit and save as ui/intermission/bld_<node>.png. Plus
-    bld_<node>_compare.png at 8x: original | the map as the GBC shows it | the cut over the map."""
-    lo, err, W, elig, gain = prepare(orig555, qimg555, nodes_map)
-    for i, (x0, y0, cols) in sorted(HAND.items()):
-        px = {}
-        for y in range(y0, y0 + 16):
-            for x in range(x0, x0 + cols * 8):
-                if elig[y, x]:
-                    c = tuple(int(v) for v in orig555[y, x])
-                    px[c] = px.get(c, 0.0) + W[y, x]
-        cs = list(px) or [(0, 0, 0)]
-        pal, _, _ = cluster_palettes([gmenu.lab(np.array([gmenu.from555(c) for c in cs], dtype=np.float64))],
-                                     [np.array([px.get(c, 1e-6) for c in cs])], 1, [[]], seed=5, ncol=3)
-        pl = gmenu.lab(np.array([gmenu.from555(c) for c in pal[0]], dtype=np.float64))
-        im = Image.new("RGBA", (cols * 8, 16), (0, 0, 0, 0))
-        for y in range(16):
-            for x in range(cols * 8):
-                if elig[y0 + y, x0 + x]:
-                    d = np.linalg.norm(pl - lo[y0 + y, x0 + x], axis=1)
-                    if d.min() + gain[y0 + y, x0 + x] < err[y0 + y, x0 + x]:
-                        im.putpixel((x, y), gmenu.from555(pal[0][int(np.argmin(d))]) + (255,))
-        im.save(os.path.join(dest, "bld_%d_auto.png" % i))
-        sheet = Image.new("RGB", (cols * 8 * 3 * 8 + 32, 16 * 8), (40, 40, 40))
-        for n in range(3):
-            for y in range(16):
-                for x in range(cols * 8):
-                    c = orig555[y0 + y, x0 + x] if n == 0 else qimg555[y0 + y, x0 + x]
-                    rgb = gmenu.from555(tuple(int(v) for v in c))
-                    if n == 2:
-                        a = im.getpixel((x, y))
-                        if a[3]:
-                            rgb = a[:3]
-                    for dy in range(8):
-                        for dx in range(8):
-                            sheet.putpixel((n * (cols * 8 * 8 + 16) + x * 8 + dx, y * 8 + dy), rgb)
-        sheet.save(os.path.join(dest, "bld_%d_compare.png" % i))
-
-
-def write_templates(dest, orig555):
-    """bld_<node>_ref.png: the original pixels under each hand-drawn window, to draw over (the art itself goes in
-    ui/intermission/bld_<node>.png: same size, transparent where the map shows through, 3 opaque colours)."""
-    os.makedirs(dest, exist_ok=True)
-    for i, (x0, y0, cols) in sorted(HAND.items()):
-        im = Image.new("RGB", (cols * 8, 16))
-        for y in range(16):
-            for x in range(cols * 8):
-                im.putpixel((x, y), gmenu.from555(tuple(int(v) for v in orig555[y0 + y, x0 + x])))
-        im.save(os.path.join(dest, "bld_%d_ref.png" % i))
-        print("gbc_genintermission: %s: node %d (E1M%d), map pixels (%d, %d) %dx16" % (
-            "bld_%d_ref.png" % i, i, i + 1, x0, y0, cols * 8))
+    n_hand = sum(1 for u in units if u in art)
+    print("gbc_genintermission: %d building sprites (%d hand-drawn columns), a palette per sprite" % (len(out), n_hand))
+    return out, [list(p) for p in pals_auto]
 
 
 # ---- level stats -----------------------------------------------------------------------------------------------
@@ -465,12 +407,9 @@ def level_stats(outdir):
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith('--')]
     outdir = args[0]
-    tpl = [a.split('=', 1)[1] for a in sys.argv[1:] if a.startswith('--templates=')]
     os.makedirs(outdir, exist_ok=True)
     glyphs = gbc_hudfont.load_glyphs()
     pals, assign, idx_img, orig555 = build_map()
-    if tpl:
-        write_templates(tpl[0], orig555)
     tw, th = MAP_W // 8, MAP_H // 8
 
     # ---- map tiles: dedup, bank 0 ids 0..255, overflow bank 1 ids 0..
@@ -493,9 +432,7 @@ def main():
     splat = load_rgba("WISPLAT_160.png", (16, 16))
     urh = [load_rgba("WIURH0_160.png", (8, 8)), load_rgba("WIURH1_160.png", (8, 8))]
     urht = load_rgba("WIURHT_160.png", (24, 16))
-    pal_splat = quantise_obj([splat])
-    pal_arrow = quantise_obj(urh)
-    pal_text = quantise_obj([urht])
+    pal_splat = pal_arrow = pal_text = quantise_obj([splat] + urh + [urht])   # one palette: OBJ 1..7 stay for buildings
     i_splat = obj_index(splat, pal_splat)
     i_arrow = [obj_index(a, pal_arrow) for a in urh]
     i_text = obj_index(urht, pal_text)
@@ -512,8 +449,6 @@ def main():
     # ---- building overlay sprites (bank 1 tile ids after the map's overflow, OBJ palettes 3..7)
     qimg = np.array([[pals[assign[(y // 8) * tw + x // 8]][idx_img[y, x]]
                       for x in range(MAP_W)] for y in range(MAP_H)], dtype=np.int64)
-    if tpl:
-        write_auto(tpl[0], orig555, qimg, [(nx * SX, ny * SY) for (nx, ny) in NODES])
     blds, bld_pals = build_buildings(orig555, qimg, [(nx * SX, ny * SY) for (nx, ny) in NODES])
     bld_id0 = (len(spill) + 1) & ~1
     if bld_id0 + 2 * len(blds) > FONT_ID0:
@@ -620,12 +555,12 @@ def main():
     for p in bgpals:
         o.append("    dw " + ",".join("$%04X" % gmenu.bgr555(c) for c in p))
     o.append("InterObjPal:")
-    for p in [pal_splat, pal_arrow, pal_text] + list(bld_pals) + [[(0, 0, 0)] * 3] * (5 - len(bld_pals)):
+    for p in [pal_splat] + list(bld_pals) + [[(0, 0, 0)] * 3] * (NPAL_BLD - len(bld_pals)):
         o.append("    dw $0000," + ",".join("$%04X" % gmenu.bgr555(c) for c in p))
     o.append("InterBldTiles:")
     for b in bld_tiles:
         o.append("    db " + hexl(b))
-    o.append("; building overlay OAM entries: y, x, tile, attribute (OBJ palette 3.., bank 1)")
+    o.append("; building overlay OAM entries: y, x, tile, attribute (OBJ palette 1.., bank 1)")
     o.append("InterBld:")
     for n, (xs, y0, rows, pi) in enumerate(blds):
         o.append("    db %d,%d,%d,%d" % (y0 + MAP_ROW0 * 8 + 16, xs + 8, bld_id0 + 2 * n, (OBJ_PAL_BLD0 + pi) | 8))

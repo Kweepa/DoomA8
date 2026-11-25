@@ -414,9 +414,9 @@ UpdateMove::
     ld a, [wItemSpin + 1]
     adc h
     ld [wItemSpin + 1], a
-    ld a, [wHP]                     ; A8 death_restart: no input or movement while dead
+    ld a, [wHP]                     ; dead: no input or movement, the eye drops (DeathCam)
     and a
-    ret z
+    jp z, DeathCamStep
     call ReadJoy
 IF DEF(DEBUG)
     ldh a, [hJoy]                   ; debug cheat: Start = all keys

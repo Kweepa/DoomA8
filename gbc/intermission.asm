@@ -1034,7 +1034,7 @@ ImPlaceArrow:
     ld c, a                         ; text y
     ld a, [hl]
     ld d, a                         ; text x
-    ld a, 1 | 8                     ; OBJ palette 1 (arrow), bank 1
+    ld a, 8                         ; OBJ palette 0 (shared red), bank 1
     ld [IM_OAM + 3], a
     ld hl, IM_OAM + 4                  ; text: 3 sprites of 8x16
     ld e, INTER_T_TEXT
@@ -1050,7 +1050,7 @@ ImPlaceArrow:
     ld [hl+], a
     add 2
     ld e, a
-    ld a, 2 | 8                     ; OBJ palette 2 (text), bank 1
+    ld a, 8                         ; OBJ palette 0, bank 1
     ld [hl+], a
     dec b
     jr nz, .t
@@ -1184,7 +1184,7 @@ ENDC
     ldh [rBCPD], a
     dec b
     jr nz, .bp
-    ld a, $80                       ; OBJ palettes 0..2
+    ld a, $80                       ; OBJ palettes 0..7
     ldh [rOCPS], a
     ld hl, InterObjPal
     ld b, 64

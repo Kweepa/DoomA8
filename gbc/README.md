@@ -11,9 +11,9 @@ CGB-only MBC5+RAM+battery, RGBDS 1.0.4.
 
 ## What's in
 - Menu (`menu.asm`, ROMX; port of A8 src/menu.asm): the A8 tree without Quit and Mouse. Main: New game, Options,
-  Controls, Read this!, Credits. New game -> episode (Knee deep in dead -> skill; Shores of hell / Inferno -> the
+  Controls, Read this!, Credits. New game -> episode (Knee-Deep in the Dead -> skill; The Shores of Hell / Inferno -> the
   order pages) -> skill (cursor on Hurt me plenty) -> E1M1. Options: Volume 0..15 (A8 effects_vol: the effects and
-  the menu music). Labels shortened so the skull and the text fit 20 columns.
+  the menu music). Long labels wrap onto two lines (second line indented one character, items 3 rows apart) so the skull and the text fit 20 columns.
   - Screen: 128x64 logo on tile rows 0-7 (`ui/hiresdoomlogo.png` point-sampled, 8x8 tiles of 4 colours,
     `tools/gbc_genmenu.py` clusters the tiles onto the 8 BG palettes, colour 0 black in all; palette 7 also holds
     the text yellow / white; preview in `gbc/build/menu_logo_preview.png`), black below, items every other row from
@@ -22,7 +22,7 @@ CGB-only MBC5+RAM+battery, RGBDS 1.0.4.
     eyes blink every 24 VBlanks (A8 20 VBIs).
   - Text pages: `gbc/text/{controls,order,readthis,credits,ending}.txt`, pages split on `^` lines, at most 20 x 9
     (the generator stops on a longer line / page or a character the font lacks); logo on top, row 8 blank, text on
-    rows 9-17 centred. Any button turns the page.
+    rows 9-17 centred (a 9-line page starts on row 8). Any button turns the page.
   - Music (`music.asm`, ROMX; port of src/a8music.asm): `tools/gbc_genmusic.py` runs the A8 converter
     (`tools/genpokey.py`: SID emulation, pitch grid, envelopes, LZ) and maps SID voice 1 -> CH3 (square wave),
     2 -> CH1, 3 -> CH2, any noise voice -> CH4; the A8 per-frame envelope from (AD, SR), ring in WRAM bank 3, a
@@ -88,7 +88,8 @@ CGB-only MBC5+RAM+battery, RGBDS 1.0.4.
     saves 5/16, blue 1/2); a new gun is selected; one grab per `PICKUP_HOLD_MS`; reach is `near_box_xz` (Chebyshev
     `TH_GRAB_R` from the `TH_FOOT_SX` square) plus the Y overlap; the radsuit starts `POWERUP_MS` (green border).
   - Start loadout 50 bullets / 25 shells, pistol. Falling more than `FALL_SAFE` cells costs `FALL_DAMAGE`. Dead = the
-    game freezes for `PL_DEATH_WAIT_MS`, then the starting loadout and a level reload. `take_damage` scaled by the menu skill.
+    weapon is hidden, the eye drops to the floor and bounces (`DeathCamB`, NebulaSkip `death_cam`), the game holds
+    `DEATH_HOLD_MS` (2 s, GBC-only; A8 uses `PL_DEATH_WAIT_MS`) once it settles, then the starting loadout and a level reload. `take_damage` scaled by the menu skill.
   - Guns: pistol / chaingun one bullet, 1..16, nearest body in a +-12 / +-6 px cone; shotgun `SHOT_PELLETS` pellets,
     each a random column +-32 px and the body half-width `block_r`, 2..6 each; range `SHOT_Z_MAX` cells, clear line
     from the eye. Fist / chainsaw: first live enemy within `PUNCH_HIT_R` cells in any direction, 1..16. The A8 tests in

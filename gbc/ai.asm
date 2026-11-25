@@ -4715,3 +4715,93 @@ WallHit:
     ret c
     xor a
     ret
+
+DEF DC_ACCEL  EQU $10               ; = FALL_ACCEL, FALL_TICK_MS (collide.asm)
+DEF DC_TICK_MS EQU 32
+DEF DEATH_V_MIN EQU $18             ; bounce speed (8.8 / tick) below this settles
+
+; Dead (PlayerDamage set wFalling and zeroed the velocity unless already airborne): the eye drops to
+; wFloorY + 1 and bounces, FALL_ACCEL per FALL_TICK_MS, each landing keeps half the speed; settled below
+; DEATH_V_MIN (wFalling = 0). Same model as NebulaSkip death_cam. Uses wDtMs (set by UpdateMove).
+DeathCamB::
+    ld a, [wFalling]
+    and a
+    ret z
+    ld a, [wFallAcc]
+    ld b, a
+    ld a, [wDtMs]
+    add b
+    ld [wAcc], a
+.tick:
+    ld a, [wAcc]
+    cp DC_TICK_MS
+    jp c, .done
+    sub DC_TICK_MS
+    ld [wAcc], a
+    ld a, [wFallVL]
+    add DC_ACCEL
+    ld [wFallVL], a
+    ld a, [wFallVH]
+    adc 0
+    ld [wFallVH], a
+    ld a, [wCamY]                   ; eye -= velocity (+ = down)
+    ld b, a
+    ld a, [wFallVL]
+    ld c, a
+    ld a, b
+    sub c
+    ld [wCamY], a
+    ld a, [wCamY + 1]
+    ld b, a
+    ld a, [wFallVH]
+    ld c, a
+    ld a, b
+    sbc c
+    ld [wCamY + 1], a
+    ld a, [wFallVH]
+    bit 7, a
+    jr nz, .tick                    ; rising
+    ld a, [wFloorY]
+    ld b, a
+    ld a, [wCamY + 1]
+    cp b
+    jr z, .land
+    jr nc, .tick                    ; eye still above floor + 1
+.land:
+    ld a, b
+    inc a
+    ld [wCamY + 1], a               ; land at floor + 1.0
+    xor a
+    ld [wCamY], a
+    ld a, [wFallVH]
+    srl a
+    ld [wFallVH], a
+    ld a, [wFallVL]
+    rra
+    ld [wFallVL], a                 ; v / 2
+    ld b, a
+    ld a, [wFallVH]
+    and a
+    jr nz, .bounce
+    ld a, b
+    cp DEATH_V_MIN
+    jr nc, .bounce
+    xor a
+    ld [wFalling], a                ; settled
+    ld [wFallVL], a
+    ld [wFallVH], a
+    ld [wFallAcc], a
+    ret
+.bounce:
+    xor a                           ; v = -v
+    ld hl, wFallVL
+    sub [hl]
+    ld [hl+], a
+    ld a, 0
+    sbc [hl]
+    ld [hl], a
+    jp .tick
+.done:
+    ld a, [wAcc]
+    ld [wFallAcc], a
+    ret

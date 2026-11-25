@@ -1,161 +1,51 @@
 The story so far
 
-You're a marine, one
-of earth's toughest,
-trained for action
-and hardened in
-combat. three years
-ago, you punched a
-superior officer for
+You're a marine, one of earth's toughest, trained for action and hardened in combat.
 ^
-ordering his men to
-fire on civilians.
-he and his body cast
-were shipped to
-pearl harbor, while
-you were shipped off
-to mars.
+Three years ago, you punched a superior officer for ordering his men to fire on civilians.
 ^
-Mars, home of the
-union aerospace
-corporation.
+He and his body cast were shipped to pearl harbor, while you were shipped off to mars.
 ^
-The uac is a
-multi-planetary
-conglomerate with
-radioactive waste
-facilities on mars
-and its two moons,
-phobos and deimos.
+Mars, home of the union aerospace corporation.
 ^
-With no action for
-fifty million miles,
-your day consisted
-of sucking dust and
-watching restricted
-flicks in the rec
-room.
+The uac is a multi-planetary conglomerate with radioactive waste facilities on mars and its two moons, phobos and deimos.
 ^
-The military, uac's
-biggest customer,
-has been using the
-moons' facilities to
-conduct research
-into inter-
-dimensional space
-travel.
+With no action for fifty million miles, your day consisted of sucking dust and watching restricted flicks in the rec room.
 ^
-So far they've been
-able to open
-gateways between
-phobos and deimos,
-throwing gadgets
-into one and
-watching them come
-out the other.
+The military, uac's biggest customer, has been using the moons' facilities to research inter-dimensional space travel.
 ^
-Recently, however,
-the gateways have
-grown dangerously
-unstable.
+So far they've been able to open gateways between phobos and deimos, throwing gadgets into one and watching them come out the other.
 ^
-"Volunteers"
-entering them have
-either disappeared
-or been stricken
-with a strange form
-of insanity***
+Recently, however, the gateways have grown dangerously unstable.
 ^
-babbling
-vulgarities,
-bludgeoning anything
-that breathes,
-before finally
-suffering an
-untimely death:
-explosive
-dismemberment.
+"Volunteers" entering them have either disappeared or been stricken with a strange form of insanity***
 ^
-Matching heads with
-torsos became
-a full time job.
-latest reports state
-that the research is
-encountering a
-"small setback," but
-that everything is
-under control.
+babbling vulgarities, bludgeoning anything that breathes, before an untimely death: explosive dismemberment.
 ^
-A few hours ago,
-mars received a
-garbled message from
-phobos. "we need
-immediate support.
+Matching heads with torsos to send back to the folks became a full time job.
 ^
-"Something fraggin'
-evil is coming out
-of the gateways!
-computer systems
-have gone haywire!"
+Latest reports state that the research is encountering a "small setback," but that everything is under control.
 ^
-The rest was
-incoherent. then
-deimos simply
-vanished from the
-sky. attempts to
-contact both moons
-have failed.
+A few hours ago, mars received a garbled message from phobos. "we need immediate support.
 ^
-Your squad were sent
-up pronto to phobos.
-you were to secure
-the perimeter of the
-base while the rest
-of your team went
-inside.
+"Something fraggin' evil is coming out of the gateways! computer systems have gone haywire!"
 ^
-Comms relayed guns
-firing, sergeants
-yelling orders,
-screams, bones
-cracking... then
-finally, silence.
+The rest was incoherent. then deimos simply vanished from the sky. attempts to contact both moons have failed.
+^
+Your squad were sent up pronto to phobos. you were to secure the perimeter of the base while the rest of your team went inside.
+^
+Comms relayed guns firing, sergeants yelling orders, screams, bones cracking... then finally, silence.
 ^
 It's up to you
 
-Things aren't
-looking too good.
-you're stranded, and
-there's no easy way
-off this godforsaken
-rock.
+Things aren't looking too good. you're stranded, and there's no easy way off this godforsaken rock.
 ^
-The assault team
-emptied the armory,
-leaving you with
-nothing but a pistol
-and a pot to piss
-in.
+The assault team emptied the armory, leaving you with nothing but a pistol and a pot to piss in.
 ^
-If only you could
-lay hands on a
-plasma rifle or even
-a shotgun, you could
-take down a few
-hostiles on the way
-out.
+If only you could lay hands on a plasma rifle or even a shotgun, you could take down a few hostiles on the way out.
 ^
-Whatever butchered
-your squad deserves
-a couple of pellets
-in the head.
+Whatever butchered your squad deserves a couple of pellets in the head.
 ^
-You check your
-helmet and exit the
-dropship. as you
-step into the base,
-animal growls echo
-through distant
-corridors. they know
-you're here. there's
-no turning back now.
+You check your helmet and exit the dropship. as you step into the base, animal growls echo through distant corridors.
+^
+They know you're here. there's no turning back now.

@@ -90,6 +90,7 @@ ENDC
     ld [wPoseI], a
     ldh [hLastFrame], a
     ld [wHaveKeys], a
+    ld a, 7 ; E1M8 ; TEMP!
     call LoadLevel
     call WpnInit
     call HudInit                    ; HUD font / attributes, room palettes (LCD still off)

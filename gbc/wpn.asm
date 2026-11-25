@@ -605,6 +605,26 @@ WpnVBlank::
 WpnVBlankBody:
     xor a
     ld [wApOk], a
+    ld a, [wHP]
+    and a
+    jr nz, .alive
+    ld a, [wOamUsed]                ; dead: the view is frozen, so drop the weapon and flash from OAM
+    and a
+    ret z
+    ld b, a
+    xor a
+    ld [wOamUsed], a
+    ld hl, OAM_BASE
+.dead:
+    xor a
+    ld [hl+], a
+    inc hl
+    inc hl
+    inc hl
+    dec b
+    jr nz, .dead
+    ret
+.alive:
     ld a, [wBodyFrame]
     cp $FF
     ret z
