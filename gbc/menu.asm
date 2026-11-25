@@ -395,9 +395,9 @@ MenuSelect:
 ; menu id * 8 + item (A8 next_menu without Quit / Mouse / Jukebox)
 MenuNext:
     db 1, 3, NM_CTRL, NM_HELP, NM_CREDITS, 0, 0, 0
-    db 2, NM_ORDER, NM_ORDER, NM_BACK, 0, 0, 0, 0
-    db NM_START, NM_START, NM_START, NM_BACK, 0, 0, 0, 0
-    db 3, NM_BACK, 0, 0, 0, 0, 0, 0
+    db 2, NM_ORDER, NM_ORDER, 0, 0, 0, 0, 0
+    db NM_START, NM_START, NM_START, 0, 0, 0, 0, 0
+    db 3, 0, 0, 0, 0, 0, 0, 0
 ASSERT MENU_COUNT == 4
 
 ; ---- drawing -----------------------------------------------------------------------------------------------
@@ -646,8 +646,8 @@ MenuVolDigits:
     ld [hl], a
     ret
 
-; HL = text (db npages; dw page...). Each page: blank lower rows, its lines, skull hidden; any button turns it
-; (A8 show_text_screen loop). Leaves the skull hidden; MenuDraw shows it again.
+; HL = text (db npages; dw page...). Each page: blank lower rows, its lines, skull hidden; any button turns it,
+; B leaves the rest (A8 show_text_screen loop). Leaves the skull hidden; MenuDraw shows it again.
 MenuPages:
     ld a, [hl+]
     ld [wMenuPages], a
@@ -696,6 +696,8 @@ MenuPages:
     ld a, [wMenuPressed]
     and PAD_ANY
     jr z, .wait
+    and JOY_B                       ; B: leave the remaining pages
+    ret nz
     ld hl, wMenuPage
     inc [hl]
     ld a, [wMenuPages]

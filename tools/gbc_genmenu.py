@@ -46,9 +46,9 @@ RESTARTS = 24
 # A8 next_menu / menu_str tables (src/menu.asm) without Quit and Mouse. Shortened labels: the skull needs 3 columns.
 MENUS = [
     ("", ["New game", "Options", "Controls", "Read this!", "Credits"]),
-    ("Which episode?", ["Knee deep in dead", "Shores of hell", "Inferno", "Back"]),
-    ("Choose skill level", ["Too young to die", "Hurt me plenty", "Ultra-violence", "Back"]),
-    ("Options", ["Volume 15", "Back"]),
+    ("Which episode?", ["Knee deep in dead", "Shores of hell", "Inferno"]),
+    ("Choose skill level", ["Too young to die", "Hurt me plenty", "Ultra-violence"]),
+    ("Options", ["Volume 15"]),
 ]
 VOL_MENU, VOL_ITEM, VOL_DIGITS = 3, 0, 7  # "Volume " is 7 characters; two digits follow
 

@@ -1,7 +1,7 @@
-dpad...Move and turn
-A......Fire
-B......Strafe
-Select.Switch weapon
+dpad..Move & turn
+A.....Fire
+B.....Strafe
+Sel...Cycle weapon
 ^
 Walk into doors to
 open them.
