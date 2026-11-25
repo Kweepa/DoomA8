@@ -4,6 +4,7 @@
 ; Spec: tools/gbc_entity.py + tools/gbc_genobj.py (see gbc_check.py --live).
 
 INCLUDE "hw.inc"
+INCLUDE "sndids.inc"
 INCLUDE "map_fields.inc"
 
 INCLUDE "en.inc"
@@ -1107,8 +1108,12 @@ MuzzleCheck:
     ld a, VIEW_ROWS * 8 - 21
 .row:
     ld [wEmuzY], a
+    ld a, [wEmuzMs]                 ; A8 ws_snd: SOUND_RLAUNC_E as the muzzle starts (not while it runs)
+    and a
     ld a, EMUZ_MS
     ld [wEmuzMs], a
+    ld a, SND_RLAUNC_E
+    call z, PlaySound
 IF DEF(SMOKE)
     ld hl, wEmuzSeen                ; smoke test: muzzle starts
     inc [hl]

@@ -106,6 +106,9 @@ LoadRoomCache::
 ; A = level index. Maps the level's ROM bank (stays mapped), copies the packed map into
 ; WRAM bank 2, binds the field pointer table, spawns the player.
 LoadLevel::
+    push af
+    call SndStopEnemy               ; A8 stop_streamed_sfx: enemy sounds end with the level
+    pop af
     ld [wLevel], a
     ld e, a
     ld d, 0

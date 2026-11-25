@@ -8,6 +8,7 @@
 
 INCLUDE "hw.inc"
 INCLUDE "map_fields.inc"
+INCLUDE "sndids.inc"
 
 DEF HAVE_YELLOW  EQU 1
 DEF HAVE_BLUE    EQU 2
@@ -377,6 +378,8 @@ TryDoorWish::
     call DoorSnap
     pop af
     call EnterRoom
+    ld a, SND_DOROPN                ; walking through a door (not in the A8, by request)
+    call PlaySound
     xor a
     ld [wDoorBlk], a
     scf

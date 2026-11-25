@@ -75,6 +75,22 @@ CGB-only MBC5+RAM+battery, RGBDS 1.0.4.
   palettes 2 / 3 = HUD stats / message (A8 text mode: hue of HUD_PF2_STAT, lum HUD_PF1_STAT / HUD_PF1_MSG).
   A8 bytes map to BGR555 through the editor's A8_HEX table. Walls, enemies and pickups are all ink, as on the A8;
   red is reserved for blood splats and the fireball triangle (not drawn yet).
+- Sound (`sound.asm`, ROM0; port of A8 playsound.asm): the A8's 28 PC-speaker effects (`tools/gbc_gensound.py` -> `sound.inc`,
+  same ids, voices, priorities and DP* lumps as `tools/gensounds.py`). Three channels as on the A8: player = CH1 pulse,
+  enemy = CH2 pulse, world = CH3 (32-sample square wave); a higher or equal priority preempts on a channel, one envelope
+  byte per tick, a tick per frame (`SndTick` from the LY 111 `StatISR`, not `VBlankISR`: its budget is the flip, weapon OAM and the HudBlit palette upload), every tone full volume. The PC byte is the timer divisor,
+  so pitch = 1193181 / (byte * 60) Hz, period = byte * 105 / 16 pulse clocks. State is in HRAM; `PlaySound` only stages a
+  request (callable anywhere), `LoadLevel` stops only the enemy channel (A8 `stop_streamed_sfx`). Cues follow the A8 sites: weapon fire (`SndWpn`, A8
+  `wpn_sound`; fist / saw play PUNCH on a hit), shotgun pump (`SGCOCK` when the pose table reaches its first alt frame,
+  `WPN_COCK_SHOT`), enemy sight / wince / death (`SndSight` / `SndWince` / `SndDeath`), the attack clip's sound frame
+  (`SndAtkFrame` / `SndAtkId`, from the editor clips), `RLAUNC_E` as the enemy muzzle starts, player pain / death,
+  pickups (`SndPick`: ammo WPNUP, the rest ITEMUP), switches (DOROPN if a door unlocked, else SWTCHN), door unhide /
+  re-hide (DOROPN / DORCLS), walking through a door (DOROPN; the A8 is silent there), rocket and barrel blasts (RXPLOD), step-up of exactly `STEP_UP` (OOF). Test builds
+  (`TEST_EXIT`) stub the driver and carry no sound data to keep ROM0 free. Not ported: the menu music (the A8 plays it
+  in the menu only; there is no GBC menu), cheat sounds. CH4 (noise) carries the A8 chainsaw motor (`a8_saw`: idle rattle,
+  fire rattle, bite re-pitched every tick from the A8 LFSR; `hSawBite` is set by `MeleeShot`) and the elevator rumble
+  (`a8_noise`, while `ElevTick` has a car moving and no world effect plays; the saw wins while it is out). POKEY AUDF
+  becomes NR43 by nearest LFSR clock; volumes are the A8's scaled 12/15 like the pulses.
 - Enemy AI (`ai.asm`, ROM bank 31) is a translation of the A8 code, routine by routine: `enemies_update`,
   `enemy_anim_step`, `eu_idle`, `eu_approach`, `enemy_enter_approach`, `select_dodge_dir`, `enemy_try_step`,
   `damage_enemy` (src/enemy.asm) and the per-type entries of src/ai_poss|pinky|imp|baron.asm. Labels in the
@@ -138,5 +154,5 @@ ROM0 (16 KB) is nearly full in the test builds, which is why the map/world tests
   Ideas: axis-aligned statics through the room column path, far-LOD weak perspective for items/enemies,
   overlap game update with DMA, back-face edge culling.
 - Not implemented: blood / wall splats, shootable switches, infighting, door animation and key prompts,
-  sound/music, menu, SRAM save, radsuit border tint (COL_SUIT_A8), trigger / cheat messages.
+  menu music, menu, SRAM save, radsuit border tint (COL_SUIT_A8), trigger / cheat messages.
 - Enemy scale: pose data is in stick units (editor `LAYOUT_ENEMY_SCALE` = 1/4), so enemies use shift 4 / radius 3.

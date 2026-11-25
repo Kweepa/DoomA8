@@ -7,6 +7,7 @@
 ; empty text), elevator triggers / switches until elevators (gbc/elev in this file when added).
 
 INCLUDE "hw.inc"
+INCLUDE "sndids.inc"
 INCLUDE "map_fields.inc"
 INCLUDE "en.inc"
 
@@ -92,6 +93,8 @@ DoorHideTag:
     and a
     ret z
     ld [wLvN], a
+    xor a
+    ld [wDhChg], a
     ld c, 0
 .l:
     ld a, F_DOOR_TAG
@@ -112,7 +115,12 @@ DoorHideTag:
 .hide:
     or DOOR_HIDDEN
 .st:
+    cp b
     ld b, a
+    jr z, .put
+    ld a, 1                          ; a hidden bit flipped
+    ld [wDhChg], a
+.put:
     ld a, F_DOOR_TYPE
     call MapPut
 .n:
@@ -120,7 +128,18 @@ DoorHideTag:
     ld a, [wLvN]
     cp c
     jr nz, .l
-    ret
+    ld a, [wDhChg]                   ; A8 door_hide_tag: one open / close sound if a bit flipped
+    and a
+    ret z
+    ld a, SND_DOROPN
+    ld hl, wUhHide
+    ld b, [hl]
+    inc b
+    dec b
+    jr z, .snd
+    ld a, SND_DORCLS
+.snd:
+    jp PlaySound
 
 ; A = tag: show those doors for DOOR_UNHIDE_MS (entering again restarts the timer).
 DoorUnhideTag:
@@ -541,7 +560,12 @@ FireSwitch:
     jr nz, .nk
     ld a, F_SW_TAG
     call MapGet
-    jp DoorUnlockTag
+    call DoorUnlockTag
+    ld a, SND_SWTCHN                 ; A8 fire_switch: DOROPN if a door unlocked, else the switch sound
+    jr nc, .sfx
+    ld a, SND_DOROPN
+.sfx:
+    jp PlaySound
 .nk:
     cp SW_DEST_TRIG
     jr z, .trig
@@ -556,7 +580,10 @@ FireSwitch:
     ld a, F_SW_TAG
     call MapGet
     ld c, a
-    jp ElevActivate
+    call ElevActivate
+    ret c                            ; refused: silent
+    ld a, SND_SWTCHN
+    jp PlaySound
 .unusedEnd:
     ld a, 1
     ld [wNextLevelReq], a
@@ -564,7 +591,9 @@ FireSwitch:
 .trig:
     ld a, F_SW_TAG
     call MapGet
-    jp TrigArmTag
+    call TrigArmTag
+    ld a, SND_SWTCHN
+    jp PlaySound
 
 ; B = point, C = box start, D = size -> A = distance to [box, box + size) (A8 near_box_xz axis).
 NearAxisSz:
@@ -867,6 +896,8 @@ ElevTick:
     and a
     ret z
     ld [wLvN], a
+    xor a
+    ldh [hElevMov], a                ; A8 elev_noise_n: the rumble plays while a car moves
     ld c, 0
 .car:
     ld b, 0
@@ -875,6 +906,8 @@ ElevTick:
     ld a, [hl]
     cp $FF
     jp z, .next
+    ld a, 1
+    ldh [hElevMov], a
     call ElevThr                     ; wElThr
     ld b, 0
     ld hl, wElevAcc

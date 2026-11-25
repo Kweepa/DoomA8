@@ -7,6 +7,7 @@
 INCLUDE "hw.inc"
 INCLUDE "wpn_ids.inc"
 INCLUDE "a8const.inc"
+INCLUDE "sndids.inc"
 INCLUDE "wpntable.asm"                  ; WPN_PERIOD_* / WPN_ANIM_*, WpnPoseTab, Pose* (tools/gbc_genwpntab.py)
 
 DEF WPN_FIST    EQU 0
@@ -196,11 +197,31 @@ ENDC
 .t1:
     ld [wWpnTimer], a
     ld a, [wWpnAnim]
+    ld d, a                         ; the anim time before this frame
     sub b
     jr nc, .t2
     xor a
 .t2:
     ld [wWpnAnim], a
+    ld e, a
+    ld a, [wWpnCur]                 ; A8 cock_apply_step 1: SGCOCK as the pump starts
+    cp WPN_SHOT
+    jr nz, .t2x
+    ld a, d
+    and a
+    jr z, .t2x
+    ld a, [wWpnAnimLen]
+    ld c, a
+    sub d                           ; VBlanks since the shot, before / after this frame
+    cp WPN_COCK_SHOT
+    jr nc, .t2x
+    ld a, c
+    sub e
+    cp WPN_COCK_SHOT
+    jr c, .t2x
+    ld a, SND_SGCOCK
+    call PlaySound
+.t2x:
     ld a, [wFlashTimer]
     sub b
     jr nc, .t3
@@ -246,6 +267,14 @@ ENDC
     ld [wWpnAnimLen], a
     ld a, 1
     ld [wFireEvent], a
+    ld a, [wWpnCur]                 ; A8 wpn_sound (fist / chainsaw play on a hit instead)
+    ld e, a
+    ld d, 0
+    ld hl, SndWpn
+    add hl, de
+    ld a, [hl]
+    cp SND_NONE
+    call nz, PlaySound
     ld a, [wWpnCur]                 ; A8 fire_shot: guns (not fist / chainsaw) wake the room
     cp WPN_FIST
     jr z, .noWake

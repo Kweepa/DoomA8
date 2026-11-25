@@ -54,6 +54,7 @@ def main():
             overhang = int(w.get("overhang", 0))
             check(0 <= overhang <= 64, wid, "overhang %d not in 0..64" % overhang)
             prev = 0
+            alt_start = None                # first alt-frame step: the shotgun's pump (A8 cock_apply_step 1)
             pose.append("Pose%s:" % name.capitalize())
             pose.append("    db %d" % overhang)
             for i, st in enumerate(steps):
@@ -68,7 +69,12 @@ def main():
                 check(-128 <= dy <= 127, wid, "step %d: dy %d not in -128..127" % (i + 1, dy))
                 check(st.get("frame") in ("idle", "alt"), wid, "step %d: frame must be idle or alt" % (i + 1))
                 pose.append("    db %d, %d, %d" % (until, dy, 1 if st["frame"] == "alt" else 0))
+                if st["frame"] == "alt" and alt_start is None:
+                    alt_start = prev
                 prev = until
+            if name == "SHOT":
+                check(alt_start is not None, wid, "no alt-frame step: no pump to play SGCOCK on")
+                consts.append("DEF WPN_COCK_SHOT EQU %d" % alt_start)
             pose.append("    db 0")
             anim = prev
             pointers.append("Pose" + name.capitalize())

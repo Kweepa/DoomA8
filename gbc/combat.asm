@@ -2,6 +2,7 @@
 ; Positions are integer cells (cam x/z high bytes) plus 8-bit fractions.
 
 INCLUDE "hw.inc"
+INCLUDE "sndids.inc"
 INCLUDE "map_fields.inc"
 INCLUDE "wpn_ids.inc"
 
@@ -189,6 +190,16 @@ PickupScan::
     ld a, HIGH(PICKUP_HOLD_MS)
     ld [wPickupMs + 1], a
     pop hl
+    ld a, [wPkType]                 ; A8 pickup_sound: ammo WPNUP, the rest ITEMUP
+    cp SND_PICK_N
+    jr nc, .noSnd
+    ld e, a
+    ld d, 0
+    ld hl, SndPick
+    add hl, de
+    ld a, [hl]
+    call PlaySound
+.noSnd:
     ld a, [wPkType]                 ; A8 hud_got
     jp HudGot                       ; one grab per hold: the scan ends
 .next:
@@ -560,7 +571,11 @@ PlayerDamage::
     xor a
 .st:
     ld [wHP], a
-    ret
+    ld a, SND_PLPAIN                ; A8 take_damage: hurt grunt, or the death cry at 0 hp
+    jr nz, .snd
+    ld a, SND_PLDETH
+.snd:
+    jp PlaySound
 
 ; Enemy wObjI takes A damage: the A8 damage_enemy port (gbc/ai.asm AiDamageEnemy, bank 31).
 DamageEnemy:

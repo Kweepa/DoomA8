@@ -70,6 +70,7 @@ Start:
     and $80
     ldh [hSpeed], a
 
+    call SndInit
     ; Level 0 (E1M1): map into WRAM bank 2, spawn camera, spawn room mesh.
     xor a
     ld [wPoseI], a
@@ -369,6 +370,13 @@ StatISR:
     ldh a, [rLCDC]
     and $FF - LCDCF_OBJON - LCDCF_BG8000    ; HUD rows: no sprites, $8800 tiles (HUD font at $9000)
     ldh [rLCDC], a
+    push bc                                 ; sound effects, one envelope step per frame (gbc/sound.asm).
+    push de                                 ; Here and not in VBlankISR: the VBlank budget is spent on the
+    push hl                                 ; flip, weapon OAM and HudBlit (the palette upload is last).
+    call SndTick
+    pop hl
+    pop de
+    pop bc
     pop af
     reti
 

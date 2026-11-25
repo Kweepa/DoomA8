@@ -6,6 +6,7 @@
 ; Routines return their result in carry. Loop indices live in C unless noted.
 
 INCLUDE "hw.inc"
+INCLUDE "sndids.inc"
 INCLUDE "map_fields.inc"
 
 INCLUDE "en.inc"                    ; A8 PLAYER_H, STEP_UP, FALL_LEDGE, EN_*
@@ -1225,6 +1226,10 @@ UpdateFall::
     sub b                           ; rise
     cp STEP_UP + 1
     ret nc
+    cp STEP_UP                      ; A8 update_fall: a rise of exactly STEP_UP plays SOUND_OOF
+    jr nz, .sync
+    ld a, SND_OOF
+    call PlaySound
 .sync:
     call LedgeUnstick
     jp SyncEye

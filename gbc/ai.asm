@@ -6,6 +6,7 @@
 ; .z_aim). The enemy step probes (EnemyMoveOk) are GBC collision code with the A8 rules.
 
 INCLUDE "hw.inc"
+INCLUDE "sndids.inc"
 INCLUDE "map_fields.inc"
 INCLUDE "en.inc"
 INCLUDE "a8enmeta.inc"
@@ -833,6 +834,8 @@ RktExplode:
     call RktPlace
     call RktSplash
     call StartExplosion
+    ld a, SND_RXPLOD                ; A8 gex_go
+    call PlaySound
     jp RktClear
 
 ; A8 rkt_place: blast origin = the rocket (cells), in the player's room.
@@ -1064,6 +1067,8 @@ BarrelExplode:
     call RktSplash
     call BarrelQueue
     call StartExplosion
+    ld a, SND_RXPLOD
+    call PlaySound
 BarrelArm:
     ld a, LOW(BARREL_CHAIN_MS)
     ld [wBarrelCh], a
@@ -2964,16 +2969,67 @@ EnEnterApproach:
     inc [hl]
     ret
 
-; A8 enemy_enter_alert: sight cue (no sound yet), then straight to approach.
+; A8 enemy_enter_alert: the sight bark, then straight to approach.
 EnEnterAlert:
+    ld hl, SndSight
+    call EnCue
     jr EnEnterApproach
 
+; HL = SndSight / SndWince / SndDeath: play the current enemy's cue (A8 enemy_play_cue).
+EnCue:
+    push hl
+    call EnTypeA
+    pop hl
+    ld e, a
+    ld d, 0
+    add hl, de
+    ld a, [hl]
+    cp SND_NONE
+    ret z
+    jp PlaySound
+
+; A8 enemy_play_clip_sfx: the attack clip's melee / shoot sound plays when the frame steps onto its
+; sound frame (old < frame <= new; wEnSfxOld / wEnNewFrame).
+EnAtkSound:
+    call EnTypeA
+    ld e, a
+    ld d, 0
+    ld hl, SndAtkFrame
+    add hl, de
+    ld a, [hl]
+    cp SND_NONE
+    ret z
+    ld b, a
+    ld a, [wEnSfxOld]
+    cp b
+    ret nc
+    ld a, [wEnNewFrame]
+    cp b
+    ret c
+    jr EnAtkPlay
+
+; A8 enemy_play_clip_sfx_enter: a sound on frame 0 plays as the attack starts.
+EnAtkEnterSound:
+    call EnTypeA
+    ld e, a
+    ld d, 0
+    ld hl, SndAtkFrame
+    add hl, de
+    ld a, [hl]
+    and a
+    ret nz                          ; (SND_NONE is nonzero too)
+EnAtkPlay:
+    ld hl, SndAtkId
+    add hl, de
+    ld a, [hl]
+    jp PlaySound
 ; A8 enemy_enter_attack (possessed): attack clip from frame 0, face the player.
 EnEnterAttack:
     ld a, EN_ATTACK
     call EnSetStateA
     ENPTR wEnFrame
     ld [hl], 0
+    call EnAtkEnterSound
     jp EnFacePlayer
 
 ; A8 enemy_enter_demon_attack: as EnEnterAttack, and the step accumulator restarts.
@@ -2986,6 +3042,7 @@ EnEnterDemonAttack:
     ld [hl], 0
     ENPTR wEnStepH
     ld [hl], 0
+    call EnAtkEnterSound
     jp EnFacePlayer
 
 ; ---- per-type AI (A8 ai_poss / ai_baron / ai_pinky / ai_imp entry points) -----------------
@@ -3531,6 +3588,7 @@ EnemyAnimStep:
 .attack:
     call .inc
     ld [wEnNewFrame], a             ; new frame
+    call EnAtkSound
     ld a, EM_FIRE_FRAME
     call EnMetaGet
     bit 7, a
@@ -3603,7 +3661,8 @@ AiDamageEnemy::
     ld [hl], 0
     ENPTR wEnPainI
     ld [hl], 0
-    ret
+    ld hl, SndWince
+    jp EnCue
 .kill:
     ld a, EN_DYING                  ; A8 kill_enemy
     call EnSetStateA
@@ -3615,7 +3674,8 @@ AiDamageEnemy::
     ld a, [wKills]
     inc a
     ld [wKills], a
-    ret
+    ld hl, SndDeath
+    jp EnCue
 
 ; A8 enemies_block_player: wColX / wColZ proposed. Carry = ok; NC = the player would newly
 ; overlap a live enemy of this room (Chebyshev < block_r + 1, overlapping in Y). A body the player
@@ -3833,6 +3893,8 @@ RollUpto:
 ; A8 punch_try_kill (fist, chainsaw): the first live enemy of the room within PUNCH_HIT_R cells in any
 ; direction (and overlapping the player in Y) takes 1..16.
 MeleeShot:
+    xor a
+    ldh [hSawBite], a                ; A8 start_saw: a miss clears the bite
     ld a, [wEnN]
     and a
     ret z
@@ -3872,13 +3934,19 @@ MeleeShot:
     swap a
     and $0F
     inc a                            ; (rnd >> 4) + 1
+    ld a, 1
+    ldh [hSawBite], a
+    push af
+    ld a, SND_PUNCH                  ; A8 start_punch / start_saw: SOUND_PUNCH on a hit
+    call PlaySound
+    pop af
     jp AiDamageEnemy
 .n:
     ld hl, wObjI
     inc [hl]
     ld a, [wEnN]
     cp [hl]
-    jr nz, .l
+    jp nz, .l
     ret
 
 ; A8 gun_hitscan + scan_shoot_barrels: the nearest target (enemy or barrel; smallest whole-cell depth,

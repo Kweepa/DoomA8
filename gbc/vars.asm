@@ -441,6 +441,7 @@ wHavePack::   ds 1                   ; A8 have_pack: backpack doubles the ammo c
 wArmorKind::  ds 1                   ; A8 combat_armor: 1 blue (saves 1/2), 0 green (5/16)
 wPuKind::     ds 1                   ; A8 pu_kind: 0 or TH_RADSUIT
 wPuMs::       ds 2                   ; A8 pu_ms: powerup time left
+wDhChg::      ds 1                   ; DoorHideTag: a hidden bit flipped (plays the door sound)
 wPickupMs::   ds 2                   ; A8 pickup_ms: no grabs while > 0
 wApTy::       ds 1                   ; ApplyPickupB scratch
 wApCap::      ds 1
