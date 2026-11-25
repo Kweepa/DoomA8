@@ -23,7 +23,6 @@ JS_ORDER = [
     "js/overheadView.js",
     "js/previewView.js",
     "js/animView.js",
-    "js/weaponView.js",
     "js/itemView.js",
     "js/gbSpriteView.js",
     "js/buildView.js",
@@ -80,7 +79,6 @@ def main() -> None:
     <div class="toolbar-actions" role="group" aria-label="Editor mode">
       <button type="button" id="btn-mode-layout" class="active">Maps</button>
       <button type="button" id="btn-mode-anim">Enemies</button>
-      <button type="button" id="btn-mode-weapons">Weapons</button>
       <button type="button" id="btn-mode-items">Items</button>
       <button type="button" id="btn-mode-gbsprites" title="Game Boy weapon, flash, blood and spark sprites">GB Sprites</button>
       <button type="button" id="btn-mode-build">Build</button>
@@ -130,21 +128,6 @@ def main() -> None:
         </div>
         <div class="btn-row">
           <button type="button" id="btn-anim-folder">Open shareware folder</button>
-        </div>
-      </section>
-      <section id="weapons-left" hidden>
-        <h2>Weapons</h2>
-        <ul id="weapon-list" class="object-list"></ul>
-        <label class="field mdl-scale-field">
-          <span>Global scale</span>
-          <input type="range" id="weapon-scale" min="0.05" max="4" step="0.01" value="0.4" />
-          <input type="number" id="weapon-scale-num" min="0.05" max="8" step="0.01" value="0.4" />
-        </label>
-        <div class="btn-row">
-          <button type="button" id="btn-weapon-folder">Open shareware folder</button>
-        </div>
-        <div class="btn-row">
-          <button type="button" id="btn-weapon-export">Export PNGs</button>
         </div>
       </section>
       <section id="gbspr-left" hidden></section>
@@ -210,13 +193,6 @@ def main() -> None:
           <canvas id="overhead-canvas"></canvas>
         </div>
         <p class="muted" id="ortho-hint">XZ · +Z up · camera arrow</p>
-      </div>
-      <div id="weapon-preview-panel" class="preview-panel panel" hidden>
-        <h2>48×42 sprite</h2>
-        <div class="preview-frame weapon-preview-frame">
-          <canvas id="weapon-preview-canvas"></canvas>
-        </div>
-        <p class="muted" id="weapon-preview-hint">C64 2×2 hi-res</p>
       </div>
     </aside>
   </main>

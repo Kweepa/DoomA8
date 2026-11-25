@@ -3762,7 +3762,6 @@ export function parseEditorState(raw) {
   if (
     raw.mode === "anim" ||
     raw.mode === "layout" ||
-    raw.mode === "weapons" ||
     raw.mode === "items" ||
     raw.mode === "gbsprites" ||
     raw.mode === "build"

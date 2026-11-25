@@ -103,10 +103,6 @@ import {
   ENEMY_BLOCK_R_MAX,
   clampWeaponVert,
   WEAPON_VERT,
-  WEAPON_KEYS,
-  WEAPON_LABELS,
-  clampWeaponScale,
-  DEFAULT_WEAPON_SCALE,
   ROOM_SHAPES,
   applyRoomShape,
   rotateRoom,
@@ -151,8 +147,6 @@ import {
   readMapFiles,
   writeMapFiles,
   readProjectBytes,
-  ensureWeaponsPngDirectory,
-  writePngFile,
 } from "./io.js";
 import { showBuildView } from "./buildView.js";
 import { parsePakBuffers } from "./pak.js";
@@ -160,22 +154,15 @@ import { loadDoomSprites, spriteHit, spriteLetters } from "./doompic.js";
 import { StickOrtho } from "./stickOrtho.js";
 import {
   loadEnemyMdls,
-  loadWeaponMdls,
   mdlEditorVerts,
   averageJointPositions,
   filterMdlClips,
   buildStickFramesFromMdl,
-  resolveWeaponFrames,
-  rasterWeaponFrame,
-  WEAPON_MDL_PATHS,
-  WEAPON_SPRITE_W,
-  WEAPON_SPRITE_H,
 } from "./mdl.js";
 import { LayoutView } from "./layoutView.js";
 import { OverheadView } from "./overheadView.js";
 import { PreviewView } from "./previewView.js";
 import { AnimView } from "./animView.js";
-import { WeaponView } from "./weaponView.js";
 import { ItemView } from "./itemView.js";
 import { GbSpriteView } from "./gbSpriteView.js";
 import { normalizeGbSprites } from "./gbSpriteModel.js";
@@ -216,8 +203,6 @@ let animPlayTimer = null;
 let animLoop = false;
 let sharewareModels = {};
 let sharewareMissing = [];
-let sharewareWeapons = {};
-let sharewareWeaponMissing = [];
 let overlayOn = true;
 let refSpriteOn = true;
 let collisionOn = true;
@@ -229,8 +214,6 @@ let framePoseClip = null;
 let clipIndex = 0;
 let frameLocal = 0;
 let mdlScale = DEFAULT_MDL_SCALE;
-let weaponKey = "shot2";
-let weaponFrame = 0;
 let itemMeshKey = "backpack";
 /** Collapsed room ids in the Objects tree. */
 const collapsedRooms = new Set();
@@ -559,35 +542,6 @@ function makeStickOrtho(id, horiz, rot) {
 const stickLeft = makeStickOrtho("stick-left-canvas", "z", 7);
 const stickFront = makeStickOrtho("stick-front-canvas", "x", 1);
 
-const weaponView = new WeaponView(document.getElementById("view-canvas"), {
-  stage: document.getElementById("map-stage"),
-  previewCanvas: document.getElementById("weapon-preview-canvas"),
-  getMdl: () => sharewareWeapons[weaponKey] || null,
-  getScale: () => doc.weapons.scale,
-  getPan: () => {
-    const item = doc.weapons.items[weaponKey];
-    return item?.pan || { x: 0, y: 0 };
-  },
-  getPreviewFrame: () => weaponFrame,
-  getOnionFrames: () => selectedWeaponFrames(),
-  setScale: (v) => {
-    doc.weapons.scale = clampWeaponScale(v);
-    syncWeaponScaleInputs();
-  },
-  setPan: (x, y) => {
-    const item = ensureWeaponItem(weaponKey);
-    item.pan = { x, y };
-  },
-  beginUndo,
-  endUndo,
-  onChange: () => {
-    markDirty();
-  },
-  onPanEnd: () => {
-    refreshWeaponClipStatus();
-  },
-});
-
 const itemView = new ItemView(document.getElementById("view-canvas"), {
   stage: document.getElementById("map-stage"),
   getMesh: () => {
@@ -799,8 +753,6 @@ function collectEditorState() {
     layoutCameras: { ...layoutCamerasByLevel },
     animOrbit: { yaw: orb.yaw, pitch: orb.pitch, dist: orb.dist },
     mdlScale,
-    weapon: weaponKey,
-    weaponFrame,
     overlayOn,
     orthoMode: overheadView.mode,
     collapsedRooms: [...collapsedRooms],
@@ -855,8 +807,6 @@ function applyEditorState(ed) {
     rememberSelectedRoom();
     selectedVerts = [...ed.selectedVerts];
     setMdlScale(ed.mdlScale);
-    weaponKey = WEAPON_KEYS.includes(ed.weapon) ? ed.weapon : "shot2";
-    weaponFrame = Math.max(0, ed.weaponFrame | 0);
     setOverlayOn(ed.overlayOn);
     setOrthoMode(ed.orthoMode);
     collapsedRooms.clear();
@@ -950,7 +900,6 @@ function restore(json) {
   if (enemyIndex >= doc.enemies.length) enemyIndex = 0;
   clampFrameIndex(activeEnemy());
   syncClipFromFrameIndex(activeEnemy());
-  clampWeaponPreviewFrame();
   markDirty();
   buildPalette();
   refreshAll();
@@ -1201,7 +1150,6 @@ function setMode(mode) {
   editorMode = mode;
   document.getElementById("btn-mode-layout").classList.toggle("active", mode === "layout");
   document.getElementById("btn-mode-anim").classList.toggle("active", mode === "anim");
-  document.getElementById("btn-mode-weapons").classList.toggle("active", mode === "weapons");
   document.getElementById("btn-mode-items")?.classList.toggle("active", mode === "items");
   document.getElementById("btn-mode-gbsprites")?.classList.toggle("active", mode === "gbsprites");
   document.getElementById("btn-mode-build")?.classList.toggle("active", mode === "build");
@@ -1234,7 +1182,6 @@ function setMode(mode) {
   document.getElementById("layout-left").hidden = mode !== "layout";
   document.querySelector(".left")?.classList.toggle("left-map", mode === "layout");
   document.getElementById("anim-left").hidden = mode !== "anim";
-  document.getElementById("weapons-left").hidden = mode !== "weapons";
   const itemsLeft = document.getElementById("items-left");
   if (itemsLeft) itemsLeft.hidden = mode !== "items";
   document.getElementById("draw-mode-group").classList.toggle("inactive", mode !== "layout");
@@ -1244,15 +1191,12 @@ function setMode(mode) {
   }
   document.getElementById("overhead-panel").hidden = mode !== "layout";
   document.getElementById("preview-panel").hidden = mode !== "layout";
-  document.getElementById("weapon-preview-panel").hidden = mode !== "weapons";
   if (mode !== "layout") clearPaletteDrag();
   updateCenterChrome();
   document.getElementById("hint").textContent =
     mode === "layout"
       ? "Drag palette to place · LMB box/click-select · Ctrl+LMB box-select points · Shift add · WASD/wheel fly · Q/E up · RMB look · Alt+LMB / Alt+MMB orbit · MMB pan · Alt+RMB zoom · F focus · G drop · Ctrl+D dup · gizmo moves selection · Del"
-      : mode === "weapons"
-        ? "LMB drag pans · wheel scale"
-        : mode === "items"
+      : mode === "items"
           ? "LMB box-select verts · click vert/line to select · Shift add · gizmo moves · V add vert · L add line · Ctrl+C/V copy/paste · Del · F focus · MMB pan · Alt+LMB / RMB orbit · Alt+RMB zoom"
           : mode === "gbsprites"
             ? "LMB paint · RMB erase · arrows shift (Shift = 8) · H/V flip · I invert · Del clear · Ctrl+C/V"
@@ -1261,7 +1205,6 @@ function setMode(mode) {
               : animHintText();
   layoutView.enabled = mode === "layout";
   animView.enabled = mode === "anim";
-  weaponView.enabled = mode === "weapons";
   itemView.enabled = mode === "items";
   gbSpriteView.enabled = gbs;
   if (gbs) gbSpriteView.refresh();
@@ -1272,8 +1215,7 @@ function setMode(mode) {
       stickLeft.resize();
       stickFront.resize();
     });
-  } else if (mode === "weapons") weaponView.resize();
-  else if (mode === "items") itemView.resize();
+  } else if (mode === "items") itemView.resize();
   if (mode === "build") showBuildView();
   if (mode !== "anim") stopAnimPlay();
   refreshAll();
@@ -1814,9 +1756,7 @@ function updateCenterChrome() {
     return;
   }
   titleEl.textContent =
-    editorMode === "weapons"
-      ? WEAPON_LABELS[weaponKey] || "Weapons"
-      : editorMode === "items"
+    editorMode === "items"
         ? itemMeshKey
         : editorMode === "build"
           ? "Build"
@@ -2065,223 +2005,11 @@ function renderItemList() {
   renderMeshKeyList(document.getElementById("door-mesh-list"), DOOR_MESH_KEYS);
 }
 
-function ensureWeaponItem(key) {
-  if (!doc.weapons) doc.weapons = { scale: DEFAULT_WEAPON_SCALE, items: {} };
-  if (!doc.weapons.items[key]) {
-    doc.weapons.items[key] = { pan: { x: 0, y: 0 }, frames: null };
-  }
-  return doc.weapons.items[key];
-}
-
-function selectedWeaponFrames() {
-  const mdl = sharewareWeapons[weaponKey];
-  const item = ensureWeaponItem(weaponKey);
-  return resolveWeaponFrames(item, mdl, weaponKey);
-}
-
-function clampWeaponPreviewFrame() {
-  const mdl = sharewareWeapons[weaponKey];
-  const selected = selectedWeaponFrames();
-  if (mdl?.frames?.length) {
-    weaponFrame = Math.max(0, Math.min(weaponFrame, mdl.frames.length - 1));
-  }
-  if (selected.length && !selected.includes(weaponFrame)) {
-    weaponFrame = selected[0];
-  }
-}
-
-function syncWeaponScaleInputs() {
-  const range = document.getElementById("weapon-scale");
-  const num = document.getElementById("weapon-scale-num");
-  const shown = String(doc.weapons.scale);
-  if (range && range.value !== shown) range.value = shown;
-  if (num && document.activeElement !== num && num.value !== shown) num.value = shown;
-}
-
 function syncSharewareFolderButtons() {
   const folder = sharewareFolderName();
   const label = folder ? "Change folder…" : "Open shareware folder";
-  const weaponBtn = document.getElementById("btn-weapon-folder");
-  if (weaponBtn) weaponBtn.textContent = label;
   const animBtn = document.getElementById("btn-anim-folder");
   if (animBtn) animBtn.textContent = label;
-  const exportBtn = document.getElementById("btn-weapon-export");
-  if (exportBtn) exportBtn.disabled = !Object.keys(sharewareWeapons).length;
-}
-
-function refreshWeaponClipStatus() {
-  if (editorMode !== "weapons") return;
-  if (!sharewareWeapons[weaponKey]) return;
-  const n = selectedWeaponFrames().length;
-  setStatus(`${WEAPON_LABELS[weaponKey]} · ${n} export frame${n === 1 ? "" : "s"}`);
-}
-
-function pixelsToPngBlob(pixels) {
-  const canvas = document.createElement("canvas");
-  canvas.width = WEAPON_SPRITE_W;
-  canvas.height = WEAPON_SPRITE_H;
-  const ctx = canvas.getContext("2d");
-  const img = ctx.createImageData(WEAPON_SPRITE_W, WEAPON_SPRITE_H);
-  for (let i = 0; i < pixels.length; i++) {
-    const on = pixels[i] ? 1 : 0;
-    const o = i * 4;
-    img.data[o] = on ? 232 : 0;
-    img.data[o + 1] = on ? 228 : 0;
-    img.data[o + 2] = on ? 216 : 0;
-    img.data[o + 3] = 255;
-  }
-  ctx.putImageData(img, 0, 0);
-  return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (blob) resolve(blob);
-      else reject(new Error("PNG encode failed"));
-    }, "image/png");
-  });
-}
-
-async function exportWeaponPngs() {
-  if (!Object.keys(sharewareWeapons).length) {
-    setStatus("Load shareware to export", true);
-    return;
-  }
-  const dir = await ensureWeaponsPngDirectory();
-  if (!dir) return;
-  let n = 0;
-  for (const key of WEAPON_KEYS) {
-    const mdl = sharewareWeapons[key];
-    if (!mdl) continue;
-    const item = ensureWeaponItem(key);
-    const frames = resolveWeaponFrames(item, mdl, key);
-    const pan = item.pan || { x: 0, y: 0 };
-    for (const fi of frames) {
-      const { pixels } = rasterWeaponFrame(mdl, fi, doc.weapons.scale, pan);
-      const blob = await pixelsToPngBlob(pixels);
-      await writePngFile(dir, `${key}_${fi}.png`, blob);
-      n++;
-    }
-  }
-  setStatus(`Exported ${n} PNG${n === 1 ? "" : "s"} (copy to *_edit.png to clean)`);
-}
-
-function renderWeaponList() {
-  const ul = document.getElementById("weapon-list");
-  if (!ul) return;
-  ul.innerHTML = "";
-  for (const key of WEAPON_KEYS) {
-    const li = document.createElement("li");
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.textContent = WEAPON_LABELS[key];
-    if (key === weaponKey) btn.className = "active";
-    btn.addEventListener("click", () => {
-      weaponKey = key;
-      clampWeaponPreviewFrame();
-      markUi();
-      refreshAll();
-    });
-    li.appendChild(btn);
-    ul.appendChild(li);
-  }
-}
-
-function renderWeaponInspector(root) {
-  const h = document.createElement("h2");
-  h.textContent = WEAPON_LABELS[weaponKey] || weaponKey;
-  root.appendChild(h);
-
-  const mdl = sharewareWeapons[weaponKey];
-  const item = ensureWeaponItem(weaponKey);
-  const folder = sharewareFolderName();
-
-  const status = document.createElement("p");
-  status.className = "muted";
-  if (mdl) {
-    status.textContent = folder
-      ? `${folder} · ${mdl.numVerts} verts · ${mdl.frames.length} frames`
-      : `${mdl.numVerts} verts · ${mdl.frames.length} frames`;
-  } else if (sharewareWeaponMissing.includes(weaponKey)) {
-    const mdlPath = WEAPON_MDL_PATHS[weaponKey];
-    status.textContent = folder && mdlPath
-      ? `${mdlPath} is not in ${folder}`
-      : "View-model not in the opened PAK";
-  } else {
-    status.textContent = folder
-      ? `Opened ${folder}. Open again if models did not load.`
-      : "Open a folder that contains pak0.pak or id1/pak0.pak";
-  }
-  root.appendChild(status);
-
-  root.appendChild(
-    vec3Field("Pan XY", [
-      {
-        value: Math.round(item.pan.x * 100) / 100,
-        onChange: (v) => {
-          pushUndo();
-          item.pan.x = Number.isFinite(v) ? v : 0;
-          markDirty();
-          refreshAll();
-        },
-      },
-      {
-        value: Math.round(item.pan.y * 100) / 100,
-        onChange: (v) => {
-          pushUndo();
-          item.pan.y = Number.isFinite(v) ? v : 0;
-          markDirty();
-          refreshAll();
-        },
-      },
-    ])
-  );
-
-  const fh = document.createElement("h2");
-  fh.textContent = "Export frames";
-  root.appendChild(fh);
-  if (!mdl) {
-    const p = document.createElement("p");
-    p.className = "muted";
-    p.textContent = "Load shareware to pick frames.";
-    root.appendChild(p);
-    return;
-  }
-
-  const selected = new Set(selectedWeaponFrames());
-  const ul = document.createElement("ul");
-  ul.className = "weapon-frame-list";
-  for (const clip of mdl.clips || []) {
-    const head = document.createElement("li");
-    head.className = "clip-head";
-    head.textContent = clip.name;
-    ul.appendChild(head);
-    for (const fr of clip.frames) {
-      const li = document.createElement("li");
-      const chk = document.createElement("input");
-      chk.type = "checkbox";
-      chk.checked = selected.has(fr.index);
-      chk.addEventListener("change", () => {
-        pushUndo();
-        const next = new Set(selectedWeaponFrames());
-        if (chk.checked) next.add(fr.index);
-        else next.delete(fr.index);
-        item.frames = [...next].sort((a, b) => a - b);
-        clampWeaponPreviewFrame();
-        markDirty();
-        refreshAll();
-      });
-      const nameBtn = document.createElement("button");
-      nameBtn.type = "button";
-      nameBtn.className = "frame-name" + (weaponFrame === fr.index ? " current" : "");
-      nameBtn.textContent = fr.name || `frame ${fr.index}`;
-      nameBtn.addEventListener("click", () => {
-        weaponFrame = fr.index;
-        markDirty();
-        refreshAll();
-      });
-      li.append(chk, nameBtn);
-      ul.appendChild(li);
-    }
-  }
-  root.appendChild(ul);
 }
 
 function field(label, input) {
@@ -2944,10 +2672,6 @@ function renderInspector() {
     hint.className = "muted";
     hint.textContent = "Grid −4…4 · origin at 0,0,0 · Add Vert places at origin.";
     root.appendChild(hint);
-    return;
-  }
-  if (editorMode === "weapons") {
-    renderWeaponInspector(root);
     return;
   }
   if (editorMode === "layout") {
@@ -3693,8 +3417,6 @@ async function loadSharewareFromHandle(handle) {
     if (!buffers.length) {
       sharewareModels = {};
       sharewareMissing = ENEMY_TYPES.map((t) => t.name);
-      sharewareWeapons = {};
-      sharewareWeaponMissing = [...WEAPON_KEYS];
       setStatus("No pak0.pak / pak1.pak in that folder", true);
       refreshPanels();
       return;
@@ -3703,22 +3425,12 @@ async function loadSharewareFromHandle(handle) {
     const { models, missing } = loadEnemyMdls(lumps);
     sharewareModels = models;
     sharewareMissing = missing;
-    const weapons = loadWeaponMdls(lumps);
-    sharewareWeapons = weapons.models;
-    sharewareWeaponMissing = weapons.missing;
-    clampWeaponPreviewFrame();
     const n = Object.keys(models).length;
-    const wn = Object.keys(sharewareWeapons).length;
     const miss = missing.length ? ` · missing ${missing.join(", ")}` : "";
-    const wmiss = weapons.missing.length ? ` · weapons missing ${weapons.missing.join(", ")}` : "";
-    setStatus(
-      `Loaded ${n} enemy / ${wn} weapon model${wn === 1 ? "" : "s"} from ${sharewareFolderName()}${miss}${wmiss}`
-    );
+    setStatus(`Loaded ${n} enemy model${n === 1 ? "" : "s"} from ${sharewareFolderName()}${miss}`);
   } catch (err) {
     sharewareModels = {};
     sharewareMissing = ENEMY_TYPES.map((t) => t.name);
-    sharewareWeapons = {};
-    sharewareWeaponMissing = [...WEAPON_KEYS];
     setStatus(String(err.message || err), true);
   }
   if (restoreMdlRigBackup()) markDirty();
@@ -3728,7 +3440,6 @@ async function loadSharewareFromHandle(handle) {
     animView.draw();
     refreshPanels();
   }
-  if (editorMode === "weapons") weaponView.draw();
 }
 
 function adoptDoomSprites(buf) {
@@ -3921,16 +3632,6 @@ function stepFrame(d) {
   refreshAll();
 }
 
-function stepWeaponFrame(d) {
-  const frames = selectedWeaponFrames();
-  if (!frames.length) return;
-  let i = frames.indexOf(weaponFrame);
-  if (i < 0) i = 0;
-  weaponFrame = frames[(i + d + frames.length) % frames.length];
-  markUi();
-  refreshAll();
-}
-
 function stopAnimPlay() {
   animPlaying = false;
   if (animPlayTimer) {
@@ -4055,16 +3756,13 @@ function refreshPanels() {
   renderLevelList();
   renderObjectList();
   renderEnemyList();
-  renderWeaponList();
   renderItemList();
   renderInspector();
-  syncWeaponScaleInputs();
   syncSharewareFolderButtons();
   if (editorMode !== "build") overheadView.draw();
   if (editorMode === "layout") previewView.draw();
   if (editorMode === "layout") layoutView.draw();
   if (editorMode === "anim") animView.draw();
-  if (editorMode === "weapons") weaponView.draw();
   if (editorMode === "items") itemView.draw();
   if (editorMode === "gbsprites") gbSpriteView.refresh();
 }
@@ -4073,7 +3771,6 @@ function refreshAll() {
   updateCenterChrome();
   refreshPanels();
   if (editorMode === "layout") layoutView.draw();
-  else if (editorMode === "weapons") weaponView.draw();
   else if (editorMode === "items") itemView.draw();
   else if (editorMode === "gbsprites") gbSpriteView.refresh();
   else if (editorMode !== "build") animView.draw();
@@ -4084,9 +3781,6 @@ document.getElementById("btn-mode-layout").addEventListener("click", () => {
 });
 document.getElementById("btn-mode-anim").addEventListener("click", () => {
   setMode("anim");
-});
-document.getElementById("btn-mode-weapons").addEventListener("click", () => {
-  setMode("weapons");
 });
 document.getElementById("btn-mode-gbsprites")?.addEventListener("click", () => {
   setMode("gbsprites");
@@ -4105,30 +3799,7 @@ document.getElementById("btn-collision-overlay")?.addEventListener("click", (e) 
   e.currentTarget.classList.toggle("active", collisionOn);
   animView.draw();
 });
-document.getElementById("weapon-scale").addEventListener("input", (e) => {
-  doc.weapons.scale = clampWeaponScale(e.target.value);
-  syncWeaponScaleInputs();
-  if (editorMode === "weapons") weaponView.draw();
-});
-document.getElementById("weapon-scale").addEventListener("change", (e) => {
-  pushUndo();
-  doc.weapons.scale = clampWeaponScale(e.target.value);
-  syncWeaponScaleInputs();
-  markDirty();
-  refreshAll();
-});
-document.getElementById("weapon-scale-num").addEventListener("change", (e) => {
-  pushUndo();
-  doc.weapons.scale = clampWeaponScale(e.target.value);
-  syncWeaponScaleInputs();
-  markDirty();
-  refreshAll();
-});
-document.getElementById("btn-weapon-folder")?.addEventListener("click", () => void openSharewareFolder());
 document.getElementById("btn-anim-folder")?.addEventListener("click", () => void openSharewareFolder());
-document.getElementById("btn-weapon-export")?.addEventListener("click", () => {
-  exportWeaponPngs().catch((err) => setStatus(String(err.message || err), true));
-});
 document.getElementById("btn-draw-all").addEventListener("click", () => {
   setDrawMode(false);
 });
@@ -4449,18 +4120,6 @@ window.addEventListener("keydown", (e) => {
     if (k === "x" || k === "y" || k === "z") {
       e.preventDefault();
       nudgeVert(k, e.shiftKey ? -1 : 1);
-      return;
-    }
-  }
-  if (editorMode === "weapons") {
-    if (e.key === "[" || e.key === "," || e.key === "ArrowLeft") {
-      e.preventDefault();
-      stepWeaponFrame(-1);
-      return;
-    }
-    if (e.key === "]" || e.key === "." || e.key === "ArrowRight") {
-      e.preventDefault();
-      stepWeaponFrame(1);
       return;
     }
   }
