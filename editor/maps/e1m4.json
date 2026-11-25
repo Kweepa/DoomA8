@@ -1,5 +1,6 @@
 {
   "name": "Command Control",
+  "parSeconds": 90,
   "objects": [
     {
       "id": "43cf1c5b-f7d4-4310-b7d5-319d2e021291",

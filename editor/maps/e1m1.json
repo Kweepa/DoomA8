@@ -1,5 +1,6 @@
 {
   "name": "Hangar",
+  "parSeconds": 30,
   "objects": [
     {
       "id": "8841eb7b-abb9-4365-b2ce-44a25e3ca288",

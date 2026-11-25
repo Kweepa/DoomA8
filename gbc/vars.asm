@@ -416,6 +416,8 @@ wHurtMs::     ds 2                   ; A8 hurt_flash: red border time left
 wPalStage::   ds 32                  ; BG palettes 0-3 (BGR555) for HudBlit
 wPalDirty::   ds 1
 wPalRoom::    ds 1                   ; room / border colour the staged palettes were built for
+wHudShadow::  ds 80                  ; wHudRows as last sent to VRAM (HudDiff), per-row change detection
+wHudDirty::   ds 1                   ; bit n: HUD row 14 + n differs from VRAM, HudBlit sends it
 wPalBorder::  ds 1
 wPkN::        ds 1
 wPkI::        ds 1

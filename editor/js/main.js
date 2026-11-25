@@ -30,6 +30,8 @@ import {
   a8Hex,
   MAX_TRIGGER_TEXT,
   MAX_NAME_LEN,
+  PAR_SECONDS_MAX,
+  clampPar,
   MAX_TAG_LEN,
   PICKUP_TYPES,
   PICKUP_ICON,
@@ -2900,6 +2902,20 @@ function renderInspector() {
         refreshAll();
       });
       root.appendChild(field("Name", nameInp));
+      const parInp = document.createElement("input");
+      parInp.type = "number";
+      parInp.min = "0";
+      parInp.max = String(PAR_SECONDS_MAX);
+      parInp.step = "1";
+      parInp.value = String(clampPar(map.parSeconds));
+      parInp.title = "Par time on the intermission screen, seconds (0-255)";
+      parInp.addEventListener("change", () => {
+        pushUndo();
+        map.parSeconds = clampPar(parInp.value);
+        markDirty();
+        refreshAll();
+      });
+      root.appendChild(field("Par (s)", parInp));
       for (const row of mapKindStatRows(mapStats(doc))) {
         const line = document.createElement("div");
         line.className = "field level-stat";

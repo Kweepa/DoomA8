@@ -1,5 +1,6 @@
 {
   "name": "Phobos Anomaly",
+  "parSeconds": 30,
   "objects": [
     {
       "id": "61b1f289-5593-4ed2-93be-2e0b19372811",

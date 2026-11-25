@@ -105,6 +105,15 @@ HudInitB::
     ld [hl+], a
     dec b
     jr nz, .clr
+    ld hl, wHudShadow                   ; VRAM gets wHudRows (zero) on the first HudBlit: shadow = zero, all rows dirty
+    ld b, 4 * HUD_W
+.clrs:
+    ld [hl+], a
+    dec b
+    jr nz, .clrs
+    ld a, $0F
+    ld [wHudDirty], a
+    xor a
     ld [wStatusMs], a
     ld [wStatusMs + 1], a
     ld [wHurtMs], a
@@ -127,6 +136,45 @@ HudInitB::
     ret
 
 ; ---- per frame -------------------------------------------------------------------------------
+
+; Per HUD row: if wHudRows differs from wHudShadow, copy it over and flag the row for HudBlit. Runs in the
+; main loop so the VBlank copy only touches rows that changed (the full 80-byte copy plus the palette upload
+; ran past the end of VBlank).
+MACRO HUDROW_DIFF
+    ld hl, wHudRows + 20 * \1
+    ld de, wHudShadow + 20 * \1
+    ld b, 20
+.c\@:
+    ld a, [de]
+    cp [hl]
+    jr nz, .d\@
+    inc hl
+    inc de
+    dec b
+    jr nz, .c\@
+    jr .e\@
+.d\@:
+    ld hl, wHudRows + 20 * \1
+    ld de, wHudShadow + 20 * \1
+    ld b, 20
+.k\@:
+    ld a, [hl+]
+    ld [de], a
+    inc de
+    dec b
+    jr nz, .k\@
+    ld a, [wHudDirty]
+    or 1 << \1
+    ld [wHudDirty], a
+.e\@:
+ENDM
+
+HudDiffB::
+    HUDROW_DIFF 0
+    HUDROW_DIFF 1
+    HUDROW_DIFF 2
+    HUDROW_DIFF 3
+    ret
 
 ; Stats and keys into the shadow rows, message timer (A8 update_status), palettes.
 HudUpdateB::

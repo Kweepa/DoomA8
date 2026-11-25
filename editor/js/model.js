@@ -2268,8 +2268,16 @@ export function cycleFace(faceId, delta) {
   return FACES[n].id;
 }
 
+export const PAR_SECONDS_DEFAULT = 60;
+export const PAR_SECONDS_MAX = 255; // one byte in the GBC InterStats table
+
+export function clampPar(v) {
+  const n = Math.round(Number(v));
+  return Number.isFinite(n) ? Math.max(0, Math.min(PAR_SECONDS_MAX, n)) : PAR_SECONDS_DEFAULT;
+}
+
 export function emptyMap() {
-  return { name: "", objects: [] };
+  return { name: "", parSeconds: PAR_SECONDS_DEFAULT, objects: [] };
 }
 
 export function mapDisplayName(map, key) {
@@ -3408,6 +3416,7 @@ export function mapFileRecords(doc) {
       file: `${name.toLowerCase()}.json`,
       data: {
         name: clampName(map.name),
+        parSeconds: clampPar(map.parSeconds ?? PAR_SECONDS_DEFAULT),
         objects,
       },
     };
@@ -3926,12 +3935,14 @@ export function normalizeDocument(raw) {
       const src = raw.maps[name] || {};
       doc.maps[name] = {
         name: clampName(src.name),
+        parSeconds: clampPar(src.parSeconds ?? PAR_SECONDS_DEFAULT),
         objects: parseObjects(src.objects),
       };
     }
   } else {
     doc.maps.E1M1 = {
       name: clampName(raw.map?.name),
+      parSeconds: clampPar(raw.map?.parSeconds ?? PAR_SECONDS_DEFAULT),
       objects: parseObjects(raw.map?.objects || raw.objects),
     };
   }

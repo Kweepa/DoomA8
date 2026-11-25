@@ -14,6 +14,11 @@ INCLUDE "a8enmeta.inc"
 
 SECTION "ai", ROMX, BANK[11]
 
+; Head point (feet + this) for the second line-of-sight try when the mid-body line is blocked: an enemy
+; standing under a ramp with its head above the face is still visible / shootable. (GBC addition; A8
+; tests the mid-body point only.)
+DEF SHOT_HEAD_H EQU ENEMY_CULL_H - 1
+
 ; Carry = the enemy (wObjI) may stand at cell (wColX, wColZ): inside its room's colliders and
 ; not blocked by crates / platforms / locked doors. The collision tests use the player's feet,
 ; so the eye height is swapped to the enemy's for the call (as the A8 engine does).
@@ -1764,14 +1769,26 @@ EnFacePlayer:
     ret
 
 ; A8 enemy_shot_clear: carry = clear line from mid-body (feet + SHOT_MID_H) to the eye, tested as a
-; 3D segment against the room's solids (src/util.asm line_solids_blocked).
+; 3D segment against the room's solids (src/util.asm line_solids_blocked). If that is blocked, the same
+; from the head (feet + SHOT_HEAD_H) counts: a body poking through a ramp face can still shoot.
 EnShotClear:
+    ld a, SHOT_MID_H
+    call .try
+    ccf                              ; carry = clear
+    ret c                            ; clear from mid-body
+    ld a, SHOT_HEAD_H
+    call .try
+    ccf
+    ret
+; A = height above the feet -> carry = blocked.
+.try:
+    ld b, a
     ENPTR wEnX
     ld a, [hl]
     ld [wLnA], a
     ENPTR wEnY
     ld a, [hl]
-    add SHOT_MID_H
+    add b
     ld [wLnA + 1], a
     ENPTR wEnZ
     ld a, [hl]
@@ -1782,9 +1799,7 @@ EnShotClear:
     ld [wLnB + 1], a
     ld a, [wCamZ + 1]
     ld [wLnB + 2], a
-    call LineSolidsBlocked
-    ccf
-    ret
+    jp LineSolidsBlocked
 
 ; ==== A8 3D segment vs boxes (src/util.asm) =====================================================
 ; wLnA / wLnB: segment ends (x, y, z), whole cells. wLBox: x, y, z, sx, sy, sz; wLnM: exclusive max.
@@ -4159,7 +4174,26 @@ ScanCand:
     ld a, [wTgt + 2]
     ld [wLnB + 2], a
     call LineSolidsBlocked
+    jr nc, .seen
+    ld a, [wScanId]                  ; blocked at mid-body: an enemy whose head clears a ramp face is still hit
+    cp $40
+    ret nc                           ; barrels: the centre only
+    ld a, [wCamX + 1]
+    ld [wLnA], a
+    ld a, [wCamY + 1]
+    ld [wLnA + 1], a
+    ld a, [wCamZ + 1]
+    ld [wLnA + 2], a
+    ld a, [wTgt]
+    ld [wLnB], a
+    ld a, [wTgt + 1]
+    add SHOT_HEAD_H - SHOT_MID_H
+    ld [wLnB + 1], a
+    ld a, [wTgt + 2]
+    ld [wLnB + 2], a
+    call LineSolidsBlocked
     ret c
+.seen:
     ; r = |l| * 256 / f  (tan, 8.8), then the cone test
     ld a, [wShL + 1]
     ld [wShLSign], a

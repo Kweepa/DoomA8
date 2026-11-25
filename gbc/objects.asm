@@ -785,6 +785,7 @@ LoadEnemies::
     ld [wDoomAnimPh], a
     ld [wGunshotWake], a
     ld [wSplatMs], a                ; no splat
+    ld [wEmuzMs], a                 ; no muzzle (WRAM is random at power-on: a stray timer stamped garbage into the framebuffer)
     ld [wLnMode], a                 ; line tests: first-hit mode
     ld [wSplatFresh], a
     ld [wSgAbs], a

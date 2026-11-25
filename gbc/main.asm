@@ -93,12 +93,16 @@ ENDC
     call LoadLevel
     call WpnInit
     call HudInit                    ; HUD font / attributes, room palettes (LCD still off)
+    call HudUpdate                  ; real HUD numbers for the first HudBlit (else frame 2 rewrites them on top of the weapon upload)
     ld a, $A5
     ldh [hRnd], a
 
-    ; Static test scene into bank 0 (shown until the demo loop replaces it).
+    ; Test builds: static line pattern into bank 0 (tools/gbc_check.py). The game starts on a blank frame, not the
+    ; pattern, which would show until the first flip.
     call ClearFB
+IF DEF(TEST_EXIT)
     call DrawTestSet
+ENDC
     xor a
     call CopyFBGeneral
 

@@ -6820,8 +6820,16 @@ function cycleFace(faceId, delta) {
   return FACES[n].id;
 }
 
+const PAR_SECONDS_DEFAULT = 60;
+const PAR_SECONDS_MAX = 255; // one byte in the GBC InterStats table
+
+function clampPar(v) {
+  const n = Math.round(Number(v));
+  return Number.isFinite(n) ? Math.max(0, Math.min(PAR_SECONDS_MAX, n)) : PAR_SECONDS_DEFAULT;
+}
+
 function emptyMap() {
-  return { name: "", objects: [] };
+  return { name: "", parSeconds: PAR_SECONDS_DEFAULT, objects: [] };
 }
 
 function mapDisplayName(map, key) {
@@ -7960,6 +7968,7 @@ function mapFileRecords(doc) {
       file: `${name.toLowerCase()}.json`,
       data: {
         name: clampName(map.name),
+        parSeconds: clampPar(map.parSeconds ?? PAR_SECONDS_DEFAULT),
         objects,
       },
     };
@@ -8478,12 +8487,14 @@ function normalizeDocument(raw) {
       const src = raw.maps[name] || {};
       doc.maps[name] = {
         name: clampName(src.name),
+        parSeconds: clampPar(src.parSeconds ?? PAR_SECONDS_DEFAULT),
         objects: parseObjects(src.objects),
       };
     }
   } else {
     doc.maps.E1M1 = {
       name: clampName(raw.map?.name),
+      parSeconds: clampPar(raw.map?.parSeconds ?? PAR_SECONDS_DEFAULT),
       objects: parseObjects(raw.map?.objects || raw.objects),
     };
   }
@@ -20495,6 +20506,20 @@ function renderInspector() {
         refreshAll();
       });
       root.appendChild(field("Name", nameInp));
+      const parInp = document.createElement("input");
+      parInp.type = "number";
+      parInp.min = "0";
+      parInp.max = String(PAR_SECONDS_MAX);
+      parInp.step = "1";
+      parInp.value = String(clampPar(map.parSeconds));
+      parInp.title = "Par time on the intermission screen, seconds (0-255)";
+      parInp.addEventListener("change", () => {
+        pushUndo();
+        map.parSeconds = clampPar(parInp.value);
+        markDirty();
+        refreshAll();
+      });
+      root.appendChild(field("Par (s)", parInp));
       for (const row of mapKindStatRows(mapStats(doc))) {
         const line = document.createElement("div");
         line.className = "field level-stat";

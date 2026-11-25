@@ -34,7 +34,8 @@ HudInit::
 HudUpdate::
     ld a, BANK(HudUpdateB)
     ld [rROMB0], a
-    jp HudUpdateB
+    call HudUpdateB
+    jp HudDiffB                     ; same bank (hud.asm)
 
 ; A = TH_* type: "+<name>" on the message row.
 HudGot::
@@ -257,29 +258,35 @@ ApplyPickup::
 
 ; ---- HUD ---------------------------------------------------------------------------------
 
-; VBlank: the four HUD shadow rows (14-17, all 20 columns) into the map, then the staged palettes.
-HudBlit::
-    xor a
-    ldh [rVBK], a
-    ld hl, wHudRows
-    ld de, VRAM_MAP0 + 32 * 14
-    ld c, 4
-.row:
+; VBlank: the HUD rows flagged in wHudDirty (14-17, 20 columns each) into the map, then the staged palettes.
+MACRO HUDROW_BLIT
+    ld a, [wHudDirty]
+    bit \1, a
+    jr z, .s\@
+    ld hl, wHudRows + 20 * \1
+    ld de, VRAM_MAP0 + 32 * (14 + \1)
     ld b, 20
-.col:
+.l\@:
     ld a, [hl+]
     ld [de], a
     inc de
     dec b
-    jr nz, .col
-    ld a, e
-    add 32 - 20
-    ld e, a
-    jr nc, .nc
-    inc d
-.nc:
-    dec c
-    jr nz, .row
+    jr nz, .l\@
+.s\@:
+ENDM
+HudBlit::
+    xor a
+    ldh [rVBK], a
+    ld a, [wHudDirty]
+    and a
+    jr z, .rowsDone
+    HUDROW_BLIT 0
+    HUDROW_BLIT 1
+    HUDROW_BLIT 2
+    HUDROW_BLIT 3
+    xor a
+    ld [wHudDirty], a
+.rowsDone:
     ld a, [wPalDirty]
     and a
     ret z

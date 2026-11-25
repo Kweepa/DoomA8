@@ -1,5 +1,6 @@
 {
   "name": "Nuclear Plant",
+  "parSeconds": 75,
   "objects": [
     {
       "id": "453bc83b-f067-4838-b45e-2920deff8f50",

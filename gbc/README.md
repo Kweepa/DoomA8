@@ -77,7 +77,7 @@ CGB-only MBC5+RAM+battery, RGBDS 1.0.4.
     (pickups taken), `wStSec` / `wStMs` (time, accumulated in `LevelTimeTick` while the player lives); `LoadLevel` clears
     them (a death reload starts over). Totals and par come from `InterStats` (generator: enemies, pickups with
     `type < TH_LIGHTPOST`, Doom E1 pars); percentage = found * 100 / total (100 when the total is 0). Secrets: `wStSecrets` (entered
-    "Secret area" triggers, one-shot via gate 15) / the map's secret triggers (counted at snapshot, 100% when none); par will move into the editor data. On return `LevelUpdate` rebuilds the
+    "Secret area" triggers, one-shot via gate 15) / the map's secret triggers (counted at snapshot, 100% when none); par is the map JSON `parSeconds` (editor inspector "Par (s)", 0-255). On return `LevelUpdate` rebuilds the
     game video (`ImExit` wipes VRAM and rebuilds the view map, then `HudInit`, `WpnVideoInit`, interrupts, LCDC).
     The old "entering" card is gone (also at game start). `build-gbc.bat inter` + `tools/gbc_intercheck.py` take
     headless screenshots of every screen (and the game after it) from a fake exit with 7 kills, 12 items, 95 s.

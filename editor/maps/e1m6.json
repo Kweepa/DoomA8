@@ -1,5 +1,6 @@
 {
   "name": "Central Processing",
+  "parSeconds": 180,
   "objects": [
     {
       "id": "534c60db-2c9b-47f4-9432-3e09383a1490",
