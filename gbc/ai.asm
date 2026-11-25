@@ -1196,6 +1196,13 @@ BarrelClrBit:
 ; A8 update_barrel_chain + the explosion timer, once per game frame: when the chain delay runs out the
 ; lowest pending barrel goes off.
 FxTick:
+    ld a, [wSplatFresh]
+    and a
+    jr z, .tickSplat
+    xor a                            ; spawned this frame: not yet
+    ld [wSplatFresh], a
+    jr .fx
+.tickSplat:
     ld a, [wSplatMs]                 ; the splat's SPLAT_MS
     and a
     jr z, .fx
@@ -4362,6 +4369,8 @@ SplatSet:
     ld [wSplatJy], a
     ld a, SPLAT_MS
     ld [wSplatMs], a
+    ld a, 1
+    ld [wSplatFresh], a              ; a frame can outlast SPLAT_MS: draw it at least once
 IF DEF(SMOKE)
     ld hl, wSplatSeen
     inc [hl]

@@ -743,6 +743,7 @@ LoadEnemies::
     ld [wGunshotWake], a
     ld [wSplatMs], a                ; no splat
     ld [wLnMode], a                 ; line tests: first-hit mode
+    ld [wSplatFresh], a
     ld [wSgAbs], a
     ld [wFxMs], a                   ; A8 init_things / init_rockets: no explosion, no barrel chain
     ld [wFxMs + 1], a

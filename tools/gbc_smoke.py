@@ -477,6 +477,17 @@ def scenario_ride(li):
     return True
 
 
+def scenario_splat_hit_slow(wid):
+    """The real game runs ~8 fps: a frame (7 VBlanks = 119 ms) is as long as SPLAT_MS. The splat must still be drawn."""
+    L = level(1)
+    e, spot = pick_enemy(L, 0, dists=(5, 4, 6, 7))
+    px, pz, yaw = spot
+    pack(L, 1, e["room"], px, pz, yaw, e["y"], wmask=0b111111, wcur=wid, hp=250, bul=200, shl=50, frames=6, dt=8,
+         script=[0x10] * 6)
+    r = run_rom()
+    return check("drawn at 8 VBlanks a frame", r["splat_drawn"] > 0, "%d splats %d stamps" % (r["splat_seen"], r["splat_drawn"]))
+
+
 def scenario_splat_hit(wid):
     """A8 shotgun_hit_splat: a gun hit on an enemy starts a red (COL_SPLAT_HIT) splat at its mid-body."""
     L = level(1)
@@ -670,6 +681,7 @@ SCENARIOS = {
     "hurt_trigger_e1m1": lambda: scenario_trigger(0, 9, hp_lost=2, frames=6),
     "spawn_trigger_e1m6": lambda: scenario_trigger(5, 3, spawn=True),
     "unlock_trigger_e1m2": lambda: scenario_trigger(1, 6, unlock=True),
+    "blood_splat_slow_frames": lambda: scenario_splat_hit_slow(4),
     "blood_splat_pistol": lambda: scenario_splat_hit(4),
     "blood_splat_shotgun": lambda: scenario_splat_hit(1),
     "wall_splat_pistol": lambda: scenario_splat_wall(4),

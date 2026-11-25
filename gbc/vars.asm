@@ -519,6 +519,7 @@ wFxA::        ds 2                   ; scratch (view origin etc.)
 wFxPlots::    ds 1                   ; smoke builds: pixels plotted by the last explosion draw
 ; Splats (A8 splat_*): a hit point anchored in the world, re-projected each frame for SPLAT_MS
 wSplatMs::    ds 1
+wSplatFresh:: ds 1                   ; spawned this frame: its first tick waits until it has been drawn
 wSplatOrg::   ds 6                   ; origin 8.8 (xl, x, yl, y, zl, z), fractions 0
 wSplatJx::    ds 1                   ; signed screen jitter added after projection
 wSplatJy::    ds 1
