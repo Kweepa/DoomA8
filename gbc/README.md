@@ -31,7 +31,12 @@ CGB-only MBC5+RAM+battery, RGBDS 1.0.4.
     not carried (the object lists are ROM). The A8 process-slot limit is not modelled.
   - Drawing: crates draw only the edges of faces the eye can see (all 12 with `crate_flags`), doors only from their
     air side, switches only from the other side, small non-solid platforms not from below.
-  - Not ported: the bump crack mark, the "entering <map>" card.
+  - Bump crack (A8 `note_bump` / `draw_crack`, `collide.asm` + `objects.asm`): a rejected move into a wall (outside
+    every room collider) or a crate arms one `Crack` mesh (x1) on the face for `CRACK_MS`, at the legal pose
+    +- `PLAYER_R` (a crate: its face, raised to the crate bottom), drawn from the outward side in that room only. An
+    enemy, platform, door or step-up arms none; a live mark or `CRACK_HOLD` skips the probe; a switch fire or door
+    transit on the same frame drops it.
+  - Not ported: the "entering <map>" card.
 - Player rules are the A8's (`player.asm`, gbc/ai.asm shots; constants and the `gb_*` pickup tables generated from
   src/ by `tools/gbc_a8const.py`):
   - Pickups: a thing at the cap, an owned key / chainsaw, a second backpack, armour that is not better stays on the
@@ -128,6 +133,6 @@ ROM0 (16 KB) is nearly full in the test builds, which is why the map/world tests
 - Performance: ~8.5 fps in the E1M1 spawn room. DrawEntity ~29k M-cycles/entity and the serialized HBlank DMA dominate.
   Ideas: axis-aligned statics through the room column path, far-LOD weak perspective for items/enemies,
   overlap game update with DMA, back-face edge culling.
-- Not implemented: blood / wall splats, shootable switches, bump crack marks, infighting, door animation and key prompts,
+- Not implemented: blood / wall splats, shootable switches, infighting, door animation and key prompts,
   sound/music, menu, SRAM save, radsuit border tint (COL_SUIT_A8), trigger / cheat messages.
 - Enemy scale: pose data is in stick units (editor `LAYOUT_ENEMY_SCALE` = 1/4), so enemies use shift 4 / radius 3.

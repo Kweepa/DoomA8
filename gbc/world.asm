@@ -420,6 +420,15 @@ ApplyMove::
     call ApplyInput
     call ApplyWish
     call TryDoorWish
+    jr nc, .walk
+    call CrackSuppressBorn          ; A8 apply_move_world: transit ate the bump, drop a mark born this frame
+    call CrackClearHold
+    jr .moved
+.walk:
+    ld a, [wDoorBlk]
+    and a
+    call z, CrackClearHold          ; contact ended
+.moved:
     call UpdateFloor
     jp UpdateFall
 

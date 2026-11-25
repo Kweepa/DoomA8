@@ -5,3 +5,7 @@ INCLUDE "a8const.inc"
 
 DEF PR_N      EQU 4                 ; fireball slots
 DEF ITEM_FIREBALL EQU 23           ; ItemTab index of the synthetic fireball mesh
+DEF ITEM_CRACK    EQU 22           ; ItemTab index of the Crack door mesh (bump mark, drawn x1)
+DEF CRACK_MS      EQU 1000         ; A8 mem.asm CRACK_MS: the mark's life
+DEF CRACK_BORN    EQU 1            ; bit0 armed this frame (a switch / transit may drop it)
+DEF CRACK_HOLD    EQU 2            ; bit1 suppressed until this contact ends

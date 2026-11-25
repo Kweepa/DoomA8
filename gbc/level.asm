@@ -35,6 +35,7 @@ MapPut:
 
 LevelUpdateB::
     call TryProximity
+    call CrackClearBorn
     call UpdateTriggers
     call ElevTick
     jp DoorUnhideTick
@@ -521,7 +522,8 @@ TryProximity:
     jr nc, .sn
     ld a, [wLvI]
     ld c, a
-    jp FireSwitch                    ; one switch per press
+    call FireSwitch
+    jp CrackSuppressBorn             ; one switch per press; a mark born this frame is dropped
 .sn:
     ld a, [wLvI]
     ld c, a

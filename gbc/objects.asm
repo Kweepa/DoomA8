@@ -354,7 +354,7 @@ DrawWorldObjects::
     ld [rROMB0], a
     ld a, [wEnN]
     and a
-    ret z
+    jp z, DrawCrack
     xor a
     ld [wObjI], a
 .enemy:
@@ -466,12 +466,86 @@ DrawWorldObjects::
     ld a, [wEnN]
     cp b
     jp nz, .enemy
+    call DrawCrack
     call DrawProjectiles
     ld a, [EntBank]
     ld [rROMB0], a
     call DrawExplosion
     call DrawSplat
     jp DrawMuzzle
+
+; A8 draw_crack: the bump mark, the Crack door mesh at x1 on the stored face point, current room
+; only, from the outward side of its face (the plane is the stored coordinate; PZ / PX need cam >= it,
+; MZ / MX cam <= it).
+DrawCrack:
+    ld a, [wCrackMs]
+    ld b, a
+    ld a, [wCrackMs + 1]
+    or b
+    ret z
+    ld a, [wCrackRoom]
+    ld b, a
+    ld a, [wRoom]
+    cp b
+    ret nz
+    ld a, [wCrackFace]
+    srl a
+    xor 1                           ; face axis: 0 X, 1 Z
+    ld e, a
+    ld d, 0
+    ld hl, wCrackX
+    add hl, de
+    ld b, [hl]                      ; plane
+    ld hl, wCamX + 1
+    ld a, e
+    and a
+    jr z, .cam
+    ld hl, wCamZ + 1
+.cam:
+    ld c, [hl]                      ; eye
+    ld a, [wCrackFace]
+    rra
+    jr c, .minus
+    ld a, c
+    cp b                            ; PZ / PX: hidden when eye < plane
+    ret c
+    jr .vis
+.minus:
+    ld a, b
+    cp c                            ; MZ / MX: hidden when plane < eye
+    ret c
+.vis:
+    ld a, [wCrackXL]
+    ld [wEntOX], a
+    ld a, [wCrackX]
+    ld [wEntOX + 1], a
+    ld a, [wCrackXL + 1]
+    ld [wEntOZ], a
+    ld a, [wCrackX + 1]
+    ld [wEntOZ + 1], a
+    xor a
+    ld [wEntOY], a
+    ld a, [wCrackY]
+    ld [wEntOY + 1], a
+    ld a, [wCrackFace]
+    and 3
+    ld e, a
+    ld d, 0
+    ld hl, CrackYaw
+    add hl, de
+    ld a, [hl]
+    ld [wEntYaw], a
+    ld a, [EntBank]
+    ld [rROMB0], a
+    ld hl, ItemTab + 2 * ITEM_CRACK
+    ld a, [hl+]
+    ld h, [hl]
+    ld l, a
+    call EntSetMesh
+    jp DrawEntity
+
+CrackYaw:                           ; door_face_rot: local +Z points out of the face (PZ, MZ, PX, MX)
+    db 0, 128, 192, 64
 
 ; A8 draw_rockets / rkt_draw_one: every fireball in flight as a screen triangle of half-extent
 ; RKT_R (0.375 units) at its depth, in red. The triangle is the fireball item mesh turned to face the
@@ -758,6 +832,9 @@ LoadEnemies::
     pop af
     ld [wTrigInside], a             ; A8 level start: no trigger occupied, no unhide timers
     ld [wKeyUseWas], a
+    ld [wCrackMs], a                ; A8 level start: no bump mark
+    ld [wCrackMs + 1], a
+    ld [wCrackFlags], a
     ld [wTrigHurtMs], a
     ld [wTrigHurtMs + 1], a
     ld [wUhHide], a

@@ -219,6 +219,15 @@ wHaveKeys::   ds 1                  ; HAVE_YELLOW 1 / HAVE_BLUE 2 / HAVE_RED 4
 wDoorBlk::    ds 1                  ; bit0 = X move rejected, bit1 = Z
 wDoorI::      ds 1
 wTdwSave::    ds 4
+wCrackMs::    ds 2                  ; A8 crack_ms: bump mark time left, 0 = none
+wCrackFlags:: ds 1                  ; CRACK_BORN / CRACK_HOLD
+wCrackX::     ds 2                  ; A8 crack_x: hi X then Z (indexed by axis)
+wCrackXL::    ds 2                  ; lo X then Z
+wCrackY::     ds 1                  ; feet / crate bottom
+wCrackFace::  ds 1                  ; FACE_*
+wCrackRoom::  ds 1
+wCrackAx::    ds 1                  ; NoteBump: axis of the rejected move
+wCrackCrate:: ds 1                  ; NoteBump: 1 = a crate, 0 = a wall
 
 ; Entity draw state (entity.asm)
 SECTION "entvars", WRAMX, BANK[1]

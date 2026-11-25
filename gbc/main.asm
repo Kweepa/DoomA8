@@ -239,6 +239,7 @@ IF DEF(LIVETEST)
     jp LiveStop
 .noStop:
 ENDC
+    call CrackTick                  ; A8 tick_crack: after the frame time, before the move
     call UpdateMove
     call LevelUpdate
     call WpnUpdate

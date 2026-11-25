@@ -504,6 +504,8 @@ ApplyWish::
     ld [wColZ], a
     call PosOk
     jr c, .z
+    xor a
+    call NoteBump                   ; A8 note_bump, axis 0
     ld a, [wSaveX]
     ld [wCamX], a
     ld a, [wSaveX + 1]
@@ -539,6 +541,8 @@ ApplyWish::
     ld [wColZ], a
     call PosOk
     ret c
+    ld a, 1
+    call NoteBump                   ; A8 note_bump, axis 1
     ld a, [wSaveX]
     ld [wCamZ], a
     ld a, [wSaveX + 1]
@@ -546,6 +550,188 @@ ApplyWish::
     ld a, [wDoorBlk]
     or 2
     ld [wDoorBlk], a
+    ret
+
+; ---- bump crack (A8 world.asm note_bump / crack_*) --------------------------------------------
+
+; A = axis (0 X, 1 Z) of the move PosOk just rejected; wColX / wColZ is the failed cell, wSaveX the
+; legal coordinate of that axis, wCam* the legal one on the other. Arms one mark on a wall (outside every
+; room collider) or a crate; an enemy, platform, door or step-up arms none. A live timer or CRACK_HOLD
+; skips the probe, so a later axis cannot move the mark.
+NoteBump::
+    ld [wCrackAx], a
+    ld a, [wCrackMs]
+    ld b, a
+    ld a, [wCrackMs + 1]
+    or b
+    ret nz
+    ld a, [wCrackFlags]
+    and CRACK_HOLD
+    ret nz
+    xor a
+    ld [wCrackCrate], a
+    call InRoomInset
+    jr nc, .pose                    ; wall
+    ld a, BANK(EnemiesBlockPlayer)
+    ld [rROMB0], a
+    call EnemiesBlockPlayer
+    ld a, [wLevelBank]
+    ld [rROMB0], a
+    ret nc                          ; an enemy blocks: no mark
+    call CratesBlock
+    ret nc
+    ld a, 1
+    ld [wCrackCrate], a             ; wBox* = the crate
+.pose:
+    ld a, [wCamX + 1]               ; legal pose on both axes
+    ld [wCrackX], a
+    ld a, [wCamX]
+    ld [wCrackXL], a
+    ld a, [wCamZ + 1]
+    ld [wCrackX + 1], a
+    ld a, [wCamZ]
+    ld [wCrackXL + 1], a
+    ld a, [wCrackAx]
+    ld c, a
+    ld b, 0
+    ld hl, wCrackX
+    add hl, bc
+    ld a, [wSaveX + 1]
+    ld [hl], a
+    ld hl, wCrackXL
+    add hl, bc
+    ld a, [wSaveX]
+    ld [hl], a
+    ld a, c                         ; FACE_*: ((axis eor 1) << 1) | positive wish
+    add a
+    ld e, a
+    ld d, 0
+    ld hl, wWishX + 1
+    add hl, de                      ; wish hi of the axis (wWishX / wWishZ are two apart)
+    ld a, c
+    xor 1
+    add a
+    bit 7, [hl]
+    jr nz, .face
+    or 1
+.face:
+    ld [wCrackFace], a
+    ld a, [wCrackCrate]
+    and a
+    jr nz, .box
+    ld hl, wCrackX                  ; wall: PLAYER_R past the legal coordinate, saturating
+    add hl, bc
+    ld a, [wCrackFace]
+    rra
+    ld a, [hl]
+    jr nc, .sub
+    add PLAYER_R
+    jr nc, .st
+    ld a, $FF
+    jr .sat
+.sub:
+    sub PLAYER_R
+    jr nc, .st
+    xor a
+.sat:
+    ld [hl], a
+    ld hl, wCrackXL
+    add hl, bc
+    ld [hl], 0
+    jr .feet
+.st:
+    ld [hl], a
+    jr .feet
+.box:                               ; crate: the face the player ran into, fraction 0
+    ld hl, wCrackXL
+    add hl, bc
+    ld [hl], 0
+    ld hl, wBoxX
+    add hl, de                      ; wBoxX / wBoxZ, the sizes three on
+    ld a, [wCrackFace]
+    rra
+    ld a, [hl]
+    jr c, .bput                     ; positive wish: the crate's min face
+    inc hl
+    inc hl
+    inc hl
+    add [hl]                        ; negative: min + size
+.bput:
+    ld hl, wCrackX
+    add hl, bc
+    ld [hl], a
+.feet:
+    ld a, [wCamY + 1]
+    sub EYE_HEIGHT
+    ld [wCrackY], a
+    ld a, [wCrackCrate]
+    and a
+    jr z, .arm
+    ld a, [wBoxY]                   ; a crate bottom above the feet lifts the mark
+    ld b, a
+    ld a, [wCrackY]
+    cp b
+    jr nc, .arm
+    ld a, b
+    ld [wCrackY], a
+.arm:
+    ld a, [wRoom]
+    ld [wCrackRoom], a
+    ld a, LOW(CRACK_MS)
+    ld [wCrackMs], a
+    ld a, HIGH(CRACK_MS)
+    ld [wCrackMs + 1], a
+    ld a, [wCrackFlags]
+    or CRACK_BORN
+    ld [wCrackFlags], a
+    ret
+
+; Contact ended (released, or the door wish consumed the bump).
+CrackClearHold::
+    ld a, [wCrackFlags]
+    and $FF - CRACK_HOLD
+    ld [wCrackFlags], a
+    ret
+
+; Once per frame after the switch check.
+CrackClearBorn::
+    ld a, [wCrackFlags]
+    and $FF - CRACK_BORN
+    ld [wCrackFlags], a
+    ret
+
+; A switch / door transit used this bump: drop a same-frame mark and hold the contact.
+CrackSuppressBorn::
+    ld a, [wCrackFlags]
+    and CRACK_BORN
+    ret z
+    xor a
+    ld [wCrackMs], a
+    ld [wCrackMs + 1], a
+    ld a, [wCrackFlags]
+    or CRACK_HOLD
+    ld [wCrackFlags], a
+    ret
+
+; A8 tick_crack: one second off the frame time (wDtMs of the last frame); underflow clears the mark.
+CrackTick::
+    ld a, [wCrackMs]
+    ld b, a
+    ld a, [wCrackMs + 1]
+    or b
+    ret z
+    ld a, [wDtMs]
+    ld b, a
+    ld a, [wCrackMs]
+    sub b
+    ld [wCrackMs], a
+    ld a, [wCrackMs + 1]
+    sbc 0
+    ld [wCrackMs + 1], a
+    ret nc
+    xor a
+    ld [wCrackMs], a
+    ld [wCrackMs + 1], a
     ret
 
 ; ---- floor -------------------------------------------------------------------------------
