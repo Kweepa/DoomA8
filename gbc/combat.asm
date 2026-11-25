@@ -570,6 +570,34 @@ DamageEnemy:
     pop af
     jp AiDamageEnemy
 
+; ---- level mechanics (gbc/level.asm) ----------------------------------------------------------
+
+; Once per game frame after the player has moved: switch bumps, triggers, unhide timers. A level
+; change asked for by the banked code (end trigger / switch) is done here: keys are per level, the
+; loadout stays (A8 next_level); after the last level the episode starts over.
+LevelUpdate::
+    ld a, [wHP]
+    and a
+    ret z                           ; dead: frozen
+    ld a, BANK(LevelUpdateB)
+    ld [rROMB0], a
+    call LevelUpdateB
+    ld a, [wLevelBank]
+    ld [rROMB0], a
+    ld a, [wNextLevelReq]
+    and a
+    ret z
+    xor a
+    ld [wNextLevelReq], a
+    ld [wHaveKeys], a
+    ld a, [wLevel]
+    inc a
+    cp MAP_NLEVELS
+    jr c, .go
+    xor a
+.go:
+    jp LoadLevel
+
 ; ---- player shots ----------------------------------------------------------------------
 
 ; Consumes wFireEvent: the shot code is in bank 31 (gbc/ai.asm PlayerShotB, next to line of sight and

@@ -52,6 +52,7 @@ class Player:
         self.floor_y = floor_y
         self.floor_yl = 0
         self.floor_slope = 0
+        self.on_elev = 255              # A8 pl_on_elev: the car under the feet
         self.falling = 0
         self.fall_vel = 0
         self.fall_acc = 0
@@ -427,6 +428,8 @@ def slope_height(P, X, frac):
 
 def update_floor(P):
     L = P.lv
+    prev = P.on_elev
+    P.on_elev = 255
     P.floor_yl = 0
     P.floor_slope = 0
     cx, cz = P.xh, P.zh
@@ -458,6 +461,18 @@ def update_floor(P):
         ft = feet(P)
         if ft >= py or ((py - ft) & 255) < STEP_UP + 1:
             P.floor_y = py
+    for x in range(L.p[6]):                 # A8 elev_update_floor (cars rest at their start height here)
+        if L.f("elev_room", x) != P.room:
+            continue
+        if not in_box_xz(cx, cz, L.f("elev_x", x), L.f("elev_z", x), L.f("elev_sx", x), L.f("elev_sz", x), True):
+            continue
+        top = (L.f("elev_y0", x) + L.f("elev_sy", x)) & 255
+        if top < P.floor_y:
+            continue
+        if prev != x and feet(P) < L.f("elev_y0", x):
+            continue                         # walking under it
+        P.floor_y = top
+        P.on_elev = x
     lo, hi = slice_of(L, "room_slope_o", P.room)
     for x in range(lo, hi):
         if not in_box_xz(cx, cz, L.f("slope_x", x), L.f("slope_z", x),
@@ -535,7 +550,7 @@ def update_fall(P, dt_ms):
             sync_eye(P)
             return
         if ft < P.floor_y:
-            if (P.floor_y - ft) < STEP_UP + 1:
+            if P.on_elev != 255 or (P.floor_y - ft) < STEP_UP + 1:      # riding: always snap
                 ledge_unstick(P)
                 sync_eye(P)
             return

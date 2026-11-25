@@ -672,6 +672,10 @@ SlopeHeight::
     ret
 
 UpdateFloor::
+    ld a, [wOnElev]                 ; A8 update_floor: the car we rode last frame, then none
+    ld [wPrevElev], a
+    ld a, $FF
+    ld [wOnElev], a
     xor a
     ld [wFloorYL], a
     ld [wFloorSlope], a
@@ -786,6 +790,11 @@ UpdateFloor::
     cp b
     jr nz, .pl
 .slopes:
+    ld a, BANK(ElevFloorB)          ; elevator tops (gbc/level.asm), then the slopes
+    ld [rROMB0], a
+    call ElevFloorB
+    ld a, [wLevelBank]
+    ld [rROMB0], a
     ld a, [wSlN]
     and a
     ret z
@@ -1023,6 +1032,9 @@ UpdateFall::
     ld [wFallY0], a
     jr .air
 .up:
+    ld a, [wOnElev]
+    inc a
+    jr nz, .sync                    ; riding an elevator: always snap
     ld a, [wFloorY]
     sub b                           ; rise
     cp STEP_UP + 1

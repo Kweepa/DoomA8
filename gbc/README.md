@@ -14,6 +14,24 @@ CGB-only MBC5+RAM+battery, RGBDS 1.0.4.
 - Static objects, pickups/props and the four enemy types drawn as wireframe meshes (poses by AI state). Pickups sit at
   cell + 1 and spin on the A8 `item_spin` (dt_ms << 4, ~1 rev / 4.1 s); the lightpost and barrel never spin (A8 `fill_item_verts`).
 - Player weapons as OAM sprites (fist, shotgun, chaingun, rocket launcher, pistol, chainsaw) with flash tiles.
+- Level mechanics (`level.asm`, ROMX; A8 world.asm / door.asm / elevator.asm):
+  - Switches: a blocked move into the pad from its air side (`SW_USE_RANGE`, facing, one fire per press) fires it:
+    unlock the doors of its tag, arm the triggers waiting on its tag, start the elevator whose index is its tag, or
+    end the level. Shootable switches (`SW_SHOOT`) are not ported.
+  - Triggers: per-room volumes, enter fires once per visit: unlock / unhide (`DOOR_UNHIDE_MS`, then hidden again) the
+    remote doors of a tag, spawn the `EN_GONE` enemies of a tag, hurt (`HURT_LG_HP` / `HURT_SM_HP` per `HURT_MS`
+    while inside, none under the radsuit), end of level, elevator (every car of the group; two or more latch the
+    gate) and summon. Message triggers are not ported (the map text is not in the GBC payload and every shipped
+    message trigger is empty). The map payload is written in place (WRAM bank 2) and reloads with the level.
+  - Level change: the keys are cleared and the loadout kept; after E1M8 the episode starts over at E1M1 (there is
+    no menu yet). Banked code only sets `wNextLevelReq`; the ROM0 stub `LevelUpdate` calls `LoadLevel`.
+  - Elevators: per car current height, target and step timer; one unit per `ELEV_STEP_MS` (x4 for slow cars);
+    the player boards the car top (`elev_update_floor`, always snaps while riding), enemies on the top ride, the
+    top plate is drawn at the current height, and enemy floor probes / line of sight see the car. Things on a car are
+    not carried (the object lists are ROM). The A8 process-slot limit is not modelled.
+  - Drawing: crates draw only the edges of faces the eye can see (all 12 with `crate_flags`), doors only from their
+    air side, switches only from the other side, small non-solid platforms not from below.
+  - Not ported: the bump crack mark, the "entering <map>" card.
 - Player rules are the A8's (`player.asm`, gbc/ai.asm shots; constants and the `gb_*` pickup tables generated from
   src/ by `tools/gbc_a8const.py`):
   - Pickups: a thing at the cap, an owned key / chainsaw, a second backpack, armour that is not better stays on the
@@ -30,6 +48,10 @@ CGB-only MBC5+RAM+battery, RGBDS 1.0.4.
   - Rockets: player projectile at `RKT_SPEED_PL`, explodes on a wall / solid / enemy / barrel, splash `RKT_RAD` cells
     for 16..47 (enemies only), one explosion at a time (`EXPLODE_MS`, the next rocket waits). Barrels: shot or rocketed
     they are taken at once, splash, and chain to barrels within `RKT_RAD` after `BARREL_CHAIN_MS`.
+    Explosion graphic (A8 fx.asm): `FX_N` red pixels (A8 plots ink; red by request) thrown from the blast origin, velocities picked at the first draw
+    (random direction on a quarter sphere, flattened by how near and how far above the eye the blast is), each at
+    projected origin + projected (velocity * elapsed / 16) for `EXPLODE_MS`; the one-at-a-time gate lasts
+    `EXPLODE_MS - FX_START_MS`, as on the A8.
 - HUD (`hud.asm`, ROMX; port of A8 hud.asm contents, Doom-style GBC layout): row 14 the message line ("+<item>",
   "Need a <key> keycard", "Opened elsewhere": the A8 texts shortened to 20 columns) for STATUS_MS; rows 15-17 an ammo
   column on the left (bullets, shells, rockets), health and armour on row 16, the frame time ("ms" + ms per game
@@ -94,11 +116,11 @@ must `ei` afterwards (it leaves interrupts off), or the TEST_EXIT VBlank wait ne
 | `pose` | `gbc_posetest.py` | 160/0 |
 | `map` | `gbc_maptest.py` (runs 2 slices, `GBC_MSLICE`) | 342 scene + 342 FindRoom / 0 |
 | `move` | `gbc_movetest.py` (also the 7 hold-sampling cases) | 182/0, 7/0 |
-| `world` | `gbc_worldtest.py` (`GBC_WSLICE=a:b`, <=120 per ROM; 922 total) | 922/0 |
+| `world` | `gbc_worldtest.py` (`GBC_WSLICE=a:b`, <=120 per ROM; 922 total; elevator floors modelled) | 922/0 |
 | `ent` | `gbc_enttest.py` | 103/0 |
 | `comb` / `pick` | `gbc_combunit.py` / `gbc_pickunit.py` | 0 mismatches (A8 `take_damage` incl. armour class; 68 pickup steps incl. caps, backpack, refusals) |
 | `los` | `gbc_losunit.py` (builds and runs itself) | 600 segments (276 blocked) / 0 |
-| `smoke` | `gbc_smoke.py [name]` | 35 scenarios pass (adds: refused pickups, fall damage, shotgun / cone / fist rules, barrels, rockets, splash) |
+| `smoke` | `gbc_smoke.py [name]` | 42 scenarios pass (adds: end / hurt / spawn / unlock triggers, elevator trigger and boarding) |
 
 ROM0 (16 KB) is nearly full in the test builds, which is why the map/world tests are sliced.
 
@@ -106,6 +128,6 @@ ROM0 (16 KB) is nearly full in the test builds, which is why the map/world tests
 - Performance: ~8.5 fps in the E1M1 spawn room. DrawEntity ~29k M-cycles/entity and the serialized HBlank DMA dominate.
   Ideas: axis-aligned statics through the room column path, far-LOD weak perspective for items/enemies,
   overlap game update with DMA, back-face edge culling.
-- Not implemented: explosion particles (the timing and damage are ported), blood / wall splats, shootable switches, infighting, elevators/switches/triggers, door animation and key prompts,
+- Not implemented: blood / wall splats, shootable switches, bump crack marks, infighting, door animation and key prompts,
   sound/music, menu, SRAM save, radsuit border tint (COL_SUIT_A8), trigger / cheat messages.
 - Enemy scale: pose data is in stick units (editor `LAYOUT_ENEMY_SCALE` = 1/4), so enemies use shift 4 / radius 3.

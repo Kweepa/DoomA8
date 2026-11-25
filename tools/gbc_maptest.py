@@ -49,8 +49,8 @@ def main():
     tests = gmap.map_tests()
     n = len(tests)
     words = struct.unpack("<%dH" % n, data[i + 6:i + 6 + 2 * n])
-    # FindRoom results sit after wPoseOut (1024) + wCamSave (8) + wTestCnt (2) + wTestRoom (1).
-    fbase = i + 4 + 2 + 1024 + 8 + 2 + 1
+    # FindRoom results sit after wPoseOut (704) + wCamSave (8) + wTestCnt (2) + wTestRoom (1).
+    fbase = i + 4 + 2 + 704 + 8 + 2 + 1
     finds = list(data[fbase:fbase + n])
 
     scenes = {}

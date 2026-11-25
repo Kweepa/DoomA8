@@ -126,7 +126,7 @@ def run_rom():
     data = open(state, "rb").read()
     i = data.find(b"POSE")
     base = i + 4 + 2
-    d = data[base:base + 370]
+    d = data[base:base + 477]
     return dict(hp=d[0], armor=d[1], kills=d[2], bul=d[3], shl=d[4], rkt=d[5], have=d[6], keys=d[7], wcur=d[8],
                 room=d[9], camx=d[10] | d[11] << 8, camz=d[12] | d[13] << 8, camy=d[14] | d[15] << 8,
                 floor=d[16], falling=d[17], level=d[18], nen=d[19], wdy=d[26] - (256 if d[26] > 127 else 0), th=list(d[32:64]),
@@ -136,7 +136,11 @@ def run_rom():
                 pr_z=list(d[265:269]), pr_life=list(d[269:273]), pr_v=list(d[273:277]), ang=d[277],
                 pr_fr=list(d[278:280]), hud=list(d[280:360]), hurt_ms=d[360] | d[361] << 8, border=d[362],
                 status_ms=d[363] | d[364] << 8, raw_dt=d[365],
-                emuz_seen=d[366], emuz_lod=d[367], emuz_col=d[368], emuz_y=d[369])
+                emuz_seen=d[366], emuz_lod=d[367], emuz_col=d[368], emuz_y=d[369],
+                door_key=list(d[370:402:2]), door_type=list(d[371:402:2]),
+                elev_y=list(d[402:410]), elev_tgt=list(d[410:418]), on_elev=d[418],
+                fx_ms=d[419] | d[420] << 8, fx_plots=d[421], fx_vx=list(d[422:446]), fx_vy=list(d[446:470]),
+                splat_seen=d[470], splat_col=d[471], splat_ms=d[472], splat_at=tuple(d[473:476]), splat_drawn=d[476])
 
 
 def check(name, cond, msg):
@@ -369,6 +373,11 @@ def scenario_rocket(li, etype):
     r = run_rom()
     hp0 = A8_META[etype][34]
     ok = check("rocket spent", r["rkt"] == 4, "rockets %d" % r["rkt"])
+    sv = lambda v: v - 256 if v > 127 else v
+    vmax = max(max(abs(sv(v)) for v in r["fx_vx"]), max(abs(sv(v)) for v in r["fx_vy"]))
+    ok &= check("explosion running", 0 < r["fx_ms"] <= 668, "time left %d ms" % r["fx_ms"])
+    ok &= check("particles plotted", r["fx_plots"] > 0, "%d pixels drawn" % r["fx_plots"])
+    ok &= check("24 particle velocities picked", 0 < vmax <= 32 and any(r["fx_vx"]) and any(r["fx_vy"]), "max |v| %d" % vmax)
     ok &= check("enemy hurt", r["en_hp"][e["idx"]] != hp0 and r["en_state"][e["idx"]] >= 5, "hp %d of %d" % (r["en_hp"][e["idx"]], hp0))
     return ok
 
@@ -393,6 +402,110 @@ def scenario_barrel_splash(li):
                     return ok
     print("  skip: no barrel near an enemy with a clear line in level %d" % li)
     return True
+
+
+def triggers(L):
+    return [dict(idx=i, room=L.f("tr_room", i), pur=L.f("tr_purpose", i), arg=L.f("tr_arg", i),
+                 x=L.f("tr_x", i), y=L.f("tr_y", i), z=L.f("tr_z", i), sx=L.f("tr_sx", i), sy=L.f("tr_sy", i),
+                 sz=L.f("tr_sz", i)) for i in range(L.p[8])]
+
+
+def stand_in(L, li, t, frames=12, **kw):
+    """Run with the player standing in the middle of trigger t."""
+    px, pz = t["x"] + t["sx"] // 2, t["z"] + t["sz"] // 2
+    pack(L, li, t["room"], px, pz, 0, t["y"], frames=frames, dt=3, **kw)
+    return run_rom()
+
+
+def scenario_trigger(li, pur, **want):
+    """A8 trig_enter on the first trigger of that purpose in level li."""
+    L = level(li)
+    t = next((t for t in triggers(L) if t["pur"] == pur and t["sy"] >= 2), None)    # tall enough to stand in
+    if not t:
+        print("  skip: no such trigger")
+        return True
+    r = stand_in(L, li, t, frames=want.get("frames", 12))
+    ok = True
+    if "level" in want:
+        ok &= check("level now %d" % want["level"], r["level"] == want["level"], "level %d" % r["level"])
+    if "hp_lost" in want:
+        ok &= check("hurt volume", r["hp"] == 100 - want["hp_lost"], "hp %d" % r["hp"])
+    if want.get("spawn"):
+        tags = {i: L.f("en_tag", i) for i in range(L.p[7])}
+        gone = [i for i, tg in tags.items() if tg == t["arg"]]
+        ok &= check("tagged enemies woke", gone and all(r["en_state"][i] != 8 for i in gone), "enemies %s states %s" % (gone, [r["en_state"][i] for i in gone]))
+    if want.get("unlock"):
+        doors = [d for d in range(L.p[1]) if L.f("door_tag", d) == t["arg"] and L.f("door_key", d) == 3]
+        ok &= check("remote doors unlocked", doors and all(r["door_key"][d] == 0 for d in doors if d < 16),
+                    "doors %s keys %s" % (doors, [r["door_key"][d] for d in doors if d < 16]))
+    return ok
+
+
+def elevs(L):
+    return [dict(idx=i, room=L.f("elev_room", i), x=L.f("elev_x", i), y0=L.f("elev_y0", i), z=L.f("elev_z", i),
+                 sx=L.f("elev_sx", i), sy=L.f("elev_sy", i), sz=L.f("elev_sz", i), home=L.f("elev_home", i),
+                 dest=L.f("elev_dest", i), grp=L.f("elev_grp", i)) for i in range(L.p[6])]
+
+
+def scenario_elevator_trigger(li):
+    """A8 trig_enter TRIG_ELEV: entering the trigger starts every car of its group toward the other stop; the
+    car moves one unit per ELEV_STEP_MS and its height changes."""
+    L = level(li)
+    t = next((t for t in triggers(L) if t["pur"] == 4 and t["sy"] >= 2 and any(e["grp"] == t["arg"] for e in elevs(L))), None)
+    if not t:
+        print("  skip: no elevator trigger")
+        return True
+    cars = [e for e in elevs(L) if e["grp"] == t["arg"]]
+    r = stand_in(L, li, t, frames=30)
+    moved = [c for c in cars if r["elev_y"][c["idx"]] != c["y0"] or r["elev_tgt"][c["idx"]] != 255]
+    return check("car of group %d moving" % t["arg"], len(moved) > 0,
+                 "cars %s y %s tgt %s" % ([c["idx"] for c in cars], [r["elev_y"][c["idx"]] for c in cars], [r["elev_tgt"][c["idx"]] for c in cars]))
+
+
+def scenario_ride(li):
+    """Standing on a car that goes up: the player's feet follow its top (A8 elev_update_floor)."""
+    L = level(li)
+    for e in elevs(L):
+        if e["dest"] != e["home"]:
+            px, pz = e["x"] + e["sx"] // 2, e["z"] + e["sz"] // 2
+            top0 = e["y0"] + e["sy"]
+            pack(L, li, e["room"], px, pz, 0, top0, frames=2, dt=3)
+            r = run_rom()
+            return check("boarded", r["on_elev"] == e["idx"] and r["floor"] == top0,
+                         "on_elev %d floor %d top %d" % (r["on_elev"], r["floor"], top0))
+    print("  skip: no elevator")
+    return True
+
+
+def scenario_splat_hit(wid):
+    """A8 shotgun_hit_splat: a gun hit on an enemy starts a red (COL_SPLAT_HIT) splat at its mid-body."""
+    L = level(1)
+    e, spot = pick_enemy(L, 0, dists=(5, 4, 6, 7))
+    px, pz, yaw = spot
+    pack(L, 1, e["room"], px, pz, yaw, e["y"], wmask=0b111111, wcur=wid, hp=250, bul=200, shl=50, frames=4, script=[0x10] * 4)
+    r = run_rom()
+    ok = check("splat started", r["splat_seen"] > 0, "%d splats" % r["splat_seen"])
+    ok &= check("blood is red", r["splat_col"] == 2, "colour %d" % r["splat_col"])
+    ok &= check("stamped on screen", r["splat_drawn"] > 0, "%d stamps" % r["splat_drawn"])
+    ok &= check("at the enemy's mid-body", r["splat_at"] == (e["x"], e["y"] + 3, e["z"]) or r["splat_seen"] > 1,
+                "at %s enemy %s" % (r["splat_at"], (e["x"], e["y"] + 3, e["z"])))
+    return ok
+
+
+def scenario_splat_wall(wid):
+    """A8 shotgun_miss_splat: a shot into the wall starts a spark (COL_SPLAT_MISS) on the nearest solid, inside
+    the room box and in front of the player."""
+    L = level(0)
+    sx, sy, sz, _, sroom, _ = L.spawn
+    pack(L, 0, sroom, sx, sz, 64, sy, wmask=0b111111, wcur=wid, hp=250, bul=200, shl=50, frames=5, script=[0x10] * 5)   # facing +X, away from the barrel
+    r = run_rom()
+    rx, ry, rz = (L.f("room_x", sroom), L.f("room_y", sroom), L.f("room_z", sroom))
+    rsx, rsy, rsz = (L.f("room_sx", sroom), L.f("room_sy", sroom), L.f("room_sz", sroom))
+    x, y, z = r["splat_at"]
+    ok = check("spark started", r["splat_seen"] > 0 and r["splat_col"] == 0, "%d splats colour %d" % (r["splat_seen"], r["splat_col"]))
+    ok &= check("inside the room box, ahead", rx <= x <= rx + rsx and ry <= y <= ry + rsy and rz <= z <= rz + rsz and x >= sx,
+                "at %s room (%d..%d, %d..%d, %d..%d) player z %d" % (r["splat_at"], rx, rx + rsx, ry, ry + rsy, rz, rz + rsz, sz))
+    return ok
 
 
 def scenario_death(li, etype=3):
@@ -550,6 +663,17 @@ SCENARIOS = {
     "pistol_wakes_e1m2": lambda: scenario_shot_wake(1, 4, True),
     "fist_no_wake_e1m2": lambda: scenario_shot_wake(1, 0, False),
     "tagged_gone_e1m6": lambda: scenario_tagged(5),
+    "end_trigger_next_level": lambda: scenario_trigger(7, 1, level=0),
+    "elevator_trigger_e1m2": lambda: scenario_elevator_trigger(1),
+    "elevator_trigger_e1m5": lambda: scenario_elevator_trigger(4),
+    "player_boards_elevator_e1m2": lambda: scenario_ride(1),
+    "hurt_trigger_e1m1": lambda: scenario_trigger(0, 9, hp_lost=2, frames=6),
+    "spawn_trigger_e1m6": lambda: scenario_trigger(5, 3, spawn=True),
+    "unlock_trigger_e1m2": lambda: scenario_trigger(1, 6, unlock=True),
+    "blood_splat_pistol": lambda: scenario_splat_hit(4),
+    "blood_splat_shotgun": lambda: scenario_splat_hit(1),
+    "wall_splat_pistol": lambda: scenario_splat_wall(4),
+    "wall_splat_shotgun": lambda: scenario_splat_wall(1),
     "shotgun_point_blank": lambda: scenario_weapon(1, (3, 4, 5), 0, 40, "dead"),
     "pistol_off_cone_misses": lambda: scenario_weapon(4, (6, 5, 7, 4), 16, 30, "miss"),
     "chaingun_off_cone_misses": lambda: scenario_weapon(2, (6, 5, 7, 4), 6, 30, "miss"),

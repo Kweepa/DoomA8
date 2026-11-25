@@ -1,7 +1,6 @@
 // Game Boy Color sprite art (weapons, flashes, splats; blood vs spark is a colour choice in game). Pure data, no DOM.
 // One bit per pixel, 1:1 with the GBC screen. rows[y] is a string of "." and "#" (w chars).
-// Source of truth for the game is assets/weapons/<id>.png (white = ink, black = clear), read by
-// tools/gbc_genwpn.py; the tab imports / exports exactly those files.
+// Stored in editor/doom64.json ("gbSprites"); tools/gbc_genwpn.py builds the GBC art from it directly.
 // OAM is 8x16: the generator slices every frame into 8-wide x 16-tall cells and skips empty ones,
 // so width/height are free (min 8) and the editor draws the 8x16 cell grid.
 
@@ -13,7 +12,7 @@ export const GBS_CELL_W = 8;
 export const GBS_CELL_H = 16;
 
 /**
- * Catalogue. id = PNG basename in assets/weapons. w/h = default and imported size.
+ * Catalogue. id matches the frame names in tools/gbc_genwpn.py. w/h = default and imported size.
  * cellLimit: gbc_genwpn.py asserts (body frames <= 16 cells, flashes <= 7); null = not wired yet.
  */
 export const GBS_DEFS = [
@@ -154,20 +153,4 @@ export function gbsResize(sp, w, h) {
     rows[y] = s;
   }
   return { id: sp.id, w, h, rows };
-}
-
-/** Sprite from decoded ink bits (array of rows of 0/1), clamped to the editor size limits. */
-export function gbsFromBits(id, bits) {
-  const def = gbsDef(id);
-  const sh = bits.length;
-  const sw = sh ? bits[0].length : 0;
-  const w = clampInt(sw, GBS_W_MIN, GBS_W_MAX, def.w);
-  const h = clampInt(sh, GBS_H_MIN, GBS_H_MAX, def.h);
-  const rows = gbsBlankRows(w, h);
-  for (let y = 0; y < h; y++) {
-    let s = "";
-    for (let x = 0; x < w; x++) s += y < sh && x < sw && bits[y][x] ? "#" : ".";
-    rows[y] = s;
-  }
-  return { id, w, h, rows };
 }

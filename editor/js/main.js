@@ -153,7 +153,6 @@ import {
   readProjectBytes,
   ensureWeaponsPngDirectory,
   writePngFile,
-  readPngFile,
 } from "./io.js";
 import { showBuildView } from "./buildView.js";
 import { parsePakBuffers } from "./pak.js";
@@ -179,7 +178,7 @@ import { AnimView } from "./animView.js";
 import { WeaponView } from "./weaponView.js";
 import { ItemView } from "./itemView.js";
 import { GbSpriteView } from "./gbSpriteView.js";
-import { GBS_DEFS, gbsBlank, gbsFromBits, normalizeGbSprites } from "./gbSpriteModel.js";
+import { normalizeGbSprites } from "./gbSpriteModel.js";
 
 const statusEl = document.getElementById("status");
 const titleEl = document.querySelector(".toolbar h1");
@@ -619,93 +618,7 @@ const gbSpriteView = new GbSpriteView({
   markDirty,
   onChange: () => markUi(),
   onStatus: (msg, isError) => setStatus(msg, isError),
-  onImport: () => void importGbSpritePngs(),
-  onExport: () => void exportGbSpritePngs(),
 });
-
-function gbSpriteBlob(sp) {
-  const canvas = document.createElement("canvas");
-  canvas.width = sp.w;
-  canvas.height = sp.h;
-  const ctx = canvas.getContext("2d");
-  const img = ctx.createImageData(sp.w, sp.h);
-  for (let y = 0; y < sp.h; y++) {
-    for (let x = 0; x < sp.w; x++) {
-      const o = (y * sp.w + x) * 4;
-      const v = sp.rows[y][x] === "#" ? 255 : 0;
-      img.data[o] = img.data[o + 1] = img.data[o + 2] = v;
-      img.data[o + 3] = 255;
-    }
-  }
-  ctx.putImageData(img, 0, 0);
-  return new Promise((resolve, reject) =>
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("PNG encode failed"))), "image/png"),
-  );
-}
-
-async function gbSpriteBitsFromFile(file) {
-  const bmp = await createImageBitmap(file);
-  const canvas = document.createElement("canvas");
-  canvas.width = bmp.width;
-  canvas.height = bmp.height;
-  const ctx = canvas.getContext("2d", { willReadFrequently: true });
-  ctx.drawImage(bmp, 0, 0);
-  const d = ctx.getImageData(0, 0, bmp.width, bmp.height).data;
-  const bits = [];
-  for (let y = 0; y < bmp.height; y++) {
-    const row = [];
-    for (let x = 0; x < bmp.width; x++) {
-      const o = (y * bmp.width + x) * 4;
-      row.push(Math.max(d[o], d[o + 1], d[o + 2]) > 16 ? 1 : 0); // same threshold as gbc_genwpn.py
-    }
-    bits.push(row);
-  }
-  return bits;
-}
-
-async function exportGbSpritePngs() {
-  try {
-    const dir = await ensureWeaponsPngDirectory();
-    if (!dir) return;
-    let n = 0;
-    for (const sp of doc.gbSprites) {
-      await writePngFile(dir, `${sp.id}.png`, await gbSpriteBlob(sp));
-      n++;
-    }
-    setStatus(`Wrote ${n} PNGs to assets/weapons`);
-  } catch (err) {
-    setStatus(String(err.message || err), true);
-  }
-}
-
-async function importGbSpritePngs() {
-  try {
-    const dir = await ensureWeaponsPngDirectory();
-    if (!dir) return;
-    const found = [];
-    const missing = [];
-    for (const def of GBS_DEFS) {
-      const file = await readPngFile(dir, `${def.id}.png`);
-      if (!file) {
-        missing.push(def.id);
-        continue;
-      }
-      found.push(gbsFromBits(def.id, await gbSpriteBitsFromFile(file)));
-    }
-    if (!found.length) {
-      setStatus("No sprite PNGs in that folder (pick assets/weapons)", true);
-      return;
-    }
-    pushUndo();
-    const byId = new Map(found.map((sp) => [sp.id, sp]));
-    doc.gbSprites = doc.gbSprites.map((sp) => byId.get(sp.id) || sp);
-    markDirty();
-    gbSpriteView.refresh();
-    setStatus(`Imported ${found.length} PNGs` + (missing.length ? ` · not found: ${missing.join(", ")}` : ""));
-  } catch (err) {
-    setStatus(String(err.message || err), true);
-  }
-}
 
 function setStatus(msg, isError = false) {
   statusEl.textContent = msg || "";

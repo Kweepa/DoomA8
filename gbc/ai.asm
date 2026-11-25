@@ -99,7 +99,7 @@ FloorBelow:
 .plats:
     ld a, [wPlN]
     and a
-    jr z, .done
+    jr z, .elevs
     ld c, 0
 .pl:
     ld b, 0
@@ -130,6 +130,55 @@ FloorBelow:
     ld a, [wPlN]
     cp c
     jr nz, .pl
+.elevs:                             ; A8 floor_below: elevator tops of the room
+    ld a, [wMapHdr + H_NELEVS]
+    and a
+    jr z, .done
+    ld [wLvN], a
+    ld c, 0
+.ev:
+    push bc
+    ld a, F_ELEV_ROOM
+    call MapGet
+    ld b, a
+    ld a, [wRoom]
+    cp b
+    jr nz, .evn
+    pop bc
+    push bc
+    ld hl, wBoxX
+    ld a, F_ELEV_X
+    ld b, 6
+.evbox:
+    push af
+    push hl
+    push bc
+    call MapGet
+    pop bc
+    pop hl
+    ld [hl+], a
+    pop af
+    inc a
+    dec b
+    jr nz, .evbox
+    pop bc
+    push bc
+    call PointInFloorXZ
+    jr nc, .evn
+    pop bc
+    push bc
+    ld b, 0
+    ld hl, wElevY
+    add hl, bc
+    ld a, [wBoxSY]
+    add [hl]
+    call .cand
+.evn:
+    pop bc
+    inc c
+    ld a, [wLvN]
+    cp c
+    jr nz, .ev
 .done:
     ld a, [wFound]
     rra
@@ -799,14 +848,37 @@ RktPlace:
     PRPTR wPrZ
     ld a, [hl]
     ld [wBlast + 2], a
+    PRPTR wPrXL
+    ld a, [hl]
+    ld [wBlastFr], a
+    PRPTR wPrYL
+    ld a, [hl]
+    ld [wBlastFr + 1], a
+    PRPTR wPrZL
+    ld a, [hl]
+    ld [wBlastFr + 2], a
     ret
 
 ; A8 start_explosion (the particles are not drawn yet): one explosion at a time for EXPLODE_MS.
 StartExplosion:
-    ld a, LOW(EXPLODE_MS)
+    ld a, LOW(EXPLODE_MS - FX_START_MS)    ; the countdown starts late: elapsed opens at FX_START_MS
     ld [wFxMs], a
-    ld a, HIGH(EXPLODE_MS)
+    ld a, HIGH(EXPLODE_MS - FX_START_MS)
     ld [wFxMs + 1], a
+    ld a, 1
+    ld [wFxNew], a
+    ld a, [wBlastFr]                       ; origin 8.8
+    ld [wFxOrg], a
+    ld a, [wBlast]
+    ld [wFxOrg + 1], a
+    ld a, [wBlastFr + 1]
+    ld [wFxOrg + 2], a
+    ld a, [wBlast + 1]
+    ld [wFxOrg + 3], a
+    ld a, [wBlastFr + 2]
+    ld [wFxOrg + 4], a
+    ld a, [wBlast + 2]
+    ld [wFxOrg + 5], a
     ret
 
 ; A8 rkt_cheby: A = max(|blast - target|) over x, y, z; target (B, C, D) = x, y, z.
@@ -1038,6 +1110,10 @@ BarrelPlace:
     ld [wBlast + 1], a
     ld a, d
     ld [wBlast + 2], a
+    xor a
+    ld [wBlastFr], a
+    ld [wBlastFr + 1], a
+    ld [wBlastFr + 2], a
     ret
 
 ; A8 barrel_queue: live barrels whose centres are inside RKT_RAD of the blast.
@@ -1120,6 +1196,19 @@ BarrelClrBit:
 ; A8 update_barrel_chain + the explosion timer, once per game frame: when the chain delay runs out the
 ; lowest pending barrel goes off.
 FxTick:
+    ld a, [wSplatMs]                 ; the splat's SPLAT_MS
+    and a
+    jr z, .fx
+    ld b, a
+    ld a, [wDtMs]
+    ld c, a
+    ld a, b
+    sub c
+    jr nc, .sp
+    xor a
+.sp:
+    ld [wSplatMs], a
+.fx:
     ld a, [wFxMs]
     ld b, a
     ld a, [wFxMs + 1]
@@ -2335,10 +2424,36 @@ LineSlopeOne:
     jr z, .no
     bit 7, a
     jr nz, .no
+    ld [wLnBest], a                 ; t of the crossing (nearest-hit mode)
     scf
     ret
 .no:
     and a
+    ret
+
+; LineHitBox / LineSlopeOne with the walk's mode: wLnMode 0 = the first hit ends the walk (carry), 1 = keep the
+; nearest t in wLnNear and never stop (carry clear).
+LineHitBoxM:
+    call LineHitBox
+    ret nc
+    jr LnNote
+LineSlopeM:
+    call LineSlopeOne
+    ret nc
+LnNote:
+    ld a, [wLnMode]
+    and a
+    jr z, .first
+    ld a, [wLnBest]
+    ld hl, wLnNear
+    cp [hl]
+    jr nc, .keep
+    ld [hl], a
+.keep:
+    and a
+    ret
+.first:
+    scf
     ret
 
 ; wLBox from the map: A = first field (F_RB_X / F_ELEV_X / F_ROOM_X), C = index; fields x, y, z,
@@ -2417,7 +2532,7 @@ LineSolidsBlocked::
     and a
     jr z, .crn
     push bc
-    call LineHitBox
+    call LineHitBoxM
     pop bc
     ret c
 .crn:
@@ -2434,7 +2549,7 @@ LineSolidsBlocked::
     push bc
     ld hl, PlatBoxTab
     call LoadBoxCache
-    call LineHitBox
+    call LineHitBoxM
     pop bc
     ret c
     inc c
@@ -2455,8 +2570,13 @@ LineSolidsBlocked::
     jr nz, .evn
     ld a, F_ELEV_X
     call LoadBoxMap
+    ld b, 0
+    ld hl, wElevY                    ; the car's current height
+    add hl, bc
+    ld a, [hl]
+    ld [wLBox + 1], a
     push bc
-    call LineHitBox
+    call LineHitBoxM
     pop bc
     ret c
 .evn:
@@ -2471,7 +2591,7 @@ LineSolidsBlocked::
     xor a
 .sl:
     ld [wLnI], a
-    call LineSlopeOne
+    call LineSlopeM
     ret c
     ld a, [wLnI]
     inc a
@@ -2483,7 +2603,7 @@ LineSolidsBlocked::
     ld c, a
     ld a, F_ROOM_X
     call LoadBoxMap
-    jp LineHitBox
+    jp LineHitBoxM
 .rb:
     ld a, F_RB_SX
     call MapGet
@@ -2492,7 +2612,7 @@ LineSolidsBlocked::
     ld a, F_RB_X
     call LoadBoxMap
     push bc
-    call LineHitBox
+    call LineHitBoxM
     pop bc
     ret
 ASSERT F_RB_SX == F_RB_X + 3 && F_ELEV_SZ == F_ELEV_X + 5 && F_ROOM_SZ == F_ROOM_X + 5
@@ -3628,10 +3748,11 @@ PlayerShotB::
     call GunScan
     ld a, [wScanBest]
     cp $FF
-    ret z
+    jp z, SplatMiss                  ; nothing hit: a spark on the wall
     cp $40
     jp nc, ShotBarrel
     ld [wObjI], a
+    call SplatHit
     ld a, PISTOL_DMG_MAX
     call RollUpto                    ; 1..16
     jp AiDamageEnemy
@@ -3640,6 +3761,10 @@ PlayerShotB::
     ld [wScanCnt], a
     ld a, 1
     ld [wScanPel], a
+    ld a, $FF
+    ld [wSgHit], a
+    xor a
+    ld [wSgAbs], a
 .pellet:
     call Rnd
     and SHOT_SPREAD_MASK
@@ -3651,9 +3776,13 @@ PlayerShotB::
     jr z, .next
     cp $40
     jr c, .enemy
+    ld a, 1
+    ld [wSgAbs], a
+    ld a, [wScanBest]
     call ShotBarrel                  ; a pellet that reaches a barrel first sets it off
     jr .next
 .enemy:
+    ld [wSgHit], a
     ld [wObjI], a
     ld a, SHOT_DMG_ROLL
     call RollUpto
@@ -3663,7 +3792,16 @@ PlayerShotB::
     ld hl, wScanCnt
     dec [hl]
     jr nz, .pellet
-    ret
+    ld a, [wSgHit]                   ; one splat for the volley: blood on the last body hit, else a spark
+    cp $FF
+    jr z, .nohit
+    ld [wObjI], a
+    jp SplatHit
+.nohit:
+    ld a, [wSgAbs]
+    and a
+    ret nz                           ; a barrel took the shot
+    jp SplatMiss
 
 ; A = $40 + thing index: the barrel the shot reached explodes (A8 barrel_explode).
 ShotBarrel:
@@ -4197,4 +4335,186 @@ SpeedPl:
     ret z
     cpl
     inc a
+    ret
+
+; ==== Splats (A8 shotgun_hit_splat / shotgun_miss_splat / splat_spawn) ===================================
+
+; wTgt = hit point (cells), A = COL_SPLAT_*: anchor it in the world, jitter it, start the SPLAT_MS timer.
+SplatSet:
+    ld [wSplatCol], a
+    xor a
+    ld [wSplatOrg], a
+    ld [wSplatOrg + 2], a
+    ld [wSplatOrg + 4], a
+    ld a, [wTgt]
+    ld [wSplatOrg + 1], a
+    ld a, [wTgt + 1]
+    ld [wSplatOrg + 3], a
+    ld a, [wTgt + 2]
+    ld [wSplatOrg + 5], a
+    call Rnd
+    and 7
+    sub 4                            ; -4 .. +3 px (A8: +-4 half pixels of a 96 px view)
+    ld [wSplatJx], a
+    call Rnd
+    and 3
+    sub 2                            ; -2 .. +1 px
+    ld [wSplatJy], a
+    ld a, SPLAT_MS
+    ld [wSplatMs], a
+IF DEF(SMOKE)
+    ld hl, wSplatSeen
+    inc [hl]
+ENDC
+    ret
+
+; wObjI = enemy: blood at its mid-body.
+SplatHit:
+    ENPTR wEnX
+    ld a, [hl]
+    ld [wTgt], a
+    ENPTR wEnY
+    ld a, [hl]
+    add SHOT_MID_H
+    ld [wTgt + 1], a
+    ENPTR wEnZ
+    ld a, [hl]
+    ld [wTgt + 2], a
+    ld a, COL_SPLAT_HIT
+    jr SplatSet
+
+; The view ray hit the nearest solid of the room: a spark there.
+SplatMiss:
+    call WallHit
+    ret nc
+    ld a, COL_SPLAT_MISS
+    jr SplatSet
+
+; A8 line_fit_b + line_solids_hit with pitch 0: from the eye along the view to the room boundary, the nearest
+; solid (cutout, crate, platform, car, slope, the room shell) -> wTgt (cells). Carry = found.
+WallHit:
+    ld a, [wCamX + 1]
+    ld [wLnA], a
+    ld a, [wCamY + 1]
+    ld [wLnA + 1], a
+    ld [wLnB + 1], a                 ; level
+    ld a, [wCamZ + 1]
+    ld [wLnA + 2], a
+    ld a, [wRoom]
+    ld c, a
+    ld a, F_ROOM_X
+    call LoadBoxMap
+    call LineBoxMax
+    ld a, [wSin]
+    call Abs8
+    ld b, a                          ; |sin|
+    ld a, [wCos]
+    call Abs8
+    cp b
+    jr nc, .zdom
+    ; X dominant: B_x on the room's x boundary, B_z on the ray
+    ld a, [wSin]
+    bit 7, a
+    ld a, [wLBox]
+    jr nz, .xmin
+    ld a, [wLnM]                     ; exclusive max
+    jr .xset
+.xmin:
+    and a
+    jr z, .xset
+    dec a
+.xset:
+    ld [wLnB], a
+    ld hl, wLnA
+    call .span                       ; E = R = |B_x - A_x| capped at 127
+    ld a, [wSin]
+    call Abs8
+    ld c, a                          ; M
+    ld a, [wCos]
+    ld b, e
+    call LerpDv                      ; cos * R / M
+    ld hl, wLnA + 2
+    call .addsat
+    ld [wLnB + 2], a
+    jr .fit
+.zdom:
+    ld a, [wCos]
+    bit 7, a
+    ld a, [wLBox + 2]
+    jr nz, .zmin
+    ld a, [wLnM + 2]
+    jr .zset
+.zmin:
+    and a
+    jr z, .zset
+    dec a
+.zset:
+    ld [wLnB + 2], a
+    ld hl, wLnA + 2
+    call .span
+    ld a, [wCos]
+    call Abs8
+    ld c, a
+    ld a, [wSin]
+    ld b, e
+    call LerpDv
+    ld hl, wLnA
+    call .addsat
+    ld [wLnB], a
+.fit:
+    ld a, $FF
+    ld [wLnNear], a
+    ld a, 1
+    ld [wLnMode], a
+    call LineSolidsBlocked
+    xor a
+    ld [wLnMode], a
+    ld a, [wLnNear]
+    cp $FF
+    ret z                            ; (carry is clear: cp equal)
+    ld c, 0
+.pt:
+    push bc
+    ld a, [wLnNear]
+    call LinePtAt                    ; A = t, C = axis -> a + d * t / 127
+    pop bc
+    ld hl, wTgt
+    ld b, 0
+    add hl, bc
+    ld [hl], a
+    inc c
+    ld a, c
+    cp 3
+    jr nz, .pt
+    scf
+    ret
+; HL = &A_axis; the matching B axis is 3 bytes on: E = min(127, |B - A|).
+.span:
+    ld a, [hl]
+    ld de, 3
+    add hl, de
+    ld b, a
+    ld a, [hl]
+    sub b
+    call Abs8
+    cp 128
+    jr c, .sp
+    ld a, 127
+.sp:
+    ld e, a
+    ret
+; A = signed delta, HL = &A_other: A_other + delta, saturating.
+.addsat:
+    ld b, a
+    ld a, [hl]
+    bit 7, b
+    jr nz, .neg
+    add b
+    ret nc
+    ld a, 255
+    ret
+.neg:
+    add b
+    ret c
+    xor a
     ret

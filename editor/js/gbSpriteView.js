@@ -37,9 +37,8 @@ function gbsEl(tag, cls, text) {
 
 /**
  * Game Boy sprites tab: sprite list (left), 1-bit pixel painter (centre) with width/height sliders,
- * shift, flip/invert, copy/paste and PNG import/export. Data lives in doc.gbSprites via opts.getSprites().
+ * shift, flip/invert and copy/paste. Data lives in doc.gbSprites via opts.getSprites().
  * opts: left, panel (DOM roots), getSprites, beginUndo, endUndo, markDirty, onChange, onStatus,
- *       onImport, onExport (async PNG round trip with assets/weapons).
  */
 export class GbSpriteView {
   constructor(opts) {
@@ -89,17 +88,7 @@ export class GbSpriteView {
       this.thumbs.set(def.id, { btn, cv, dim });
     }
     root.append(wrap);
-    const io = gbsEl("div", "btn-row");
-    io.append(
-      this.#button("Import PNGs", "Read assets/weapons/*.png into every sprite (replaces the tab's data)", () =>
-        this.opts.onImport?.(),
-      ),
-      this.#button("Export PNGs", "Write every sprite to assets/weapons/<id>.png (white on black)", () =>
-        this.opts.onExport?.(),
-      ),
-    );
-    root.append(io);
-    root.append(gbsEl("p", "muted spr-left-hint", "1 px = 1 GBC pixel. White = ink. Build reads assets/weapons/*.png."));
+    root.append(gbsEl("p", "muted spr-left-hint", "1 px = 1 GBC pixel. White = ink. Saved in doom64.json; the GBC build reads it directly."));
   }
 
   #button(label, title, onClick, cls = "") {
@@ -283,17 +272,19 @@ export class GbSpriteView {
     t.dim.textContent = `${sp.w}×${sp.h}`;
     t.dim.classList.toggle("error", this.#overLimit(sp, def));
     const cv = t.cv;
-    cv.width = sp.w;
-    cv.height = sp.h;
-    const k = Math.max(1, Math.min(Math.floor(56 / sp.w), Math.floor(44 / sp.h)));
-    cv.style.width = `${sp.w * k}px`;
-    cv.style.height = `${sp.h * k}px`;
+    // Whole-number multiple in *device* pixels (CSS-px integers go fractional at 125%/150% scaling).
+    const dpr = window.devicePixelRatio || 1;
+    const k = Math.max(1, Math.floor(Math.min((56 * dpr) / sp.w, (44 * dpr) / sp.h) + 1e-6));
+    cv.width = sp.w * k;
+    cv.height = sp.h * k;
+    cv.style.width = `${(sp.w * k) / dpr}px`;
+    cv.style.height = `${(sp.h * k) / dpr}px`;
     const ctx = cv.getContext("2d");
     ctx.fillStyle = GBS_BG;
-    ctx.fillRect(0, 0, sp.w, sp.h);
+    ctx.fillRect(0, 0, cv.width, cv.height);
     ctx.fillStyle = GBS_INK;
     for (let y = 0; y < sp.h; y++) {
-      for (let x = 0; x < sp.w; x++) if (gbsGet(sp, x, y)) ctx.fillRect(x, y, 1, 1);
+      for (let x = 0; x < sp.w; x++) if (gbsGet(sp, x, y)) ctx.fillRect(x * k, y * k, k, k);
     }
   }
 

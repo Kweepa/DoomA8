@@ -493,15 +493,6 @@ export async function writePngFile(dirHandle, filename, blob) {
   await writable.close();
 }
 
-export async function readPngFile(dirHandle, filename) {
-  try {
-    const fh = await dirHandle.getFileHandle(filename);
-    return await fh.getFile();
-  } catch {
-    return null;
-  }
-}
-
 export function downloadJSON(doc, filename = DEFAULT_DOC_PATH) {
   const blob = new Blob([JSON.stringify(withoutEditor(doc), null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);

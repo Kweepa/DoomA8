@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Weapon view-model sprites for the GBC: PNG line art -> scaled 8x16 OAM cells.
+"""Weapon view-model sprites for the GBC: editor sprite art -> scaled 8x16 OAM cells.
 
-Source art: assets/weapons/*_lines.png (white = ink, black = clear). It is authored for the A8's
-192-wide hires view and is used at native size (1:1) in the 128 x 112 GBC viewport.
+Source art: the "gbSprites" list in editor/doom64.json (edited in the editor's GB Sprites tab;
+rows of "." / "#", "#" = ink), used at native size (1:1) in the 128 x 112 GBC viewport.
 
 Writes <outdir>/wpn.inc:
   bank WPN_BANK: for every frame  db ncells, w, h ; ncells * (db dx, dy ; 32 bytes of tile data)
@@ -11,14 +11,13 @@ Writes <outdir>/wpn.inc:
 Frame data is uploaded to VRAM when the frame changes: body frames to bank 1 ids 224.., flash
 frames to bank 0 ids 242.. (see gbc/wpn.asm).
 """
+import json
 import os
 import sys
 
-from PIL import Image
-
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-PNG = os.path.join(ROOT, "assets", "weapons")
+DOC = os.path.join(ROOT, "editor", "doom64.json")
 WPN_BANK = 30
 
 SX, SY = 1.0, 1.0       # native size, as on the A8 (scale() is a no-op copy at 1:1)
@@ -40,11 +39,20 @@ FLASH = [
 ]
 
 
+_SPRITES = None
+
+
 def load_ink(name):
-    im = Image.open(os.path.join(PNG, name)).convert("RGB")
-    w, h = im.size
-    px = im.load()
-    return [[1 if max(px[x, y]) > 16 else 0 for x in range(w)] for y in range(h)]
+    """Ink bits for a sprite id (png-style name, e.g. "pistol_lines.png") from doom64.json."""
+    global _SPRITES
+    if _SPRITES is None:
+        with open(DOC, encoding="utf-8") as f:
+            _SPRITES = {sp["id"]: sp for sp in json.load(f).get("gbSprites", [])}
+    sid = name[:-4] if name.endswith(".png") else name
+    sp = _SPRITES.get(sid)
+    if sp is None:
+        raise SystemExit("gbc_genwpn: sprite %r missing from %s (gbSprites)" % (sid, DOC))
+    return [[1 if c == "#" else 0 for c in row] for row in sp["rows"]]
 
 
 def scale(bits):

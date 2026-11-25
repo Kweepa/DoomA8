@@ -4,6 +4,8 @@
 ;           WRAMX bank 1 (always mapped): engine state. WRAMX bank 2: packed map payload,
 ;           mapped only inside MapGet-style bursts (SVBK = 2) and back to 1 afterwards.
 
+INCLUDE "a8const.inc"
+
 SECTION "hram", HRAM
 
 hFrame::     ds 1
@@ -101,11 +103,11 @@ wPosePtr::   ds 2
 wOutPtr::    ds 2
 wPoseMagic:: ds 4
 wPoseTicks:: ds 2
-wPoseOut::   ds 1024
+wPoseOut::   ds 704                  ; test result buffer (the longest user: the LOS unit test, 600 + 6)
 wCamSave::   ds 8
 wTestCnt::   ds 2
 wTestRoom::  ds 1
-wFindOut::   ds 400
+wFindOut::   ds 190                  ; FindRoom results (one slice of the map test: 180)
 wDbgOut::    ds 160
 wScriptPtr:: ds 2
 wStepCnt::   ds 1
@@ -428,6 +430,32 @@ wApForce::    ds 1
 wPkX::        ds 1
 wPkY::        ds 1
 wPkZ::        ds 1
+; level mechanics (gbc/level.asm)
+wLvTag::      ds 1
+wLvCnt::      ds 1
+wLvN::        ds 1
+wLvI::        ds 1
+wLvEnd::      ds 1
+wLvMask::     ds 1
+wLvPur::      ds 1
+wTrigInside:: ds 1                   ; A8 trig_inside: bit per room-local trigger
+wTrigSeen::   ds 1
+wKeyUseWas::  ds 1                   ; A8 key_use_was: a bump already fired this press
+wTrigHurtMs:: ds 2                   ; A8 hurt_ms: hurt trigger period
+wUhTag::      ds 4                   ; A8 uh_tag / uh_lo / uh_hi (UNHIDE_MAX)
+wUhLo::       ds 4
+wUhHi::       ds 4
+wUhHide::     ds 1
+wNextLevelReq:: ds 1                 ; set by banked level code, done by LevelUpdate (ROM0)
+wElevY::      ds 8                   ; A8 elev_y: current height per car
+wElevTgt::    ds 8                   ; $FF idle, else the stop it moves to
+wElevAcc::    ds 16                  ; ms toward the next step (16-bit per car)
+wElThr::      ds 2
+wOnElev::     ds 1                   ; A8 pl_on_elev ($FF none) / the one before this floor update
+wPrevElev::   ds 1
+wLvN2::       ds 1
+wCullEdges::  ds 24                  ; culled crate edge list (a, b pairs)
+wCullTmp::    ds 2
 wScanLim::    ds 2                   ; GunScan: flat cone half-width (tan 8.8)
 wScanAim::    ds 1                   ; pellet column, signed px (A8 scan_aim)
 wScanPel::    ds 1                   ; 1 = pellet test
@@ -481,6 +509,29 @@ wAiO::        ds 4                   ; position before a step: x, xl, z, zl
 wCellFy::     ds 1
 wRawDt::      ds 1                   ; VBlanks the last frame took (unclamped)
 wScriptJoy::  ds 1
+; Explosion particles (A8 fx.asm), gbc/objects.asm DrawExplosion
+wFxNew::      ds 1                   ; 1 = pick the particle velocities at the next draw
+wFxVx::       ds FX_N                ; s8 view-space velocity per particle
+wFxVy::       ds FX_N
+wFxOrg::      ds 6                   ; blast origin 8.8: xl, x, yl, y, zl, z
+wBlastFr::    ds 3                   ; fractions of the blast origin (rocket position), set with wBlast
+wFxA::        ds 2                   ; scratch (view origin etc.)
+wFxPlots::    ds 1                   ; smoke builds: pixels plotted by the last explosion draw
+; Splats (A8 splat_*): a hit point anchored in the world, re-projected each frame for SPLAT_MS
+wSplatMs::    ds 1
+wSplatOrg::   ds 6                   ; origin 8.8 (xl, x, yl, y, zl, z), fractions 0
+wSplatJx::    ds 1                   ; signed screen jitter added after projection
+wSplatJy::    ds 1
+wSplatCol::   ds 1                   ; COL_SPLAT_HIT (red) / COL_SPLAT_MISS (ink)
+wStampCol::   ds 1                   ; StampImage: byte column of the 24x21 box, its row, the bitplane
+wStampY::     ds 1
+wStampPlane:: ds 1
+wLnMode::     ds 1                   ; LineSolids: 0 first hit, 1 nearest
+wLnNear::     ds 1                   ; nearest hit t (Q7), $FF none
+wSgHit::      ds 1                   ; shotgun volley: last enemy hit / a pellet reached a barrel
+wSgAbs::      ds 1
+wSplatSeen::  ds 1                   ; smoke builds: splats started
+wSplatDrawn:: ds 1                   ; smoke builds: splat stamps
 
 ; Input hold times. The timer interrupt (INPUT_HZ, 4 ticks per VBlank) adds a tick to the counter of
 ; every direction held at that moment; ReadJoy snapshots them into wHold* once per game frame.

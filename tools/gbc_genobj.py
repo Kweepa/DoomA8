@@ -7,7 +7,9 @@ Things (pickups, barrels, lightposts) reference shared item meshes in the entity
 
 Per room (ObjTab[room] -> list):
   db n_static ; n * 12 bytes: dw mesh_ptr, dw ox, dw oy, dw oz, db yaw, db kind, db aux
-       kind 0 plain, 1 door (aux = global door index, hidden state read at draw time),
+       kind 0 plain, 1 door (aux = global door index, hidden state and facing read at draw time),
+       3 crate (back-face edges culled unless crate_flags), 4 switch (drawn from the air side only),
+       5 platform (a small non-solid one is not drawn from below), 2 elevator (height read at draw time),
             2 elevator (aux = elevator index)
   db n_things ; n * 6 bytes: db thing_index, type, x, y, z, 0
 Mesh record: db nv, ne, shift, radius ; verts (x,y,z)*nv ; edges (a,b)*ne
@@ -86,7 +88,7 @@ def level_objects(L, lv_objs, pool, items):
         sx, sy, sz = L.f("crate_sx", x), L.f("crate_sy", x), L.f("crate_sz", x)
         lab = pool.add(box_verts(sx, sy, sz), BOX_EDGES)
         add(L.f("crate_room", x), lab, L.f("crate_x", x) * 256 + sx * 128, L.f("crate_y", x) * 256,
-            L.f("crate_z", x) * 256 + sz * 128, 0)
+            L.f("crate_z", x) * 256 + sz * 128, 0, 3, x)
     for r in range(nrooms):
         lo, hi = gw.slice_of(L, "room_plat_o", r)
         for x in range(lo, hi):
@@ -94,7 +96,7 @@ def level_objects(L, lv_objs, pool, items):
             hx, hz = q(sx / 2.0), q(sz / 2.0)
             lab = pool.add([(-hx, 0, -hz), (hx, 0, -hz), (hx, 0, hz), (-hx, 0, hz)],
                            [(0, 1), (1, 2), (2, 3), (3, 0)])
-            add(r, lab, L.f("plat_x", x) * 256 + sx * 128, L.f("plat_y", x) * 256, L.f("plat_z", x) * 256 + sz * 128, 0)
+            add(r, lab, L.f("plat_x", x) * 256 + sx * 128, L.f("plat_y", x) * 256, L.f("plat_z", x) * 256 + sz * 128, 0, 5, x)
         lo, hi = gw.slice_of(L, "room_slope_o", r)
         for x in range(lo, hi):
             sx, sy, sz = L.f("slope_sx", x), L.f("slope_sy", x), L.f("slope_sz", x)
@@ -116,11 +118,12 @@ def level_objects(L, lv_objs, pool, items):
     for x in range(L.p[5]):
         sx, sy, sz = L.f("sw_sx", x), L.f("sw_sy", x), L.f("sw_sz", x)
         lab = pool.add(*switch_tri(sx, sy, sz, L.f("sw_face", x)))
-        add(L.f("sw_room", x), lab, L.f("sw_x", x) * 256 + sx * 128, L.f("sw_y", x) * 256, L.f("sw_z", x) * 256 + sz * 128, 0)
+        add(L.f("sw_room", x), lab, L.f("sw_x", x) * 256 + sx * 128, L.f("sw_y", x) * 256, L.f("sw_z", x) * 256 + sz * 128, 0, 4, x)
     for x in range(L.p[6]):
         sx, sy, sz = L.f("elev_sx", x), L.f("elev_sy", x), L.f("elev_sz", x)
-        lab = pool.add(box_verts(sx, sy, sz), BOX_EDGES)
-        add(L.f("elev_room", x), lab, L.f("elev_x", x) * 256 + sx * 128, L.f("elev_home", x) * 256,
+        hx, hz = q(sx / 2.0), q(sz / 2.0)           # A8 draws the top plate at elev_y + sy (draw_plat_mesh)
+        lab = pool.add([(-hx, 0, -hz), (hx, 0, -hz), (hx, 0, hz), (-hx, 0, hz)], [(0, 1), (1, 2), (2, 3), (3, 0)])
+        add(L.f("elev_room", x), lab, L.f("elev_x", x) * 256 + sx * 128, (L.f("elev_y0", x) + sy) * 256,
             L.f("elev_z", x) * 256 + sz * 128, 0, 2, x)
     # doors: type mesh scaled by face width, at the outward face's bottom centre
     for d in range(L.p[1]):

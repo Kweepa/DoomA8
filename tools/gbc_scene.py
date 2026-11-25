@@ -14,6 +14,10 @@ import gbc_room as gr  # noqa: E402
 import gbc_world as gw  # noqa: E402
 
 
+# A8 mesh.asm box_edge_faces: which box faces (bit0 -X, 1 +X, 2 -Y, 3 +Y, 4 -Z, 5 +Z) each edge belongs to.
+CRATE_EDGE_FACES = [0x14, 0x06, 0x24, 0x05, 0x18, 0x0A, 0x28, 0x09, 0x11, 0x12, 0x22, 0x21]
+
+
 class SceneData:
     def __init__(self, key):
         lv = gmap.gm.load_level(key)
@@ -49,11 +53,45 @@ def scene_pixels(sd, room, cam_x, cam_z, cam_y, yaw, spin, enemies=None, taken=(
         fb.update(ge.entity_pixels(cam_x, cam_z, cam_y, yaw, ox, oz, oy, oyaw, verts, edges, shift, radius))
 
     if "static" in parts:
+        L = sd.L
+        cx, cy, cz = cam_x >> 8, cam_y >> 8, cam_z >> 8
+
+        def front(face, x, z, sx, sz):
+            """A8 check_face_front: the camera cell is on the outward side of the face plane."""
+            if face == 0:
+                return cz >= z + sz
+            if face == 1:
+                return z >= cz
+            if face == 2:
+                return cx >= x + sx
+            return x >= cx
         for (lab, ox, oy, oz, oyaw, kind, aux) in sd.static[room]:
-            if kind == 1 and (sd.L.f("door_type", aux) & 0x80):
-                continue
             m = sd.mesh(lab)
-            draw(ox, oy, oz, oyaw, m.verts, m.edges, m.shift, m.radius)
+            edges = m.edges
+            if kind == 1:
+                if L.f("door_type", aux) & 0x80:
+                    continue
+                if not front(L.f("door_face", aux), L.f("door_x", aux), L.f("door_z", aux), L.f("door_sx", aux), L.f("door_sz", aux)):
+                    continue
+            elif kind == 4:
+                if front(L.f("sw_face", aux), L.f("sw_x", aux), L.f("sw_z", aux), L.f("sw_sx", aux), L.f("sw_sz", aux)):
+                    continue
+            elif kind == 5:
+                if (not L.f("plat_solid", aux) and L.f("plat_sx", aux) < 5 and L.f("plat_sz", aux) < 5
+                        and cy < L.f("plat_y", aux)):
+                    continue
+            elif kind == 3 and not L.f("crate_flags", aux):
+                bits = 0
+                for a, (pn, sn, c) in enumerate((("crate_x", "crate_sx", cx), ("crate_y", "crate_sy", cy), ("crate_z", "crate_sz", cz))):
+                    lo, size = L.f(pn, aux), L.f(sn, aux)
+                    if c < lo:
+                        bits |= 1 << (2 * a)
+                    elif c - lo >= size:
+                        bits |= 2 << (2 * a)
+                edges = [e for i, e in enumerate(m.edges) if CRATE_EDGE_FACES[i] & bits]
+                if not edges:
+                    continue
+            draw(ox, oy, oz, oyaw, m.verts, edges, m.shift, m.radius)
     if "things" in parts:
         for (t, ty, x, y, z) in sd.things[room]:
             if t in taken:

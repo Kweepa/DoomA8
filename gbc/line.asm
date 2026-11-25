@@ -18,7 +18,7 @@ ENDM
 
 ; Base address of each framebuffer column (16 entries, 32-byte aligned).
 SECTION "colbase", ROM0, ALIGN[5]
-ColBase:
+ColBase::
 FOR i, VIEW_COLS
     dw FB + i * FB_STRIDE
 ENDR

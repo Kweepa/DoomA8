@@ -93,7 +93,7 @@ python tools\gbc_game.py gbc\build
 if errorlevel 1 exit /b 1
 
 set "OBJS="
-for %%F in (main vars line fb bench math render posetest data input world collide doors entity objects wpn combat ai hud player) do (
+for %%F in (main vars line fb bench math render posetest data input world collide doors entity objects wpn combat ai hud player level) do (
   "%RGBDS%\rgbasm.exe" -Weverything %DEFS% -I gbc\ -I gbc\build\ -o gbc\build\%%F.o gbc\%%F.asm
   if errorlevel 1 exit /b 1
   call set "OBJS=%%OBJS%% gbc\build\%%F.o"

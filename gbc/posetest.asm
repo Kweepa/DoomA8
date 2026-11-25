@@ -3,6 +3,7 @@
 ; Results (after the "POSE" magic): ticks word, then one word per pose.
 
 INCLUDE "hw.inc"
+INCLUDE "map_fields.inc"
 
 SECTION "posetest", ROM0
 
@@ -911,6 +912,8 @@ RunSmoke::
     xor a
     ld [wEmuzSeen], a
     ld [wEmuzMs], a
+    ld [wSplatSeen], a
+    ld [wSplatDrawn], a
     ld a, [wTestRoom]
     call EnterRoom
     ld hl, SmokeScenario + 2
@@ -1009,6 +1012,7 @@ IF DEF(SDAPPLY)
 ELSE
     call UpdateMove
 ENDC
+    call LevelUpdate
     call WpnUpdate
     call PickupScan
     call CombatUpdate
@@ -1242,6 +1246,68 @@ ENDC
     ld a, [wEmuzCol]
     ld [hl+], a
     ld a, [wEmuzY]
+    ld [hl+], a
+    ld c, 0                         ; offset 370: door key / type of the first 16 doors
+.dk:
+    ld a, F_DOOR_KEY
+    push hl
+    call MapGet
+    pop hl
+    ld [hl+], a
+    ld a, F_DOOR_TYPE
+    push hl
+    call MapGet
+    pop hl
+    ld [hl+], a
+    inc c
+    ld a, c
+    cp 16
+    jr nz, .dk
+    ld de, wElevY                   ; offset 402: elevator heights, targets, the car under the player
+    ld b, 8
+.ey:
+    ld a, [de]
+    inc de
+    ld [hl+], a
+    dec b
+    jr nz, .ey
+    ld de, wElevTgt
+    ld b, 8
+.et2:
+    ld a, [de]
+    inc de
+    ld [hl+], a
+    dec b
+    jr nz, .et2
+    ld a, [wOnElev]
+    ld [hl+], a
+    ld a, [wFxMs]                   ; offset 419: explosion time left, pixels plotted, velocities
+    ld [hl+], a
+    ld a, [wFxMs + 1]
+    ld [hl+], a
+    ld a, [wFxPlots]
+    ld [hl+], a
+    ld de, wFxVx
+    ld b, 48
+.fv:
+    ld a, [de]
+    inc de
+    ld [hl+], a
+    dec b
+    jr nz, .fv
+    ld a, [wSplatSeen]              ; offset 470: splats started, colour, time left, origin cells
+    ld [hl+], a
+    ld a, [wSplatCol]
+    ld [hl+], a
+    ld a, [wSplatMs]
+    ld [hl+], a
+    ld a, [wSplatOrg + 1]
+    ld [hl+], a
+    ld a, [wSplatOrg + 3]
+    ld [hl+], a
+    ld a, [wSplatOrg + 5]
+    ld [hl+], a
+    ld a, [wSplatDrawn]
     ld [hl+], a
     ret
 ENDC

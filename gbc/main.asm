@@ -240,11 +240,12 @@ IF DEF(LIVETEST)
 .noStop:
 ENDC
     call UpdateMove
+    call LevelUpdate
     call WpnUpdate
     call PickupScan
     call CombatUpdate
     call HudUpdate
-    jr Demo
+    jp Demo
 
 IF DEF(LIVETEST)
 LiveStop::                           ; headless test breakpoint (tools/gbc_check.py --live)
