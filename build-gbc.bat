@@ -47,7 +47,7 @@ if /i "%~1"=="ent" (
   set "NAME=doomgbc_ent"
 )
 if /i "%~1"=="smoke" (
-  set "DEFS=-D TEST_EXIT=1 -D SMOKE=1"
+  set "DEFS=-D TEST_EXIT=1 -D SMOKE=1 -D FRAME_MS=1"
   set "NAME=doomgbc_smoke"
 )
 if /i "%~1"=="pick" (

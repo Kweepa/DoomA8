@@ -105,7 +105,7 @@ CGB-only MBC5+RAM+battery, RGBDS 1.0.4.
 - HUD (`hud.asm`, ROMX; port of A8 hud.asm contents, Doom-style GBC layout): row 14 the message line ("+<item>",
   "Need a <key> keycard", "Opened elsewhere": the A8 texts shortened to 20 columns) for STATUS_MS; rows 15-17 an ammo
   column on the left (bullets, shells, rockets), health and armour on row 16, the frame time ("ms" + ms per game
-  frame) under the armour, and a key card column on the right (blue, yellow, red). Three digits with leading zeros,
+  frame, only in `-D FRAME_MS=1` builds) under the armour, and a key card column on the right (blue, yellow, red). Three digits with leading zeros,
   no labels, no title / map name.
   Glyphs are the A8 UI charset (editor/font.json (Font tab) via `tools/gbc_hudfont.py`) at $9000, tile id = ASCII - 32; the A8
   icons are `{ | }` (ammo) and `[ \ ]` (red / yellow / blue key); `^` health and `~` armour are GBC glyphs, drawn as

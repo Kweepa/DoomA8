@@ -55,6 +55,6 @@ run-gbc.bat        :: boot doomgbc.gbc in BGB
 run-editor.bat     :: same local editor (maps, skeletons, items, par times)
 ```
 
-`build-gbc.bat <variant>` (`test`, `bench`, `live`, `map`, `move`, `world`, `ent`, `smoke`, `pick`, `comb`, `los`, `inter`, `pose`) builds a test ROM into `gbc\build` for the checkers in `tools\gbc_*.py`. `GBC_DEFS=-D DEBUG=1` adds the Start-button cheat. See `gbc\README.md` for the full notes.
+`build-gbc.bat <variant>` (`test`, `bench`, `live`, `map`, `move`, `world`, `ent`, `smoke`, `pick`, `comb`, `los`, `inter`, `pose`) builds a test ROM into `gbc\build` for the checkers in `tools\gbc_*.py`. `GBC_DEFS=-D DEBUG=1` adds the Start-button cheat. `GBC_DEFS=-D FRAME_MS=1` shows the frame-time readout on the HUD (off by default). From a cmd prompt: `set GBC_DEFS=-D FRAME_MS=1`, `build-gbc.bat`, then `set GBC_DEFS=` so it doesn't stay set for later builds. See `gbc\README.md` for the full notes.
 
 Controls: D-pad to move and turn. B + left/right strafes. A fires, Select cycles weapons. Menu: A / Start select, B goes back.

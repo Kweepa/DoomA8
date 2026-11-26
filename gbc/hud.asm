@@ -8,7 +8,7 @@
 ;   row 14:      message, centred       "+<item>", "Need a <key> keycard", "Opened elsewhere"
 ;   row 15:  {bul                 ]     A8 ammo icons '{' '|' '}' (HUD_CH_BULLET / SHELL / ROCKET)
 ;   row 16:  |shl  ^hp  ~arm      \     '^' health, '~' armour (GBC glyphs)
-;   row 17:  }rkt       ms<ms>    [     frame time (ms per game frame); keys blue / yellow / red
+;   row 17:  }rkt       ms<ms>    [     frame time (FRAME_MS builds only); keys blue / yellow / red
 ; HUD tiles are the A8 UI charset at $9000 (bank 0), tile id = ASCII - 32; the STAT interrupt
 ; switches the HUD rows to $8800 (signed) tile addressing (main.asm StatISR / VBlankISR).
 ;
@@ -230,6 +230,7 @@ HudUpdateB::
     ld [hl+], a
     ld a, [wArmor]
     call PutNum3
+IF DEF(FRAME_MS)                        ; off in release; GBC_DEFS=-D FRAME_MS=1 (or the smoke variant) shows it
     ld hl, wHudRows + HUD_R17 + COL_ARMOUR - 1  ; frame time under the armour: "ms" + 3 digits
     ld a, 'm' - 32
     ld [hl+], a
@@ -237,6 +238,7 @@ HudUpdateB::
     ld [hl+], a
     call FrameMs
     call PutNum3
+ENDC
     ld a, [wHaveKeys]                   ; key column, A8 hud_keys order: blue, yellow, red
     ld b, a
     bit 1, b                            ; HAVE_BLUE

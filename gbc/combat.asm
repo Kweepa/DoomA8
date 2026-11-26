@@ -260,11 +260,19 @@ ApplyPickup::
 
 ; ---- HUD ---------------------------------------------------------------------------------
 
-; VBlank: the HUD rows flagged in wHudDirty (14-17, 20 columns each) into the map, then the staged palettes.
+; VBlank: the staged palettes, then the HUD rows flagged in wHudDirty (14-17, 20 columns each) into the map.
+; Runs at the tail of the VBlank budget (after the flip and weapon OAM): VRAM / palette writes are dropped once
+; the PPU leaves VBlank, so each piece starts only while LY is 144..151 (a row or the palette is about one
+; line) and otherwise stays flagged for the next frame. (Clearing the flags unconditionally left a half-written
+; message row, a stale armour field and a wrong border colour until the next change.)
 MACRO HUDROW_BLIT
     ld a, [wHudDirty]
     bit \1, a
     jr z, .s\@
+    ldh a, [rLY]
+    sub 144
+    cp 8
+    jr nc, .s\@                     ; too late: keep the flag
     ld hl, wHudRows + 20 * \1
     ld de, VRAM_MAP0 + 32 * (14 + \1)
     ld b, 20
@@ -274,24 +282,21 @@ MACRO HUDROW_BLIT
     inc de
     dec b
     jr nz, .l\@
+    ld a, [wHudDirty]
+    res \1, a
+    ld [wHudDirty], a
 .s\@:
 ENDM
 HudBlit::
     xor a
     ldh [rVBK], a
-    ld a, [wHudDirty]
-    and a
-    jr z, .rowsDone
-    HUDROW_BLIT 0
-    HUDROW_BLIT 1
-    HUDROW_BLIT 2
-    HUDROW_BLIT 3
-    xor a
-    ld [wHudDirty], a
-.rowsDone:
     ld a, [wPalDirty]
     and a
-    ret z
+    jr z, .palDone
+    ldh a, [rLY]
+    sub 144
+    cp 7
+    jr nc, .palDone                 ; too late: retry next frame
     xor a
     ld [wPalDirty], a
     ld a, $80                       ; BG palette 0, auto-increment
@@ -303,6 +308,14 @@ HudBlit::
     ldh [rBCPD], a
     dec b
     jr nz, .pal
+.palDone:
+    ld a, [wHudDirty]
+    and a
+    ret z
+    HUDROW_BLIT 0
+    HUDROW_BLIT 1
+    HUDROW_BLIT 2
+    HUDROW_BLIT 3
     ret
 
 ; ---- enemy geometry helpers --------------------------------------------------------------

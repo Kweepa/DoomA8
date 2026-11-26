@@ -644,7 +644,8 @@ FireSwitch:
     ret nz
     ld a, 1
     ld [wNextLevelReq], a
-    ret
+    ld a, SND_DOROPN                 ; (the A8 stays silent) the intermission's SndTick plays it
+    jp PlaySound
 .elev:                               ; the switch tag is the car
     ld a, F_SW_TAG
     call MapGet

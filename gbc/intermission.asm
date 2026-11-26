@@ -53,8 +53,8 @@ DEF ST_PAUSE_E  EQU 9
 DEF ST_WAIT     EQU 10
 
 SECTION "intervars", WRAMX, BANK[1]
-wImNameA:     ds 17                     ; finished level's name
-wImNameB:     ds 17                     ; next level's name
+wImNameA:     ds 20                     ; finished level's name
+wImNameB:     ds 20                     ; next level's name
 wImLast:      ds 1                      ; finished level index
 wImFoundK:    ds 1
 wImFoundI:    ds 1
@@ -140,10 +140,10 @@ ImCountSecrets:
     ld a, b
     ret
 
-; HL = destination (17 bytes): the level name at wMap + 23 (WRAM bank 2), NUL-terminated, at most 16 characters.
+; HL = destination (20 bytes): the level name at wMap + 23 (WRAM bank 2), NUL-terminated, at most 19 characters.
 ImCopyName:
     ld de, wMap + 23
-    ld b, 16
+    ld b, 19
 .l:
     ld a, 2
     ldh [rSVBK], a
